@@ -4,8 +4,14 @@
 module Yesod.Helpers.Json where
 
 import Yesod
-import qualified Data.Aeson.Types           as A
+import qualified Data.Text.Encoding         as TE
+import qualified Data.ByteString.Lazy       as LB
+import qualified Data.Aeson.Parser          as AP
+import qualified Data.Aeson                 as A
+import Data.Aeson.Types                     (Pair, parseEither)
+import Data.Attoparsec.ByteString           (parseOnly)
 import Data.Text                            (pack, Text)
+import qualified Data.Text                  as T
 
 
 jsonErrorOutput' :: (ToJSON a) => a -> [ (Text, Value) ]
@@ -39,7 +45,7 @@ succeedOutputJsonOrRedirect msg route = do
 succeedOutputJsonDataOrRedirect ::
     forall site message url.
     (RenderMessage site message, RedirectUrl site url) =>
-    message -> url -> [A.Pair] -> HandlerT site IO TypedContent
+    message -> url -> [Pair] -> HandlerT site IO TypedContent
 succeedOutputJsonDataOrRedirect msg route other_data = do
     selectRep $ do
         provideRep $ do
@@ -68,3 +74,21 @@ errorOutputJsonOrHtml msg showf = do
             showf
         provideRep $ do
             return $ jsonErrorOutput tmsg
+
+
+-- | 把一个 Key 用JSON字串表示
+jsonEncodeKey :: Key a -> Text
+jsonEncodeKey = TE.decodeUtf8 . LB.toStrict . A.encode . unKey
+
+jsonDecodeKey :: Text -> Either String (Key a)
+jsonDecodeKey k =
+    case parseOnly AP.value (TE.encodeUtf8 k) of
+        Left err ->
+            Left $ "cannot parse string as JSON: " ++ err ++ ", k=" ++ k'
+        Right jval ->
+            case parseEither A.parseJSON jval of
+                Left e ->
+                    Left $ "cannot parse string as PersistValue: " ++ e ++ ", k=" ++ k'
+                Right pv -> Right pv
+    where
+        k' = T.unpack k
