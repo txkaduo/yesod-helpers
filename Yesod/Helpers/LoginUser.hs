@@ -3,16 +3,20 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 module Yesod.Helpers.LoginUser where
 
 import Prelude
 import Yesod
+import qualified Network.HTTP.Types         as H
 
 import Data.Typeable                        (Typeable)
 import Data.Text                            (Text)
 import qualified Data.Text                  as T
 import Data.Time                            (TimeZone)
 import Control.Monad                        (liftM, join)
+import Control.Monad.Catch                  (MonadThrow)
 
 import Yesod.Helpers.Json                   (jsonDecodeKey, jsonEncodeKey)
 
@@ -41,15 +45,15 @@ class (PersistEntity u, Typeable u) => LoginUser u where
 
 
 
-getLoggedInUser ::
+getLoggedInUser :: forall u site.
     (PersistEntityBackend u ~ PersistMonadBackend (YesodDB site)
     , PersistStore (YesodDB site)
     , YesodPersist site
     , LoginUser u
-    , Monad n
-    )
-    => n u -> HandlerT site IO (Maybe (Entity u))
-getLoggedInUser mu = do
+    ) =>
+    HandlerT site IO (Maybe (Entity u))
+getLoggedInUser = do
+    let mu = Nothing :: Maybe u
     maybe_key <- liftM (join . (fmap $ loginIdentToKey mu)) $ getLoggedInIdent mu
     case maybe_key of
         Nothing -> return Nothing
@@ -71,6 +75,92 @@ markLoggedOut mu = do
     let sk = loginIdentSK mu
     deleteSession sk
 
+
+data LoggedInHandler u site m a =
+            LoggedInHandler
+                (forall msg. RenderMessage site msg => msg -> HandlerT site m a)
+                    -- ^ a function to do "redirect"
+                    -- when login is required
+                (Entity u -> HandlerT site m a)
+                    -- ^ the real handler function
+
+runLoggedInHandler ::
+    (PersistEntityBackend u ~ PersistMonadBackend (YesodDB site)
+    , PersistStore (YesodDB site)
+    , YesodPersist site
+    , LoginUser u
+    , RenderMessage site message
+    ) =>
+    message -> LoggedInHandler u site IO a -> HandlerT site IO a
+runLoggedInHandler msg (LoggedInHandler rdr h) = do
+    mu <- getLoggedInUser
+    case mu of
+        Just eu -> h eu
+        Nothing -> do
+            -- 因为 selectRep 一定要返回一个确定的类型 TypedContent
+            -- 无法用它来实现返回其它类型的返回值，因此要自己实现类似于
+            -- selectRep 的功能
+            -- 以下代码就是参考 selectRep 代码写的
+            -- the content types are already sorted by q values
+            -- which have been stripped
+            liftM reqAccept getRequest >>= tryAccepts
+    where
+        tryAccepts []           = html
+        tryAccepts (ct:others)  =
+            if (mainType == "*" || mainType == "text")
+                && (subType == "*" || subType == "html")
+                then html
+                else if (mainType == "*" || mainType == "application")
+                        && (subType == "json")
+                        then deny
+                        else tryAccepts others
+            where
+                (mainType, subType) = contentTypeTypes ct
+
+        html = rdr msg
+
+        deny = do
+            mr <- getMessageRender
+            sendResponseStatus H.forbidden403 (mr msg)
+
+
+-- | 一种常用的登录重定向方式
+-- 用 query-string 传递以下的参数:
+-- login_msg: 登录的提示语
+-- from_url: 登录成功后应回到的位置
+--
+-- 没有使用 setMessage setUltDest 是为了减少使用 session
+-- Yesod 的 session 内容不宜太多，因全部 session 都直接加密保存于 client
+redirectToLoginRoute ::
+    ( RenderMessage site message
+    , MonadIO m
+    , MonadThrow m
+    , MonadBaseControl IO m
+    ) =>
+    Route site -> message -> HandlerT site m a
+redirectToLoginRoute login_route msg = do
+    url_render_p <- getUrlRenderParams
+    url_render <- getUrlRender
+    m_current_r <- getCurrentRoute
+    mr <- getMessageRender
+    redirect $ url_render_p login_route $
+        ("login_msg", mr msg) : case m_current_r of
+                                    Nothing -> []
+                                    Just r -> [ ("from_url", url_render r) ]
+
+data LoginParams = LoginParams {
+                    loginParamFromUrl   :: Maybe Text
+                    , loginParamMessage :: Maybe Text
+                    }
+
+getLoginParam :: (MonadIO m, MonadThrow m, MonadBaseControl IO m) =>
+    HandlerT site m LoginParams
+getLoginParam = do
+    u <- lk "from_url"
+    msg <- lk "login_msg"
+    return $ LoginParams u msg
+    where
+        lk x = lookupPostParam x >>= maybe (lookupGetParam x) (return . Just)
 
 ------------------------------------------------------------------------------
 
