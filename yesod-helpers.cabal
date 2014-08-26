@@ -22,6 +22,7 @@ library
                        Yesod.Helpers.Types
                        Yesod.Helpers.LoginUser
                        Yesod.Helpers.Parsec
+                       Yesod.Helpers.I18N
 
   -- other-modules:       
   -- other-extensions:    
@@ -36,6 +37,7 @@ library
                      , attoparsec
                      , parsec3
                      , aeson
+                     , shakespeare
                      , old-locale
                      , http-types
                      , exceptions
