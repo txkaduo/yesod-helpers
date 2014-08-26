@@ -21,21 +21,26 @@ library
                        Yesod.Helpers.Json
                        Yesod.Helpers.Types
                        Yesod.Helpers.LoginUser
+                       Yesod.Helpers.Parsec
 
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base >=4.7 && <4.8
                      , wai
                      , yesod
+                     , persistent
                      , text
                      , time
                      , bytestring
                      , blaze-markup
                      , attoparsec
+                     , parsec3
                      , aeson
                      , old-locale
                      , http-types
                      , exceptions
+                     , template-haskell
+                     , transformers
   -- hs-source-dirs:      
   default-language:    Haskell2010
 
