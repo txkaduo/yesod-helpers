@@ -5,10 +5,14 @@ import Data.Aeson
 import qualified Data.Text              as T
 import qualified Data.Vector            as V
 import qualified Data.Aeson             as A
+import qualified Data.ByteString.Base16 as B16
+import qualified Data.ByteString        as B
 
 import Data.Text                        (Text)
-import Data.Aeson.Types                 (Parser, typeMismatch)
+import Data.Text.Encoding               (encodeUtf8)
+import Data.Aeson.Types                 (Parser, typeMismatch, modifyFailure)
 import Data.List                        (find)
+import Data.ByteString                  (ByteString)
 
 -- | Parse a string (usually a word), with a lookup table.
 lookupParseText :: String -> [([Text], a)] -> Text -> Parser a
@@ -36,3 +40,27 @@ parseWordList _ type_name v               = typeMismatch type_name v
 -- | for FromJSON types
 parseWordList' :: FromJSON a => String -> Value -> Parser [a]
 parseWordList' = parseWordList parseJSON
+
+
+-- | parse a hex-encoded string
+parseHexByteString :: String -> Text -> Parser ByteString
+parseHexByteString type_name s = do
+    let (good, invalid) = B16.decode $ encodeUtf8 s
+    if B.null invalid
+        then return good
+        else fail $ "cannot parse string as type '" ++ type_name ++ "'"
+
+
+-- | expecting a Array, parse each value in it
+parseArray ::
+    (Value -> Parser a)         -- ^ function to apply on each of array
+    -> String                   -- ^ the type name when reporting error
+    -> Value -> Parser [a]
+parseArray f type_name = withArray type_name $ mapM f' . zip [0..] . V.toList
+    where
+        f' (idx, v) = modifyFailure report $ f v
+            where
+                report s =
+                    "Failed to parse item in array with index="
+                        ++ show (idx :: Int) ++ ": "
+                        ++ s
