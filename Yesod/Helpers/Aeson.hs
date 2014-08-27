@@ -27,7 +27,12 @@ lookupParseValue :: String -> [([Text], a)] -> Value -> Parser a
 lookupParseValue type_name lst = withText type_name $ lookupParseText type_name lst
 
 
-parseWordList :: FromJSON a => String -> Value -> Parser [a]
-parseWordList _         (A.Array arr)   = mapM parseJSON $ V.toList arr
-parseWordList _         (A.String t)    = mapM parseJSON $ map toJSON $ T.words t
-parseWordList type_name v               = typeMismatch type_name v
+-- | parse a list of words or do it after spliting a string of words
+parseWordList :: (Value -> Parser a) -> String -> Value -> Parser [a]
+parseWordList f _         (A.Array arr)   = mapM f $ V.toList arr
+parseWordList f _         (A.String t)    = mapM f $ map toJSON $ T.words t
+parseWordList _ type_name v               = typeMismatch type_name v
+
+-- | for FromJSON types
+parseWordList' :: FromJSON a => String -> Value -> Parser [a]
+parseWordList' = parseWordList parseJSON
