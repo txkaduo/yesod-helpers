@@ -24,6 +24,7 @@ library
                        Yesod.Helpers.Parsec
                        Yesod.Helpers.I18N
                        Yesod.Helpers.Aeson
+                       Yesod.Helpers.FuzzyDay
 
   -- other-modules:       
   -- other-extensions:    
