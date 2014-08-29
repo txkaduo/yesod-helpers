@@ -15,11 +15,14 @@ import Text.Parsec.String                   (Parser)
 import Data.Monoid                          (mconcat)
 import Data.Functor.Identity                (Identity)
 import Data.Text                            (Text)
--- import Data.Aeson                           (ToJSON, toJSON)
+import Data.ByteString                      (ByteString)
 import qualified Data.Aeson                 as A
 import qualified Data.Aeson.Types           as AT
 import qualified Data.Text                  as T
 import qualified Text.Parsec.Token          as PT
+import qualified Data.ByteString.Base16     as B16
+import qualified Data.ByteString.UTF8       as B8
+import qualified Data.ByteString            as B
 
 
 type GenCharParser u m a = forall s. Stream s m Char => ParsecT s u m a
@@ -34,6 +37,28 @@ type CharParser a = GenCharParser () Identity a
 class SimpleStringRep a where
     simpleEncode :: a -> String
     simpleParser :: CharParser a
+
+instance SimpleStringRep Double where
+    simpleEncode = show
+    simpleParser = float
+
+instance SimpleStringRep Int where
+    simpleEncode = show
+    simpleParser = fmap fromIntegral integer
+
+instance SimpleStringRep Integer where
+    simpleEncode = show
+    simpleParser = integer
+
+instance SimpleStringRep ByteString where
+    simpleEncode = B8.toString . B16.encode
+
+    simpleParser = do
+        s <- many1 hexDigit
+        let (good, invalid) = B16.decode $ B8.fromString s
+        if B.null invalid
+            then return good
+            else parserFail $ "cannot decode as hex-encoded bytestring"
 
 simpleEncodeParens :: SimpleStringRep a => a -> String
 simpleEncodeParens x = mconcat [ "(", simpleEncode x, ")" ]
@@ -143,6 +168,12 @@ lexer       = PT.makeTokenParser simpleLangDef
 
 natural :: Stream s Identity Char => ParsecT s u Identity Integer
 natural     = PT.natural lexer
+
+float :: Stream s Identity Char => ParsecT s u Identity Double
+float       = PT.float lexer
+
+integer :: Stream s Identity Char => ParsecT s u Identity Integer
+integer       = PT.integer lexer
 
 whiteSpace :: Stream s Identity Char => ParsecT s u Identity ()
 whiteSpace  = PT.whiteSpace lexer
