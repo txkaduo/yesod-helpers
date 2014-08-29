@@ -13,6 +13,7 @@ import Data.Text                            (Text)
 import Data.Maybe                           (catMaybes)
 import Text.Blaze.Renderer.Utf8             (renderMarkup)
 import Control.Monad                        (liftM)
+import Control.Applicative                  (Applicative, pure)
 
 nameIdToFs :: Text -> Text -> FieldSettings site
 nameIdToFs name idName = FieldSettings "" Nothing (Just idName) (Just name) []
@@ -64,3 +65,10 @@ jsonOrHtmlOutputForm show_form formWidget formEnctype other_data = do
         provideRep $ do
             js_form <- jsonOutputForm formWidget
             return $ object $ ("form_body" .= js_form) : other_data
+
+
+-- | the Data.Traversable.traverse function for FormResult
+traverseFormResult :: Applicative m => (a -> m b) -> FormResult a -> m (FormResult b)
+traverseFormResult f (FormSuccess x)    = fmap FormSuccess $ f x
+traverseFormResult _ (FormFailure e)    = pure $ FormFailure e
+traverseFormResult _ FormMissing        = pure FormMissing
