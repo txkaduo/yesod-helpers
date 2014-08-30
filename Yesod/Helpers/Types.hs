@@ -2,24 +2,21 @@
 module Yesod.Helpers.Types where
 
 import Prelude
-import Yesod                                hiding (parseTime)
-import qualified Data.Aeson                 as A
-import qualified Data.Text                  as T
 
 import Data.Time                            (TimeZone, timeZoneOffsetString, parseTime)
 import System.Locale                        (defaultTimeLocale)
-import Control.Monad                        (mzero)
+import Control.Monad                        (mzero, void)
+import Text.Parsec
+import Yesod.Helpers.Parsec
 
 newtype XTimeZone = XTimeZone { unXTimeZone :: TimeZone }
-                    deriving (Show, Read, Eq)
-derivePersistField "XTimeZone"
+                    deriving (Show, Read, Eq, Ord)
 
-instance A.FromJSON XTimeZone where
-    parseJSON v = A.withText "String" f v
-        where
-            f s = maybe mzero (return . XTimeZone) $
-                        parseTime defaultTimeLocale "%z" $ T.unpack s
+instance SimpleStringRep XTimeZone where
+    simpleEncode = timeZoneOffsetString . unXTimeZone
+    simpleParser = do
+        manyTill anyChar (eof <|> void space) >>=
+            maybe mzero (return . XTimeZone) . (parseTime defaultTimeLocale "%z")
 
-instance A.ToJSON XTimeZone where
-    toJSON = A.String . T.pack . timeZoneOffsetString . unXTimeZone
-
+$(derivePersistFieldS "XTimeZone")
+$(deriveJsonS "XTimeZone")
