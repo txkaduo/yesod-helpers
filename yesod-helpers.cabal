@@ -25,6 +25,7 @@ library
                        Yesod.Helpers.I18N
                        Yesod.Helpers.Aeson
                        Yesod.Helpers.FuzzyDay
+                       Yesod.Helpers.Yaml
 
   -- other-modules:       
   -- other-extensions:    
@@ -48,6 +49,7 @@ library
                      , vector
                      , base16-bytestring
                      , utf8-string
+                     , yaml
 
   -- hs-source-dirs:      
   default-language:    Haskell2010
