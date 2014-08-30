@@ -65,10 +65,10 @@ getLoggedInIdent mu = do
     lookupSession sk
 
 -- | 在 session 中标记某个用户为登录状态
-markLoggedIn :: forall u site . (LoginUser u) => Entity u -> HandlerT site IO ()
-markLoggedIn eu = do
+markLoggedIn :: forall u site . (LoginUser u) => Key u -> HandlerT site IO ()
+markLoggedIn uid = do
     let sk = loginIdentSK ([] :: [u])
-    setSession sk $ jsonEncodeKey $ entityKey eu
+    setSession sk $ jsonEncodeKey uid
 
 markLoggedOut :: (LoginUser u, Monad n) => n u -> HandlerT site IO ()
 markLoggedOut mu = do
