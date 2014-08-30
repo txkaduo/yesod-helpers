@@ -19,6 +19,7 @@ import Control.Monad                        (liftM, join)
 import Control.Monad.Catch                  (MonadThrow)
 
 import Yesod.Helpers.Json                   (jsonDecodeKey, jsonEncodeKey)
+import Yesod.Helpers.Form                   (nameToFs)
 
 -- | Any logged-in user on Web
 -- 本意是要打算支持多种类型用户互相独立地登录
@@ -161,6 +162,18 @@ getLoginParam = do
     return $ LoginParams u msg
     where
         lk x = lookupPostParam x >>= maybe (lookupGetParam x) (return . Just)
+
+loginParamHiddenFormParts ::
+    -- (Monad m, PathPiece p, RenderMessage (HandlerSite m) FormMessage) =>
+    (MonadIO m, MonadBase IO m, MonadBaseControl IO m, MonadThrow m
+    , RenderMessage site FormMessage) =>
+    MForm (HandlerT site m) [(FormResult (Maybe Text), FieldView site)]
+loginParamHiddenFormParts = do
+    lp <- lift getLoginParam
+    sequence
+        [ mopt hiddenField (nameToFs "from_url") (Just $ loginParamFromUrl lp)
+        , mopt hiddenField (nameToFs "login_msg") (Just $ loginParamMessage lp)
+        ]
 
 ------------------------------------------------------------------------------
 
