@@ -9,6 +9,7 @@ import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString        as B
 import qualified Text.Parsec            as PC
 
+import Text.Parsec.Text                 ()
 import Data.Text                        (Text)
 import Data.Text.Encoding               (encodeUtf8)
 import Data.Aeson.Types                 (Parser, typeMismatch, modifyFailure)
