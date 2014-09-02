@@ -65,5 +65,5 @@ renderMessageForward ::
     [(a, b)] -> site -> [Lang] -> a -> Text
 renderMessageForward lst s langs x =
     case lookup x lst of
-        Nothing -> "unmatched i18n message"
+        Nothing -> "<<unmatched i18n message>>"
         Just y -> renderMessage s langs y
