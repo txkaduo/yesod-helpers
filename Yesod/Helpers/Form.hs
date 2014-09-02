@@ -1,11 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Yesod.Helpers.Form where
 
 import Prelude
 import Yesod
 
 import qualified Data.Text.Encoding         as TE
+import qualified Data.Text                  as T
 import qualified Data.ByteString.Lazy       as LB
 import qualified Data.Aeson.Types           as A
 
@@ -14,6 +16,9 @@ import Data.Maybe                           (catMaybes)
 import Text.Blaze.Renderer.Utf8             (renderMarkup)
 import Control.Monad                        (liftM)
 import Control.Applicative                  (Applicative, pure)
+import Text.Parsec                          (parse)
+
+import Yesod.Helpers.Parsec
 
 nameIdToFs :: Text -> Text -> FieldSettings site
 nameIdToFs name idName = FieldSettings "" Nothing (Just idName) (Just name) []
@@ -72,3 +77,26 @@ traverseFormResult :: Applicative m => (a -> m b) -> FormResult a -> m (FormResu
 traverseFormResult f (FormSuccess x)    = fmap FormSuccess $ f x
 traverseFormResult _ (FormFailure e)    = pure $ FormFailure e
 traverseFormResult _ FormMissing        = pure FormMissing
+
+
+simpleEncodedField ::
+    (SimpleStringRep a, Monad m
+    , RenderMessage (HandlerSite m) msg
+    , RenderMessage (HandlerSite m) FormMessage
+    ) =>
+    (String -> msg)     -- ^ a function to generate a error message
+    -> Field m a
+simpleEncodedField mk_msg = checkMMap f (T.pack . simpleEncode) textField
+    where
+        f t = case parse simpleParser "" t of
+                Left err -> return $ Left $ mk_msg $ show err
+                Right x -> return $ Right x
+
+
+simpleEncodedOptionList ::
+    (SimpleStringRep a, Enum a, Bounded a) =>
+    (a -> Text)     -- ^ to render value to display
+    -> OptionList a
+simpleEncodedOptionList render = mkOptionList $ map f [minBound .. maxBound]
+    where
+        f x = Option (render x) x (T.pack $ simpleEncode x)
