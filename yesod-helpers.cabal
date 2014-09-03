@@ -26,6 +26,7 @@ library
                        Yesod.Helpers.Aeson
                        Yesod.Helpers.FuzzyDay
                        Yesod.Helpers.Yaml
+                       Yesod.Helpers.Persist
 
   -- other-modules:       
   -- other-extensions:    

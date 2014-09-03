@@ -113,6 +113,16 @@ deriveJsonS s = do
             ]
         ]
 
+
+-- | try render encoded result of every possible value,
+-- if it match the following string, parse successfully.
+enumEncodedParser :: (Enum a, Bounded a) =>
+    (a -> String)
+    -> CharParser a
+enumEncodedParser render = choice $ map f [minBound .. maxBound]
+    where
+        f x = try $ string (render x) >> return x
+
 ----------------------------------------------------------------------
 
 sqlTypeFunD :: Exp -> Dec
