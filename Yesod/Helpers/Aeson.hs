@@ -37,14 +37,14 @@ lookupParseValue type_name lst = withText type_name $ lookupParseText type_name 
 
 
 -- | parse a list of words or do it after spliting a string of words
-parseWordList :: (Value -> Parser a) -> String -> Value -> Parser [a]
-parseWordList f _         (A.Array arr)   = mapM f $ V.toList arr
-parseWordList f _         (A.String t)    = mapM f $ map toJSON $ T.words t
-parseWordList _ type_name v               = typeMismatch type_name v
+parseWordList :: String -> (Value -> Parser a) -> Value -> Parser [a]
+parseWordList _         f (A.Array arr)   = mapM f $ V.toList arr
+parseWordList _         f (A.String t)    = mapM f $ map toJSON $ T.words t
+parseWordList type_name _ v               = typeMismatch type_name v
 
 -- | for FromJSON types
 parseWordList' :: FromJSON a => String -> Value -> Parser [a]
-parseWordList' = parseWordList parseJSON
+parseWordList' = flip parseWordList parseJSON
 
 
 -- | parse a hex-encoded string
@@ -58,16 +58,16 @@ parseHexByteString type_name s = do
 
 -- | expecting a Array, parse each value in it
 parseArray ::
-    (Value -> Parser a)         -- ^ function to apply on each of array
-    -> String                   -- ^ the type name when reporting error
+    String                          -- ^ the type name when reporting error
+    -> (Value -> Parser a)          -- ^ function to apply on each of array
     -> Value -> Parser [a]
-parseArray f type_name = withArray type_name $  parseList f type_name . V.toList
+parseArray type_name f = withArray type_name $  parseList type_name f . V.toList
 
 parseList ::
-    (Value -> Parser a)         -- ^ function to apply on each of array
-    -> String                   -- ^ the type name when reporting error
+    String                   -- ^ the type name when reporting error
+    -> (Value -> Parser a)         -- ^ function to apply on each of array
     -> [Value] -> Parser [a]
-parseList f type_name = mapM f' . zip [0..]
+parseList type_name f = mapM f' . zip [0..]
     where
         f' (idx, v) = modifyFailure report $ f v
             where
@@ -97,17 +97,17 @@ parseTextByParsec p t =
 
 -- | like parseWordList, but somewhat more general
 parseListByParsec ::
-    ParsecT Text () Identity b      -- ^ separator parser
-    -> ParsecT Text () Identity a   -- ^ item parser
-    -> String                       -- ^ type name for error report
+    String                              -- ^ type name for error report
+    -> ParsecT Text () Identity b       -- ^ separator parser
+    -> ParsecT Text () Identity a       -- ^ item parser
     -> Value -> Parser [a]
-parseListByParsec _ p type_name (A.Array arr) =
+parseListByParsec type_name _ p (A.Array arr) =
     parseList
-        (withText type_name $ reportExpected type_name . parseTextByParsec p)
         type_name
+        (withText type_name $ reportExpected type_name . parseTextByParsec p)
         (V.toList arr)
 
-parseListByParsec sep p type_name (A.String t) =
+parseListByParsec type_name sep p (A.String t) =
     reportExpected type_name $ parseTextByParsec (p `PC.sepBy` sep) t
 
-parseListByParsec _ _ type_name v = typeMismatch type_name v
+parseListByParsec type_name _ _ v = typeMismatch type_name v
