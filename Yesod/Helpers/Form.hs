@@ -20,8 +20,10 @@ import Control.Monad                        (liftM, void)
 import Control.Applicative                  (Applicative, pure, (<|>))
 import Text.Parsec                          (parse, sepEndBy, many1, space, newline
                                             , eof, skipMany)
+import Control.Monad.Trans.Except           (runExceptT, throwE)
 
 import Yesod.Helpers.Parsec
+import Yesod.Helpers.Upload                 (fiReadLimited, fiReadUnlimited)
 
 nameIdToFs :: Text -> Text -> FieldSettings site
 nameIdToFs name idName = FieldSettings "" Nothing (Just idName) (Just name) []
@@ -195,8 +197,46 @@ caseFormResult x _ (FormFailure _)  = x
 caseFormResult _ f (FormSuccess r)  = f r
 
 
+-- | whether a FormResult is success and contains expected value.
 ifFormResult ::
     (a -> Bool)      -- ^ check value is expected
     -> FormResult a
     -> Bool             -- ^ if result is expected
 ifFormResult = caseFormResult False
+
+
+data SunkFileInfo = SunkFileInfo {
+                        sfiFileInfo :: FileInfo
+                        , sfiContent :: LB.ByteString
+                    }
+
+
+-- | modify fileField to a size-limited one.
+-- result type has been changed to SunkFileInfo.
+limitedSizeFileField ::
+    (MonadResource m
+    , RenderMessage (HandlerSite m) FormMessage
+    , RenderMessage (HandlerSite m) msg
+    ) =>
+    (Int -> msg)        -- ^ make a message when file size exceeds limit
+    -> Maybe Int        -- ^ the file size limit
+    -> Field m SunkFileInfo
+limitedSizeFileField mk_msg m_max_size = checkMMap f sfiFileInfo fileField
+    where
+        f fi = runExceptT $ do
+            liftM (SunkFileInfo fi) $
+                case m_max_size of
+                    Nothing         -> lift $ fiReadUnlimited fi
+                    Just max_size   -> (lift $ fiReadLimited max_size fi)
+                                        >>= maybe (throwE $ mk_msg max_size) return
+
+-- | convert a FormResult containing a Either into a vanilla one
+-- i.e. convert a Left value into FormFailure.
+liftEitherFormResult ::
+    (msg -> Text)
+    -> FormResult (Either msg a)
+    -> FormResult a
+liftEitherFormResult render (FormSuccess (Left err))    = FormFailure $ [ render err ]
+liftEitherFormResult _      (FormSuccess (Right x))     = FormSuccess x
+liftEitherFormResult _      (FormFailure errs)          = FormFailure errs
+liftEitherFormResult _      FormMissing                 = FormMissing
