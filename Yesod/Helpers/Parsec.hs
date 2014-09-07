@@ -5,6 +5,8 @@ module Yesod.Helpers.Parsec where
 
 import Prelude
 import Yesod
+import Data.String                          (IsString, fromString)
+import Control.Monad                        (void)
 
 import Text.Parsec
 import Text.Parsec.Text                     ()
@@ -122,6 +124,21 @@ enumEncodedParser :: (Enum a, Bounded a) =>
 enumEncodedParser render = choice $ map f [minBound .. maxBound]
     where
         f x = try $ string (render x) >> return x
+
+
+-- | split a text/string, by a parser
+splitByParsec ::
+    (Stream s Identity Char, IsString s) =>
+    ParsecT s () Identity a
+    -> s
+    -> Either String [s]
+splitByParsec sep t = do
+        case parse
+            (skipMany sep >> many anyChar `sepEndBy` (eof <|> (void $ many1 sep)))
+            "" t
+            of
+            Left err -> fail $ "failed to split text: " ++ show err
+            Right x -> return $ map fromString x
 
 ----------------------------------------------------------------------
 
