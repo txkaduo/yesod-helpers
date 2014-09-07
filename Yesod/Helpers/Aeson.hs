@@ -18,6 +18,8 @@ import Data.ByteString                  (ByteString)
 import Text.Parsec                      (ParsecT)
 import Data.Functor.Identity            (Identity)
 
+import Yesod.Helpers.Parsec             (splitByParsec)
+
 
 -- | Parse a string (usually a word), with a lookup table.
 lookupParseText :: String -> [([Text], a)] -> Text -> Parser a
@@ -45,6 +47,27 @@ parseWordList type_name _ v               = typeMismatch type_name v
 -- | for FromJSON types
 parseWordList' :: FromJSON a => String -> Value -> Parser [a]
 parseWordList' = flip parseWordList parseJSON
+
+
+-- | parse a list or after spliting the text into a list
+-- use a Parsec parser to split the the text
+parseListSepParsec ::
+    String
+    -> ParsecT Text () Identity b   -- ^ separator parser
+    -> (Value -> Parser a)          -- ^ parse each value of the list
+                                    -- the value maybe a String if it is
+                                    -- from spliting a long text,
+                                    -- otherwise it is the value in an array
+    -> Value -> Parser [a]
+parseListSepParsec _            _   f (A.Array arr)     = mapM f $ V.toList arr
+parseListSepParsec type_name    sep f (A.String t)      =
+    mapM f $ map toJSON $
+        case splitByParsec sep t of
+            Left err -> fail $ "when parsing expected type '" ++
+                                type_name ++ "': " ++ err
+            Right x -> return x
+
+parseListSepParsec type_name    _   _ v                 = typeMismatch type_name v
 
 
 -- | parse a hex-encoded string
