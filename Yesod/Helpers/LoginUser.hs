@@ -13,7 +13,6 @@ import qualified Network.HTTP.Types         as H
 
 import Data.Typeable                        (Typeable)
 import Data.Text                            (Text)
-import qualified Data.Text                  as T
 import Data.Time                            (TimeZone)
 import Control.Monad                        (liftM, join)
 import Control.Monad.Catch                  (MonadThrow)
