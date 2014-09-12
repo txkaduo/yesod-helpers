@@ -48,6 +48,7 @@ library
                      , exceptions
                      , template-haskell
                      , transformers
+                     , mtl
                      , vector
                      , base16-bytestring
                      , utf8-string

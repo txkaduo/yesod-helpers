@@ -2,6 +2,8 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ImpredicativeTypes #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE LiberalTypeSynonyms #-}
 module Yesod.Helpers.Form where
 
 import Prelude
@@ -11,6 +13,9 @@ import qualified Data.Text.Encoding         as TE
 import qualified Data.Text                  as T
 import qualified Data.ByteString.Lazy       as LB
 import qualified Data.Aeson.Types           as A
+import qualified Control.Monad.Trans.State.Strict as SS
+import Control.Monad.RWS.Lazy               (RWST)
+import Text.Blaze                           (Markup)
 
 import Data.Text                            (Text)
 import Data.Maybe                           (catMaybes)
@@ -70,8 +75,16 @@ jsonOrHtmlOutputForm :: Yesod site =>
     -> [A.Pair]
     -> HandlerT site IO TypedContent
 jsonOrHtmlOutputForm show_form formWidget formEnctype other_data = do
+    jsonOrHtmlOutputForm' (show_form formWidget formEnctype) formWidget other_data
+
+jsonOrHtmlOutputForm' :: Yesod site =>
+    HandlerT site IO Html
+    -> WidgetT site IO ()
+    -> [A.Pair]
+    -> HandlerT site IO TypedContent
+jsonOrHtmlOutputForm' show_form formWidget other_data = do
     selectRep $ do
-        provideRep $ show_form formWidget formEnctype
+        provideRep $ show_form
         provideRep $ do
             js_form <- jsonOutputForm formWidget
             return $ object $ ("form_body" .= js_form) : other_data
@@ -171,6 +184,26 @@ wsSepListTextareaField =
     encodedListTextareaField (space, "\n")
 
 
+-- | check the result by constructing a Unique key,
+-- if record matching that Unique key already exists, report the error message.
+checkFieldDBUnique ::
+    ( YesodPersist site, PersistEntity val
+    , RenderMessage site msg
+    , PersistUnique (YesodDB site)
+    , PersistMonadBackend (YesodDB site) ~ PersistEntityBackend val
+    ) =>
+    (a -> Unique val)
+    -> msg
+    -> Field (HandlerT site IO) a
+    -> Field (HandlerT site IO) a
+checkFieldDBUnique mk_unique msg = checkMMap chk id
+    where
+        chk t = (runDB $ getBy $ mk_unique t)
+                    >>= return . maybe
+                            (Right t)
+                            (const $ Left msg)
+
+
 -- | can be used as a placeholder
 emptyFieldView :: FieldView site
 emptyFieldView = FieldView
@@ -240,3 +273,47 @@ liftEitherFormResult render (FormSuccess (Left err))    = FormFailure $ [ render
 liftEitherFormResult _      (FormSuccess (Right x))     = FormSuccess x
 liftEitherFormResult _      (FormFailure errs)          = FormFailure errs
 liftEitherFormResult _      FormMissing                 = FormMissing
+
+
+-- | the following long type synonym actually says:
+-- type SMForm site m a = SS.StateT [FieldView site] (MForm m) a
+-- but haskell does not allow partially applied synonym in the above line,
+-- we have the expand the synonym manually.
+--
+-- Usage: With the following helpers (smreq, smopt), all FieldView's are remembered.
+-- So usually we don't need to name all FieldView's one by one,
+-- which simplify code a little.
+type SMForm m a = SS.StateT [FieldView (HandlerSite m)] (RWST (Maybe (Env, FileEnv), HandlerSite m, [Lang]) Enctype Ints m) a
+
+smreq ::
+    (RenderMessage site FormMessage, HandlerSite m ~ site, MonadHandler m) =>
+    Field m a
+    -> FieldSettings site
+    -> Maybe a
+    -> SMForm m (FormResult a)
+smreq field settings initv = do
+    (res, view) <- lift $ mreq field settings initv
+    SS.modify ( view : )
+    return res
+
+smopt ::
+    (RenderMessage site FormMessage, HandlerSite m ~ site, MonadHandler m) =>
+    Field m a
+    -> FieldSettings site
+    -> Maybe (Maybe a)
+    -> SMForm m (FormResult (Maybe a))
+smopt field settings initv = do
+    (res, view) <- lift $ mopt field settings initv
+    SS.modify ( view : )
+    return res
+
+
+renderBootstrapS :: Monad m =>
+    Markup -> FormResult a -> SMForm m (FormResult a, WidgetT (HandlerSite m) IO ())
+renderBootstrapS extra result = do
+    views <- liftM reverse $ SS.get
+    let aform = formToAForm $ return (result, views)
+    lift $ renderBootstrap aform extra
+
+smToForm :: Monad m => SMForm m a -> MForm m a
+smToForm = flip SS.evalStateT []
