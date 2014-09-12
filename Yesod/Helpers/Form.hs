@@ -184,6 +184,26 @@ wsSepListTextareaField =
     encodedListTextareaField (space, "\n")
 
 
+-- | a textField with its value automatically stripped before parsing.
+strippedTextField :: forall m. (Monad m
+    , RenderMessage (HandlerSite m) FormMessage
+    ) =>
+    Field m Text
+strippedTextField = stripUpFront textField
+
+-- | a textareaField with its value automatically stripped before parsing.
+strippedTextareaField :: forall m. (Monad m
+    , RenderMessage (HandlerSite m) FormMessage
+    ) =>
+    Field m Textarea
+strippedTextareaField = stripUpFront textareaField
+
+-- | strip the value (as Text from client) before parsing.
+stripUpFront :: Field m a -> Field m a
+stripUpFront fd = fd { fieldParse = new_parse }
+    where
+        new_parse = fieldParse fd . map T.strip
+
 -- | check the result by constructing a Unique key,
 -- if record matching that Unique key already exists, report the error message.
 checkFieldDBUnique ::
