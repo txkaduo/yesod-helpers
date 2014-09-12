@@ -335,5 +335,13 @@ renderBootstrapS extra result = do
     let aform = formToAForm $ return (result, views)
     lift $ renderBootstrap aform extra
 
+-- | combines renderBootstrapS and smToForm
+renderBootstrapS' :: Monad m =>
+    Markup
+    -> SMForm m (FormResult a)
+    -> MForm m (FormResult a, WidgetT (HandlerSite m) IO ())
+renderBootstrapS' extra result = do
+    smToForm $ result >>= renderBootstrapS extra
+
 smToForm :: Monad m => SMForm m a -> MForm m a
 smToForm = flip SS.evalStateT []
