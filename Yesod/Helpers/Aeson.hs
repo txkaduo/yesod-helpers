@@ -20,6 +20,13 @@ import Data.Functor.Identity            (Identity)
 
 import Yesod.Helpers.Parsec             (splitByParsec)
 
+nullToNothing :: FromJSON a => Maybe Value -> Parser (Maybe a)
+nullToNothing Nothing     = return Nothing
+nullToNothing (Just Null) = return Nothing
+nullToNothing (Just v)    = parseJSON v
+
+(.:?*) :: (FromJSON a) => Object -> Text -> Parser (Maybe a)
+obj .:?* key = obj .:? key >>= nullToNothing
 
 -- | Parse a string (usually a word), with a lookup table.
 lookupParseText :: String -> [([Text], a)] -> Text -> Parser a
