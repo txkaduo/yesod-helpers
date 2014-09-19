@@ -73,3 +73,18 @@ test-suite test
                  , parsec3
                  , yesod-helpers
   default-language:    Haskell2010
+
+test-suite test2
+    type:              exitcode-stdio-1.0
+    main-is:           test2.hs
+    hs-source-dirs:    tests
+    ghc-options:       -Wall
+
+    build-depends: base
+                 , aeson
+                 , yaml
+                 , bytestring
+                 , text
+                 , mtl
+                 , yesod-helpers
+  default-language:    Haskell2010
