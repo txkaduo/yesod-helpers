@@ -16,9 +16,11 @@ import Data.Text                            (Text)
 import Data.Time                            (TimeZone)
 import Control.Monad                        (liftM, join)
 import Control.Monad.Catch                  (MonadThrow)
+import Data.Maybe                           (fromMaybe)
 
 import Yesod.Helpers.Json                   (jsonDecodeKey, jsonEncodeKey)
 import Yesod.Helpers.Form                   (nameToFs)
+import Yesod.Helpers.Handler                (lookupReqAccept, matchMimeType)
 
 -- | Any logged-in user on Web
 -- 本意是要打算支持多种类型用户互相独立地登录
@@ -103,20 +105,11 @@ runLoggedInHandler msg (LoggedInHandler rdr h) = do
             -- 以下代码就是参考 selectRep 代码写的
             -- the content types are already sorted by q values
             -- which have been stripped
-            liftM reqAccept getRequest >>= tryAccepts
+            join $ fmap (fromMaybe html) $
+                lookupReqAccept [ (matchMimeType "application/json", deny)
+                                , (matchMimeType "text/html", html)
+                                ]
     where
-        tryAccepts []           = html
-        tryAccepts (ct:others)  =
-            if (mainType == "*" || mainType == "text")
-                && (subType == "*" || subType == "html")
-                then html
-                else if (mainType == "*" || mainType == "application")
-                        && (subType == "json")
-                        then deny
-                        else tryAccepts others
-            where
-                (mainType, subType) = contentTypeTypes ct
-
         html = rdr msg
 
         deny = do
