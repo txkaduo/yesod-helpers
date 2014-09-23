@@ -10,9 +10,13 @@ import qualified Data.Aeson.Parser          as AP
 import qualified Data.Aeson                 as A
 import Data.Aeson.Types                     (Pair, parseEither)
 import Data.Attoparsec.ByteString           (parseOnly)
+import Data.Maybe                           (fromMaybe)
+import Control.Monad                        (join)
 import Data.Text                            (pack, Text)
 import qualified Data.Text                  as T
 
+
+import Yesod.Helpers.Handler                (lookupReqAccept, matchMimeType)
 
 jsonErrorOutput' :: (ToJSON a) => a -> [ (Text, Value) ]
 jsonErrorOutput' msg = [ "message" .= msg, "result" .= pack "fail" ]
@@ -75,6 +79,20 @@ errorOutputJsonOrHtml msg showf = do
         provideRep $ do
             return $ jsonErrorOutput tmsg
 
+
+redirectOrJson ::
+     (RenderMessage (HandlerSite m) message, MonadHandler m
+     , RedirectUrl (HandlerSite m) url
+     ) =>
+    message -> url -> m a
+redirectOrJson msg route = do
+    msgRender <- getMessageRender
+    let tmsg = msgRender msg
+    join $ fmap (fromMaybe $ json tmsg) $
+        lookupReqAccept [ (not . matchMimeType "application/json", rdr) ]
+    where
+        json tmsg = sendResponse $ jsonErrorOutput tmsg
+        rdr = redirect route
 
 -- | 把一个 Key 用JSON字串表示
 jsonEncodeKey :: Key a -> Text
