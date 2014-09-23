@@ -84,10 +84,10 @@ jsonOrHtmlOutputForm' :: Yesod site =>
     -> HandlerT site IO TypedContent
 jsonOrHtmlOutputForm' show_form formWidget other_data = do
     selectRep $ do
-        provideRep $ show_form
         provideRep $ do
             js_form <- jsonOutputForm formWidget
             return $ object $ ("form_body" .= js_form) : other_data
+        provideRep $ show_form
 
 
 -- | the Data.Traversable.traverse function for FormResult
