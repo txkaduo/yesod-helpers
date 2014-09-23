@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TupleSections #-}
 module Yesod.Helpers.Handler where
 
 import Prelude
@@ -13,6 +14,9 @@ import Text.Blaze                           (Markup)
 import Control.Monad.Catch                  (MonadThrow)
 import Yesod.Helpers.Form                   (jsonOrHtmlOutputForm')
 import Data.Text                            (Text)
+import Data.List                            (findIndex, sortBy)
+import Data.Ord                             (comparing)
+import Data.Maybe                           (listToMaybe, catMaybes)
 
 
 setLastModified :: UTCTime -> HandlerT site IO ()
@@ -116,3 +120,24 @@ jsonOrHtmlOutputFormHandleResult show_page f result = do
         FormMissing         -> showf ([] :: [Text])
         FormFailure errs    -> showf errs
         FormSuccess x       -> (lift $ f x) >>= either showf' return
+
+
+matchMimeType :: ContentType -> ContentType -> Bool
+matchMimeType expected actual =
+    (mainType == "*" || mainType0 == "*" || mainType == mainType0)
+        && (subType == "*" || subType0 == "*" || subType == subType0)
+    where
+        (mainType, subType) = contentTypeTypes actual
+        (mainType0, subType0) = contentTypeTypes expected
+
+
+lookupReqAccept :: MonadHandler m => [(ContentType -> Bool, a)] -> m (Maybe a)
+lookupReqAccept lst = do
+    fmap reqAccept getRequest >>= return . tryAccepts
+    where
+        tryAccepts cts = listToMaybe $ map snd $
+                            sortBy (comparing $ fst) $ catMaybes $
+                                flip map lst $
+                                    \(f, x) ->
+                                        fmap (, x) $ findIndex f cts
+
