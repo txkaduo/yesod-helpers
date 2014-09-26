@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
 module Yesod.Helpers.Json where
 
 import Yesod
@@ -110,3 +111,27 @@ jsonDecodeKey k =
                 Right pv -> Right pv
     where
         k' = T.unpack k
+
+getOrRedirectJH ::
+    ( PersistEntity val
+    , YesodPersist site
+    , PersistMonadBackend (YesodDB site) ~ PersistEntityBackend val
+    , RenderMessage site message
+    , RedirectUrl site url
+    , PersistStore (YesodPersistBackend site (HandlerT site IO))
+    ) =>
+    message -> url -> Key val -> HandlerT site IO val
+getOrRedirectJH msg route key = do
+    (runDB $ get key) >>= maybe (redirectOrJson msg route) return
+
+getByOrRedirectJH ::
+    ( PersistEntity val
+    , YesodPersist site
+    , PersistMonadBackend (YesodDB site) ~ PersistEntityBackend val
+    , RenderMessage site message
+    , RedirectUrl site url
+    , PersistUnique (YesodPersistBackend site (HandlerT site IO))
+    ) =>
+    message -> url -> Unique val -> HandlerT site IO (Entity val)
+getByOrRedirectJH msg route u_key = do
+    (runDB $ getBy u_key) >>= maybe (redirectOrJson msg route) return
