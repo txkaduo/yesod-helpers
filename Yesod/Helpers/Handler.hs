@@ -69,7 +69,7 @@ generateFormPostHandler form_func fh = do
 generateFormPostHandlerJH ::
     ( Yesod site, RenderMessage site FormMessage ) =>
     MkForm site IO r
-    -> FormHandlerT site IO Html
+    -> ([Text] -> FormHandlerT site IO Html)
     -> HandlerT site IO TypedContent
 generateFormPostHandlerJH form_func show_page = do
     generateFormPostHandler form_func $ do
@@ -89,7 +89,8 @@ runFormPostHandler form_func fh = do
 runFormPostHandlerJH ::
     (RenderMessage site FormMessage, RenderMessage site msg, Yesod site) =>
     MkForm site IO r                 -- ^ form function
-    -> FormHandlerT site IO Html    -- ^ show html page function
+    -> ([Text] -> FormHandlerT site IO Html)
+                                    -- ^ show html page function
     -> (r -> HandlerT site IO (Either [msg] TypedContent))
                                     -- ^ function to handler success form result
     -> HandlerT site IO TypedContent
@@ -99,22 +100,22 @@ runFormPostHandlerJH form_func show_page h_ok = do
 
 
 jsonOrHtmlOutputFormX :: Yesod site =>
-    FormHandlerT site IO Html
-    -> [A.Pair]
+    ([Text] -> FormHandlerT site IO Html)
+    -> [Text]
     -> FormHandlerT site IO TypedContent
-jsonOrHtmlOutputFormX show_form other_data = do
+jsonOrHtmlOutputFormX show_form errs = do
     (formWidget, formEnctype) <- R.ask
-    let show_form' = R.runReaderT show_form (formWidget, formEnctype)
-    lift $ jsonOrHtmlOutputForm' show_form' formWidget other_data
+    let show_form' = R.runReaderT (show_form errs) (formWidget, formEnctype)
+    lift $ jsonOrHtmlOutputForm' show_form' formWidget [ "form_errors" .= errs ]
 
 jsonOrHtmlOutputFormHandleResult ::
     (Yesod site, RenderMessage site msg) =>
-    FormHandlerT site IO Html
+    ([Text] -> FormHandlerT site IO Html)
     -> (r -> HandlerT site IO (Either [msg] TypedContent))
     -> FormResult r
     -> FormHandlerT site IO TypedContent
 jsonOrHtmlOutputFormHandleResult show_page f result = do
-    let showf errs = jsonOrHtmlOutputFormX show_page [ "form_errors" .= errs ]
+    let showf errs = jsonOrHtmlOutputFormX show_page errs
         showf' msgs = lift getMessageRender >>= showf . flip map msgs
     case result of
         FormMissing         -> showf ([] :: [Text])
@@ -140,4 +141,3 @@ lookupReqAccept lst = do
                                 flip map lst $
                                     \(f, x) ->
                                         fmap (, x) $ findIndex f cts
-
