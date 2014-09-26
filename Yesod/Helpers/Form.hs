@@ -111,6 +111,26 @@ simpleEncodedField mk_msg = checkMMap f (T.pack . simpleEncode) textField
                 Right x -> return $ Right x
 
 
+entityField ::
+    ( RenderMessage site msg
+    , RenderMessage site FormMessage
+    , PersistMonadBackend (YesodDB site) ~ PersistEntityBackend val
+    , PersistStore (YesodDB site)
+    , PersistEntity val
+    , YesodPersist site
+    , PathPiece (Key val)
+    ) =>
+    msg
+    -> msg
+    -> Field (HandlerT site IO) (Entity val)
+entityField invalid_msg not_found_msg =
+    checkMMap f (toPathPiece . entityKey) strippedTextField
+    where
+        f t = runExceptT $ do
+            k <- maybe (throwE invalid_msg) return $ fromPathPiece t
+            (lift $ runDB $ get k) >>= maybe (throwE not_found_msg) (return . Entity k)
+
+
 -- | parse the content in textarea, into a list of values
 -- using methods of SimpleStringRep
 simpleEncodedListTextareaField ::
