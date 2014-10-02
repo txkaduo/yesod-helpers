@@ -72,6 +72,13 @@ simpleParseJson name = A.withText name $ \t -> do
                             ++ show err
         Right x -> return x
 
+-- | helper for implement 'simpleParser'
+makeSimpleParserByTable :: [(String, a)] -> CharParser a
+makeSimpleParserByTable lst =
+    choice $
+        flip map lst $ \(s, v) ->
+            try $ string s >> return v
+
 -- | generate instance somewhat like this
 -- a must be an instance of SimpleStringRep
 -- instance PersistField a where
