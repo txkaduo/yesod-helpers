@@ -22,6 +22,7 @@ library
                        Yesod.Helpers.Types
                        Yesod.Helpers.LoginUser
                        Yesod.Helpers.Parsec
+                       Yesod.Helpers.Attoparsec
                        Yesod.Helpers.I18N
                        Yesod.Helpers.Aeson
                        Yesod.Helpers.FuzzyDay
@@ -51,6 +52,7 @@ library
                      , mtl
                      , vector
                      , base16-bytestring
+                     , base64-bytestring
                      , utf8-string
                      , yaml
                      , yesod-core
