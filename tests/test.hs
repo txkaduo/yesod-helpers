@@ -5,7 +5,7 @@ module Main where
 import Prelude
 import System.Exit
 import Text.Parsec
-import Network                              (HostName, PortID(..))
+import Network                              (PortID(..))
 
 import Yesod.Helpers.Types
 import Yesod.Helpers.Parsec
@@ -63,7 +63,7 @@ test_parseFileOrNetworkPath = do
     let f = testAnyCharParser parseFileOrNetworkPath
     f "/path/to/some" $ Left "/path/to/some"
     f ":/path/to/some" $ Right ("localhost", UnixSocket "/path/to/some")
-    f "127.0.0.1:80" $ Right ("127.0.0.1", PortNumber (fromIntegral 80))
+    f "127.0.0.1:80" $ Right ("127.0.0.1", PortNumber (fromIntegral (80::Int)))
     f "127.0.0.1:www" $ Right ("127.0.0.1", Service "www")
 
 main :: IO ()
