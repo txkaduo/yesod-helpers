@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TupleSections #-}
 module Yesod.Helpers.Parsec where
 
 import Prelude
@@ -18,6 +19,7 @@ import Data.Monoid                          (mconcat)
 import Data.Functor.Identity                (Identity)
 import Data.Text                            (Text)
 import Data.ByteString                      (ByteString)
+import Network                              (HostName, PortID(..))
 import qualified Data.Aeson                 as A
 import qualified Data.Aeson.Types           as AT
 import qualified Data.Text                  as T
@@ -147,6 +149,33 @@ splitByParsec sep t = do
             Left err -> fail $ "failed to split text: " ++ show err
             Right x -> return $ map fromString x
 
+
+-- | mainly for config file: parse a string value into
+-- a file path or a network host and port
+-- example:
+-- /path/to/file
+--
+-- :/path/to/file       -- localhost and unix socket
+-- hostname:80          -- hostname and port number
+-- hostname:www         -- hostname and service name
+parseFileOrNetworkPath :: CharParser (Either FilePath (HostName, PortID))
+parseFileOrNetworkPath = try (fmap Right p_network) <|> fmap Left p_file
+    where
+        p_network = do
+            hostname <- manyTill hostname_char (char ':')
+            if null hostname
+                then do
+                    fmap (("localhost",) . UnixSocket) $ many1 anyChar
+                else do
+                    fmap (hostname,) $
+                        try (fmap (PortNumber . fromIntegral) natural)
+                            <|> fmap Service (many1 anyChar)
+
+        p_file = many1 anyChar
+
+        hostname_char = noneOf ":/"
+
+
 ----------------------------------------------------------------------
 
 sqlTypeFunD :: Exp -> Dec
@@ -179,7 +208,6 @@ parsePVByParser p pv =
                 Left err -> Left $ T.pack $
                                 "cannot parsed as persist value: " ++ show err
                 Right x -> Right x
-
 
 
 -- | like haskellStyle, but with different type signature

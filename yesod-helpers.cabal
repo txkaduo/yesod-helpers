@@ -61,6 +61,7 @@ library
                      , conduit-extra
                      , Glob
                      , safecopy
+                     , network
 
   -- hs-source-dirs:      
   default-language:    Haskell2010
@@ -76,6 +77,7 @@ test-suite test
     build-depends: base
                  , parsec3
                  , yesod-helpers
+                 , network
   default-language:    Haskell2010
 
 test-suite test2

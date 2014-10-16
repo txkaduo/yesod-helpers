@@ -1,8 +1,11 @@
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Main where
 
 import Prelude
 import System.Exit
 import Text.Parsec
+import Network                              (HostName, PortID(..))
 
 import Yesod.Helpers.Types
 import Yesod.Helpers.Parsec
@@ -24,6 +27,22 @@ tryVerConstraintParse s = do
             exitFailure
         Right x -> return x
 
+testAnyCharParser :: (Eq a, Show a) => CharParser a -> String -> a -> IO ()
+testAnyCharParser p s expected = do
+    case parse p "" s of
+        Left err -> do
+            putStrLn $ "failed to parse " ++ show s ++ ": " ++ show err
+            exitFailure
+        Right x -> do
+            if x == expected
+                then return ()
+                else do
+                    putStrLn $ "failed to parse " ++ show s ++ "to expected result"
+                    putStrLn $ "expected: " ++ show expected
+                    putStrLn $ "actual: " ++ show x
+                    exitFailure
+
+
 testVerConstraint :: IO ()
 testVerConstraint = do
     testVerValidate (VerWithOrder GT $ SimpleVersion [0, 9]) (SimpleVersion [1]) True
@@ -39,6 +58,15 @@ testVerConstraint = do
     tryVerConstraintParse "/= 1.*"
         >>= flip (flip testVerValidate $ SimpleVersion [1, 0, 1]) False
 
+test_parseFileOrNetworkPath :: IO ()
+test_parseFileOrNetworkPath = do
+    let f = testAnyCharParser parseFileOrNetworkPath
+    f "/path/to/some" $ Left "/path/to/some"
+    f ":/path/to/some" $ Right ("localhost", UnixSocket "/path/to/some")
+    f "127.0.0.1:80" $ Right ("127.0.0.1", PortNumber (fromIntegral 80))
+    f "127.0.0.1:www" $ Right ("127.0.0.1", Service "www")
+
 main :: IO ()
 main = do
     testVerConstraint
+    test_parseFileOrNetworkPath
