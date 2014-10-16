@@ -1,8 +1,10 @@
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE FlexibleContexts #-}
 module Yesod.Helpers.SafeCopy where
 
 import Data.SafeCopy
 import Yesod
+import Language.Haskell.TH
 import Control.Monad.State
 import Control.Monad.Reader
 
@@ -107,3 +109,40 @@ queryTimeTaggedI :: MonadReader r m =>
     (r -> TimeTagged a) -> Int -> UTCTime -> m (Maybe a)
 queryTimeTaggedI f ttl now =
     liftM (expiryCheckTimeTagged (fromIntegral ttl) now . f) ask
+
+
+--------------------------------------------------------------------------------
+
+deriveSafeCopyAnyId :: Name -> Q [Dec]
+deriveSafeCopyAnyId name = do
+    pcp <- [| putCopyAnyId |]
+    gcp <- [| getCopyAnyId |]
+    return
+        [ safeCopyInstanceD (ConT name)
+            [ FunD 'putCopy
+                [ Clause [] (NormalB pcp) []
+                ]
+            , FunD 'getCopy
+                [ Clause [] (NormalB gcp) []
+                ]
+            ]
+        ]
+
+deriveSafeCopyEntity :: Name -> Q [Dec]
+deriveSafeCopyEntity name = do
+    pcp <- [| putCopyAnyEntity |]
+    gcp <- [| getCopyAnyEntity |]
+    return
+        [ safeCopyInstanceD (ConT ''Entity `AppT` ConT name)
+            [ FunD 'putCopy
+                [ Clause [] (NormalB pcp) []
+                ]
+            , FunD 'getCopy
+                [ Clause [] (NormalB gcp) []
+                ]
+            ]
+        ]
+
+safeCopyInstanceD :: Type -> [Dec] -> Dec
+safeCopyInstanceD typ =
+    InstanceD [] (ConT ''SafeCopy `AppT` typ)
