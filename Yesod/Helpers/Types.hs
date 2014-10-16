@@ -8,10 +8,11 @@ import Data.Time                            (TimeZone, timeZoneOffsetString, par
 import System.Locale                        (defaultTimeLocale)
 import Control.Monad                        (mzero, void)
 import Data.List                            (intersperse)
+import Data.SafeCopy                        (SafeCopy, putCopy, getCopy)
 import qualified System.FilePath.Glob       as G
 import Text.Parsec
 import Yesod.Helpers.Parsec
-
+import Yesod.Helpers.SafeCopy
 
 
 newtype XTimeZone = XTimeZone { unXTimeZone :: TimeZone }
@@ -27,7 +28,6 @@ $(derivePersistFieldS "XTimeZone")
 $(deriveJsonS "XTimeZone")
 
 
-
 data SimpleVersion = SimpleVersion { unSimpleVersion :: [Int] }
                 deriving (Show, Read, Eq, Ord)
 
@@ -38,6 +38,10 @@ instance SimpleStringRep SimpleVersion where
     simpleEncode (SimpleVersion vs) = concat $ intersperse "." $ map show vs
 
     simpleParser = fmap (SimpleVersion . map fromIntegral) $ natural `sepBy1` string "."
+
+instance SafeCopy SimpleVersion where
+    getCopy = getCopySimpleEncoded
+    putCopy = putCopySimpleEncoded
 
 
 data VerConstraint = VerWithOrder Ordering SimpleVersion
@@ -50,6 +54,10 @@ data VerConstraint = VerWithOrder Ordering SimpleVersion
 
 $(derivePersistFieldS "VerConstraint")
 $(deriveJsonS "VerConstraint")
+
+instance SafeCopy VerConstraint where
+    getCopy = getCopySimpleEncoded
+    putCopy = putCopySimpleEncoded
 
 instance SimpleStringRep VerConstraint where
     simpleEncode (VerWithOrder GT ver) =
