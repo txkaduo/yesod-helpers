@@ -143,6 +143,21 @@ deriveSafeCopyEntity name = do
             ]
         ]
 
+deriveSafeCopySimpleEncoded :: Name -> Q [Dec]
+deriveSafeCopySimpleEncoded name = do
+    pcp <- [| putCopySimpleEncoded |]
+    gcp <- [| getCopySimpleEncoded |]
+    return
+        [ safeCopyInstanceD (ConT name)
+            [ FunD 'putCopy
+                [ Clause [] (NormalB pcp) []
+                ]
+            , FunD 'getCopy
+                [ Clause [] (NormalB gcp) []
+                ]
+            ]
+        ]
+
 safeCopyInstanceD :: Type -> [Dec] -> Dec
 safeCopyInstanceD typ =
     InstanceD [] (ConT ''SafeCopy `AppT` typ)
