@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE CPP #-}
 module Yesod.Helpers.Parsec where
 
 import Prelude
@@ -165,7 +166,11 @@ parseFileOrNetworkPath = try (fmap Right p_network) <|> fmap Left p_file
             hostname <- manyTill hostname_char (char ':')
             if null hostname
                 then do
+#if !defined(mingw32_HOST_OS) && !defined(cygwin32_HOST_OS) && !defined(_WIN32)
                     fmap (("localhost",) . UnixSocket) $ many1 anyChar
+#else
+                    fail $ "UnixSocket is not available on this platform"
+#endif
                 else do
                     fmap (hostname,) parsePortID
 
