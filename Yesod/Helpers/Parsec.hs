@@ -151,6 +151,23 @@ splitByParsec sep t = do
             Right x -> return $ map fromString x
 
 
+-- | parse time length in the following formats:
+-- 1'20" : 1 minute 20 seconds
+-- 1′20″ : 1 minute 20 seconds
+-- 1′20 : 1 minute 20 seconds
+-- 1'20 : 1 minute 20 seconds
+-- 300.05 : 300.05 seconds
+parseSeconds :: CharParser Double
+parseSeconds = try p_minute_and_sec <|> p_sec
+    where
+        p_sec = fmap (either fromIntegral id) naturalOrFloat
+        p_minute_and_sec = do
+            min <- natural
+            _ <- char '\'' <|> char '′'
+            sec <- p_sec
+            (void $ char '"' <|> char '″') <|> eof
+            return $ fromIntegral min * 60 + sec
+
 -- | mainly for config file: parse a string value into
 -- a file path or a network host and port
 -- example:
@@ -239,6 +256,10 @@ natural     = PT.natural lexer
 
 float :: Stream s Identity Char => ParsecT s u Identity Double
 float       = PT.float lexer
+
+naturalOrFloat :: Stream s Identity Char =>
+                    ParsecT s u Identity (Either Integer Double)
+naturalOrFloat = PT.naturalOrFloat lexer
 
 integer :: Stream s Identity Char => ParsecT s u Identity Integer
 integer       = PT.integer lexer

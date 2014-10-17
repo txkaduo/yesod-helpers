@@ -66,7 +66,19 @@ test_parseFileOrNetworkPath = do
     f "127.0.0.1:80" $ Right ("127.0.0.1", PortNumber (fromIntegral (80::Int)))
     f "127.0.0.1:www" $ Right ("127.0.0.1", Service "www")
 
+test_parseSeconds :: IO ()
+test_parseSeconds = do
+    let f = testAnyCharParser parseSeconds
+    f "10"          10
+    f "10.1"        10.1
+    f "1'20\""      80
+    f "1'20.1\""    80.1
+    f "1'20"        80
+    f "1′20″"       80
+    f "1′20"        80
+
 main :: IO ()
 main = do
     testVerConstraint
     test_parseFileOrNetworkPath
+    test_parseSeconds
