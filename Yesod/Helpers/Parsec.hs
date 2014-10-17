@@ -167,14 +167,15 @@ parseFileOrNetworkPath = try (fmap Right p_network) <|> fmap Left p_file
                 then do
                     fmap (("localhost",) . UnixSocket) $ many1 anyChar
                 else do
-                    fmap (hostname,) $
-                        try (fmap (PortNumber . fromIntegral) natural)
-                            <|> fmap Service (many1 anyChar)
+                    fmap (hostname,) parsePortID
 
         p_file = many1 anyChar
 
         hostname_char = noneOf ":/"
 
+parsePortID :: CharParser PortID
+parsePortID = try (fmap (PortNumber . fromIntegral) natural)
+                    <|> fmap Service (many1 anyChar)
 
 ----------------------------------------------------------------------
 
