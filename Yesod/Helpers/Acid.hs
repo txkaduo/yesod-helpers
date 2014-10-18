@@ -20,9 +20,10 @@ import Data.Typeable                        (Typeable)
 import Control.Monad.IO.Class               (MonadIO, liftIO)
 import Control.Concurrent                   (forkIO)
 import Control.Applicative                  ((<$>), (<*>))
-import Control.Monad                        (void)
+import Control.Monad                        (void, forever)
 import Control.Monad.Logger                 (MonadLogger, logError)
 import Control.Exception                    (try)
+import Control.Concurrent                   (threadDelay)
 import Control.Arrow                        ((&&&))
 import Data.Monoid                          ((<>))
 import Data.String                          (fromString)
@@ -153,6 +154,13 @@ acidServeOn auth port host acid = do
     socket <- bindPortTCP port host
     acidServer' auth socket acid
 
+
+acidFlushRepeatly ::
+    Int -> AcidState st -> IO ()
+acidFlushRepeatly ms acid = forever $ do
+    threadDelay ms
+    createCheckpoint acid
+
 acidServerByConfig :: (SafeCopy st) =>
     AcidStateConfig
     -> Maybe ((CommChannel -> IO Bool) -> AcidState st -> IO ())
@@ -162,6 +170,17 @@ acidServerByConfig config =
     where
         host = acidConfigServeHost config
 
+-- | a network server of acid or repeatly create check point
+-- use this as a entry point of background thread
+acidServeOrFlushByConfig :: (SafeCopy st) =>
+    (CommChannel -> IO Bool)
+    -> Int              -- ^ delay time in microseconds
+    -> AcidStateConfig
+    -> AcidState st
+    -> IO ()
+        -- ^ return the IO action if server should be started
+acidServeOrFlushByConfig auth ms config acid =
+    maybe (acidFlushRepeatly ms) ($ auth) (acidServerByConfig config) $ acid
 
 -- | open acid state according to AcidStateConfig
 acidOpenByConfig ::
