@@ -1,8 +1,10 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 module Yesod.Helpers.SafeCopy where
 
 import Data.SafeCopy
+import Data.Typeable                        (Typeable)
 import Yesod
 import Language.Haskell.TH
 import Control.Monad.State
@@ -67,33 +69,50 @@ getCopyAnyEntity :: (SafeCopy (Key val), SafeCopy val) => Contained (Get (Entity
 getCopyAnyEntity = contain $ fmap (uncurry Entity) safeGet
 
 
+class TimedDefault a where
+    defTimed :: UTCTime -> a
+
 data TimeTagged a = TimeTagged {
-                        ttTime      :: !UTCTime
-                        , unTimeTag :: !a
+                        _ttTime      :: !UTCTime
+                        , _unTimeTag :: !a
                     }
+                    deriving (Typeable)
+
+instance Default a => TimedDefault (TimeTagged a) where
+    defTimed now = TimeTagged now def
+
+initTimedDefault :: TimedDefault a => IO a
+initTimedDefault = do
+    now <- getCurrentTime
+    return $ defTimed now
+
+-- provide some lens
+-- ttTime :: Lens' (TimeTagged a) UTCTime
+ttTime :: Functor f => (UTCTime -> f UTCTime) -> TimeTagged a -> f (TimeTagged a)
+ttTime f (TimeTagged t x) = fmap (\t' -> TimeTagged t' x) (f t)
+
+-- unTimeTag :: Lens (TimeTagged a) (TimeTagged b) a b
+unTimeTag :: Functor f => (a -> f b) -> TimeTagged a -> f (TimeTagged b)
+unTimeTag f (TimeTagged t x) = fmap (TimeTagged t) (f x)
 
 instance SafeCopy a => SafeCopy (TimeTagged a) where
     putCopy x = contain $ do
-                safePut $ ttTime x
-                safePut $ unTimeTag x
+                safePut $ _ttTime x
+                safePut $ _unTimeTag x
 
     getCopy = contain $ TimeTagged <$> safeGet <*> safeGet
 
 expiryCheckTimeTagged :: NominalDiffTime -> UTCTime -> TimeTagged a -> (Maybe a)
 expiryCheckTimeTagged ttl now tt =
-    let t = addUTCTime ttl (ttTime tt)
+    let t = addUTCTime ttl (_ttTime tt)
     in if t >= now
-        then Just $ unTimeTag tt
+        then Just $ _unTimeTag tt
         else Nothing
 
 -- | like expiryCheckTimeTagged, but specify TTL in Int
 expiryCheckTimeTaggedI :: Int -> UTCTime -> TimeTagged a -> (Maybe a)
 expiryCheckTimeTaggedI ttl = expiryCheckTimeTagged (fromIntegral ttl)
 
-initTimeTaggedDef :: Default a => IO (TimeTagged a)
-initTimeTaggedDef = do
-    now <- getCurrentTime
-    return $ TimeTagged now def
 
 
 updateTimeTagged :: MonadState s m => (TimeTagged a -> s -> s) -> UTCTime -> a -> m ()
