@@ -20,7 +20,7 @@ import Data.Typeable                        (Typeable)
 import Control.Monad.IO.Class               (MonadIO, liftIO)
 import Control.Concurrent                   (forkIO)
 import Control.Applicative                  ((<$>), (<*>))
-import Control.Monad                        (void, forever)
+import Control.Monad                        (void, forever, when)
 import Control.Monad.Logger                 (MonadLogger, logError)
 import Control.Exception                    (try)
 import Control.Concurrent                   (threadDelay)
@@ -193,3 +193,19 @@ acidOpenByConfig s config ms = do
     case acidConfigConnect config of
         Right (host, port)  -> openRemoteStateTL ms host port
         Left fp             -> liftIO $ fmap Just $ openLocalStateFrom fp s
+
+
+checkInitAcid ::
+    ( MonadIO m
+    , QueryEvent qevent, UpdateEvent uevent
+    , EventResult qevent ~ Bool
+    , st ~ EventState qevent
+    , st ~ EventState uevent
+    ) =>
+    AcidState st -> qevent -> (t -> uevent) -> m t -> m ()
+checkInitAcid acid q u f = do
+    b <- liftIO $ query acid q
+    when b $ do
+        r <- f
+        _ <- liftIO $ update acid $ u r
+        return ()
