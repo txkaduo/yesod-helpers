@@ -21,7 +21,7 @@ import Data.Default                         (Default, def)
 import Yesod.Helpers.Parsec
 
 newtype SafeCopyId val = SafeCopyId { unSafeCopyId :: Key val }
-                        deriving (Eq, Ord, Show)
+                        deriving (Eq, Ord, Show, Typeable)
 
 instance SafeCopy (SafeCopyId val) where
     putCopy (SafeCopyId k) = contain $ do
@@ -86,6 +86,8 @@ initTimedDefault = do
     now <- getCurrentTime
     return $ defTimed now
 
+type MTT a = Maybe (TimeTagged a)
+
 -- provide some lens
 -- ttTime :: Lens' (TimeTagged a) UTCTime
 ttTime :: Functor f => (UTCTime -> f UTCTime) -> TimeTagged a -> f (TimeTagged a)
@@ -126,8 +128,16 @@ queryTimeTagged f ttl now =
 -- | like queryTimeTagged, but specify TTL in Int
 queryTimeTaggedI :: MonadReader r m =>
     (r -> TimeTagged a) -> Int -> UTCTime -> m (Maybe a)
-queryTimeTaggedI f ttl now =
-    liftM (expiryCheckTimeTagged (fromIntegral ttl) now . f) ask
+queryTimeTaggedI f ttl = queryTimeTagged f (fromIntegral ttl)
+
+queryTimeTaggedMaybe :: MonadReader r m =>
+    (r -> MTT a) -> NominalDiffTime -> UTCTime -> m (Maybe a)
+queryTimeTaggedMaybe f ttl now =
+    liftM (join . (fmap $ expiryCheckTimeTagged ttl now) . f) ask
+
+queryTimeTaggedMaybeI :: MonadReader r m =>
+    (r -> MTT a) -> Int -> UTCTime -> m (Maybe a)
+queryTimeTaggedMaybeI f ttl = queryTimeTaggedMaybe f (fromIntegral ttl)
 
 
 --------------------------------------------------------------------------------
