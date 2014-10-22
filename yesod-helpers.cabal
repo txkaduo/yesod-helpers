@@ -37,7 +37,7 @@ library
   build-depends:       base >=4.7 && <4.8
                      , wai
                      , yesod
-                     , persistent
+                     , persistent	== 1.*
                      , text
                      , time
                      , bytestring
