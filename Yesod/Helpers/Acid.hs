@@ -161,26 +161,6 @@ acidFlushRepeatly ms acid = forever $ do
     threadDelay ms
     createCheckpoint acid
 
-acidServerByConfig :: (SafeCopy st) =>
-    AcidStateConfig
-    -> Maybe ((CommChannel -> IO Bool) -> AcidState st -> IO ())
-        -- ^ return the IO action if server should be started
-acidServerByConfig config =
-    fmap (\x auth acid-> acidServeOn auth x host acid) $ acidConfigPort config
-    where
-        host = acidConfigServeHost config
-
--- | a network server of acid or repeatly create check point
--- use this as a entry point of background thread
-acidServeOrFlushByConfig :: (SafeCopy st) =>
-    (CommChannel -> IO Bool)
-    -> Int              -- ^ delay time in microseconds
-    -> AcidStateConfig
-    -> AcidState st
-    -> IO ()
-        -- ^ return the IO action if server should be started
-acidServeOrFlushByConfig auth ms config acid =
-    maybe (acidFlushRepeatly ms) ($ auth) (acidServerByConfig config) $ acid
 
 -- | open acid state according to AcidStateConfig
 acidOpenByConfig ::
