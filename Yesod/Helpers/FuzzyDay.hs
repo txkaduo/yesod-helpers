@@ -6,6 +6,7 @@ import Prelude
 import Data.Time                            (toGregorian, fromGregorian, Day, diffDays)
 import Data.Monoid                          (mconcat)
 import Yesod.Helpers.Parsec
+import Yesod.Helpers.SafeCopy
 import Text.Parsec
 
 
@@ -16,6 +17,8 @@ data FuzzyDay = FuzzyDayY Int
 
 $(derivePersistFieldS "FuzzyDay")
 $(deriveJsonS "FuzzyDay")
+
+$(deriveSafeCopySimpleEncoded ''FuzzyDay)
 
 instance SimpleStringRep FuzzyDay where
     simpleEncode (FuzzyDayY y)          = show y
