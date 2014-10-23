@@ -79,6 +79,27 @@ instance
     where
     acidCacheArmed (q, u) func acid = acidCached q u func acid
 
+instance
+    ( MonadIO m
+    , QueryEvent eventq, UpdateEvent eventu
+    , EventResult eventq ~ Maybe r
+    , st ~ EventState eventq
+    , st ~ EventState eventu
+    ) =>
+    AcidCacheArm st (m (Maybe r)) (eventq, r -> eventu)
+    where
+    acidCacheArmed (q, u) func acid = do
+        mr <- liftIO $ query acid q
+        case mr of
+            Just x  -> return $ Just x
+            Nothing -> do
+                new_mr <- func
+                case new_mr of
+                    Nothing -> return Nothing
+                    Just new_r -> do
+                        _ <- liftIO $ forkIO $ void $ update acid (u new_r)
+                        return $ Just new_r
+
 instance AcidCacheArm st f a =>
     AcidCacheArm st (a1 -> f) (a1 -> a)
     where
