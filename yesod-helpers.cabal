@@ -81,9 +81,19 @@ test-suite test
     ghc-options:       -Wall
 
     build-depends: base
-                 , parsec3
-                 , yesod-helpers
                  , network
+                 , bytestring
+                 , base16-bytestring
+                 , parsec3
+                 , aeson
+                 , text
+                 , persistent
+                 , safecopy
+                 , persistent
+                 , cereal
+                 , transformers
+                 , yesod-helpers
+
   default-language:    Haskell2010
 
 test-suite test2

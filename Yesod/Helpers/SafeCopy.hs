@@ -5,18 +5,19 @@ module Yesod.Helpers.SafeCopy where
 
 import Data.SafeCopy
 import Data.Typeable                        (Typeable)
-import Yesod
+import Yesod hiding (get)
 import Language.Haskell.TH
-import Control.Monad.State
+import Control.Monad.State hiding (get, put)
 import Control.Monad.Reader
 
-import Control.Applicative                  ((<$>), (<|>), (<*>))
-import Data.Serialize                       (Get, Put)
+import Control.Applicative                  ((<$>), (<*>))
+import Data.Serialize                       (Get, Put, get, put)
 import Text.Parsec                          (parse)
 import Data.Time                            ( UTCTime, NominalDiffTime
                                             , addUTCTime, getCurrentTime
                                             )
 import Data.Default                         (Default, def)
+import Data.Word                            (Word8)
 
 import Yesod.Helpers.Parsec
 
@@ -24,37 +25,43 @@ newtype SafeCopyId val = SafeCopyId { unSafeCopyId :: Key val }
                         deriving (Eq, Ord, Show, Typeable)
 
 instance SafeCopy (SafeCopyId val) where
-    putCopy (SafeCopyId k) = contain $ do
-            case unKey k of
-                PersistInt64 x      -> safePut x
-                PersistObjectId x   -> safePut x
-                PersistByteString x -> safePut x
-                PersistDbSpecific x -> safePut x
-                _                   -> error "unexpected PersistValue in Key"
+    putCopy (SafeCopyId k) = contain $ putCopySafeCopyInside k
 
-    getCopy = contain $ getCopyInside
+    getCopy = contain $ SafeCopyId <$> getCopySafeCopyInside
 
+putCopySafeCopyInside :: KeyBackend b val -> Put
+putCopySafeCopyInside k =
+    case unKey k of
+        PersistInt64 x      -> put (1 :: Word8) >> put x
+        PersistObjectId x   -> put (2 :: Word8) >> put x
+        PersistByteString x -> put (3 :: Word8) >> put x
+        PersistDbSpecific x -> put (4 :: Word8) >> put x
+        _                   -> error "unexpected PersistValue in Key"
 
-getCopyInside :: Get (SafeCopyId val)
-getCopyInside = SafeCopyId . Key <$> get_pv
+getCopySafeCopyInside :: Get (KeyBackend b val)
+getCopySafeCopyInside = Key <$> get_pv
     where
-        get_pv = (PersistInt64 <$> safeGet)
-                <|> (PersistObjectId <$> safeGet)
-                <|> (PersistDbSpecific <$> safeGet)
-                <|> (PersistByteString <$> safeGet)
+        get_pv = do
+            x <- get
+            case (x :: Word8) of
+                1 -> PersistInt64 <$> get
+                2 -> PersistObjectId <$> get
+                3 -> PersistByteString <$> get
+                4 -> PersistDbSpecific <$> get
+                _ -> fail $ "unexpected/unknown PersistValue type tag: " ++ show x
 
-putCopyAnyId :: Key val -> Contained Put
-putCopyAnyId = putCopy . SafeCopyId
+putCopyAnyId :: KeyBackend b val -> Contained Put
+putCopyAnyId = contain . putCopySafeCopyInside
 
-getCopyAnyId :: Contained (Get (Key val))
-getCopyAnyId = contain $ fmap unSafeCopyId getCopyInside
+getCopyAnyId :: Contained (Get (KeyBackend b val))
+getCopyAnyId = contain $ getCopySafeCopyInside
 
 putCopySimpleEncoded :: SimpleStringRep a => a -> Contained Put
-putCopySimpleEncoded = putCopy . simpleEncode
+putCopySimpleEncoded = contain . put . simpleEncode
 
 getCopySimpleEncodedInside :: SimpleStringRep a => Get a
 getCopySimpleEncodedInside = do
-    s <- safeGet
+    s <- get
     case parse simpleParser "" (s :: String) of
         Left _ -> mzero
         Right x -> return x
@@ -63,7 +70,7 @@ getCopySimpleEncoded :: SimpleStringRep a => Contained (Get a)
 getCopySimpleEncoded = contain getCopySimpleEncodedInside
 
 putCopyAnyEntity :: (SafeCopy (Key val), SafeCopy val) => Entity val -> Contained Put
-putCopyAnyEntity x = putCopy (entityKey x, entityVal x)
+putCopyAnyEntity x = contain $ safePut (entityKey x, entityVal x)
 
 getCopyAnyEntity :: (SafeCopy (Key val), SafeCopy val) => Contained (Get (Entity val))
 getCopyAnyEntity = contain $ fmap (uncurry Entity) safeGet
