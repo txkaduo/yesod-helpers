@@ -27,6 +27,10 @@ instance SimpleStringRep XTimeZone where
 $(derivePersistFieldS "XTimeZone")
 $(deriveJsonS "XTimeZone")
 
+instance SafeCopy XTimeZone where
+    getCopy = getCopySimpleEncoded
+    putCopy = putCopySimpleEncoded
+
 
 data SimpleVersion = SimpleVersion { unSimpleVersion :: [Int] }
                 deriving (Show, Read, Eq, Ord)
