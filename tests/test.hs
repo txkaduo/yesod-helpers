@@ -89,6 +89,8 @@ test_parseSeconds = do
     f "1'20"        80
     f "1′20″"       80
     f "1′20"        80
+    f "01:20"       80
+    f "00:01:20"    80
 
 testAnySafeCopy :: (SafeCopy a, Eq a, Show a) => a -> IO ()
 testAnySafeCopy x = do

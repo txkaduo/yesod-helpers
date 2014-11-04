@@ -156,9 +156,14 @@ splitByParsec sep t = do
 -- 1′20″ : 1 minute 20 seconds
 -- 1′20 : 1 minute 20 seconds
 -- 1'20 : 1 minute 20 seconds
+-- 00:01:20: 1 minute 20 seconds
+-- 01:20: 1 minute 20 seconds
 -- 300.05 : 300.05 seconds
 parseSeconds :: CharParser Double
-parseSeconds = try p_minute_and_sec <|> p_sec
+parseSeconds = try p_minute_and_sec
+                <|> try p_hour_minute_and_sec2
+                <|> try p_minute_and_sec2
+                <|> p_sec
     where
         p_sec = fmap (either fromIntegral id) naturalOrFloat
         p_minute_and_sec = do
@@ -167,6 +172,22 @@ parseSeconds = try p_minute_and_sec <|> p_sec
             sec <- p_sec
             (void $ char '"' <|> char '″') <|> eof
             return $ fromIntegral min * 60 + sec
+
+        p_minute_and_sec2 = do
+            min <- natural
+            _ <- char ':'
+            sec <- p_sec
+            (void $ char ':') <|> eof
+            return $ fromIntegral min * 60 + sec
+
+        p_hour_minute_and_sec2 = do
+            hour <- natural
+            _ <- char ':'
+            min <- natural
+            _ <- char ':'
+            sec <- p_sec
+            (void $ char ':') <|> eof
+            return $ fromIntegral hour * 3600 + fromIntegral min * 60 + sec
 
 -- | mainly for config file: parse a string value into
 -- a file path or a network host and port
