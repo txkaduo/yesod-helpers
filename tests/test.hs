@@ -92,6 +92,12 @@ test_parseSeconds = do
     f "01:20"       80
     f "00:01:20"    80
 
+test_parseIntGrouping :: IO ()
+test_parseIntGrouping = do
+    let f = testAnyCharParser (parseIntWithGrouping ',')
+    f "100,123"     (100123 :: Int)
+    f "2,100,123"   (2100123 :: Int)
+
 testAnySafeCopy :: (SafeCopy a, Eq a, Show a) => a -> IO ()
 testAnySafeCopy x = do
     let bs = runPut $ safePut x
@@ -126,7 +132,8 @@ testSafeCopy = do
 
 main :: IO ()
 main = do
-    -- testVerConstraint
-    -- test_parseFileOrNetworkPath
-    -- test_parseSeconds
+    testVerConstraint
+    test_parseFileOrNetworkPath
+    test_parseSeconds
+    test_parseIntGrouping
     testSafeCopy

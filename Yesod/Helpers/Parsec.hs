@@ -20,6 +20,7 @@ import Data.Monoid                          (mconcat)
 import Data.Functor.Identity                (Identity)
 import Data.Text                            (Text)
 import Data.ByteString                      (ByteString)
+import Data.Char                            (isDigit)
 import Network                              (HostName, PortID(..))
 import qualified Data.Aeson                 as A
 import qualified Data.Aeson.Types           as AT
@@ -188,6 +189,17 @@ parseSeconds = try p_minute_and_sec
             sec <- p_sec
             (void $ char ':') <|> eof
             return $ fromIntegral hour * 3600 + fromIntegral min * 60 + sec
+
+-- | remove digit grouping marks, then parse the string as int
+parseIntWithGrouping :: Integral a => Char -> CharParser a
+parseIntWithGrouping sep = do
+    s <- many1 (satisfy allowed_char)
+    let s' = filter (/= sep) s
+    case parse integer "" s' of
+        Left err    -> fail $ show err
+        Right x     -> return $ fromIntegral x
+    where
+        allowed_char c = isDigit c || c == '-' || c == sep
 
 -- | mainly for config file: parse a string value into
 -- a file path or a network host and port
