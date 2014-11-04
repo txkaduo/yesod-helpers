@@ -92,6 +92,7 @@ test_parseSeconds = do
 
 testAnySafeCopy :: (SafeCopy a, Eq a, Show a) => a -> IO ()
 testAnySafeCopy x = do
+    let bs = runPut $ safePut x
     putStrLn $ C8.unpack $ B16.encode bs
     putStrLn $ show x
     case runGet safeGet bs of
