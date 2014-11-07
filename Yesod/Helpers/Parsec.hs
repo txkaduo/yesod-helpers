@@ -168,27 +168,27 @@ parseSeconds = try p_minute_and_sec
     where
         p_sec = fmap (either fromIntegral id) naturalOrFloat
         p_minute_and_sec = do
-            min <- natural
+            minute <- natural
             _ <- char '\'' <|> char '′'
             sec <- p_sec
             (void $ char '"' <|> char '″') <|> eof
-            return $ fromIntegral min * 60 + sec
+            return $ fromIntegral minute * 60 + sec
 
         p_minute_and_sec2 = do
-            min <- natural
+            minute <- natural
             _ <- char ':'
             sec <- p_sec
             (void $ char ':') <|> eof
-            return $ fromIntegral min * 60 + sec
+            return $ fromIntegral minute * 60 + sec
 
         p_hour_minute_and_sec2 = do
             hour <- natural
             _ <- char ':'
-            min <- natural
+            minute <- natural
             _ <- char ':'
             sec <- p_sec
             (void $ char ':') <|> eof
-            return $ fromIntegral hour * 3600 + fromIntegral min * 60 + sec
+            return $ fromIntegral hour * 3600 + fromIntegral minute * 60 + sec
 
 -- | remove digit grouping marks, then parse the string as int
 parseIntWithGrouping :: Integral a => Char -> CharParser a
