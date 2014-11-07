@@ -1,4 +1,5 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Yesod.Helpers.Persist where
 
 import Prelude
@@ -8,6 +9,12 @@ import Data.Maybe                           (catMaybes)
 import Database.Persist.Sql                 (transactionUndo, MonadSqlPersist)
 import Control.Monad.Trans.Except           (ExceptT, catchE, throwE)
 import Data.List                            ((\\))
+
+import Control.Monad.State.Strict           (StateT)
+import qualified Control.Monad.State.Strict as S
+
+import Data.Map.Strict                      (Map)
+import qualified Data.Map.Strict            as Map
 
 -- | select current records, replace them with the supplied new list.
 -- Try hard to retain old records that are the same as new ones.
@@ -110,3 +117,44 @@ deleteWhereExcept filters keeps = do
     let to_del = ks \\ keeps
     mapM_ delete to_del
     return to_del
+
+
+type CachedInMap val m = StateT (Map (Key val) val) m
+
+-- | when we don't should that might reselect the same record multiple times,
+-- use this function to reduce DB access.
+cget ::
+    ( PersistStore m, PersistEntity val
+    , PersistEntityBackend val ~ PersistMonadBackend m
+    , Ord (Key val)
+    ) =>
+    Key val
+    -> CachedInMap val m (Maybe val)
+cget k = do
+    mv <- S.gets $ Map.lookup k
+    case mv of
+        Just v -> return $ Just v
+        Nothing -> do
+            mv2 <- get k
+            maybe (return ()) (S.modify . Map.insert k) mv2
+            return mv2
+
+cselectList ::
+    ( PersistQuery m, PersistEntity val
+    , PersistEntityBackend val ~ PersistMonadBackend m
+    , Ord (Key val)
+    ) =>
+    [Filter val] -> [SelectOpt val]
+    -> CachedInMap val m [Entity val]
+cselectList f o = do
+    records <- selectList f o
+    mapM_ cput records
+    return records
+
+cput ::
+    ( PersistStore m, PersistEntity val
+    , PersistEntityBackend val ~ PersistMonadBackend m
+    , Ord (Key val)
+    ) =>
+    Entity val -> CachedInMap val m ()
+cput (Entity k v) = S.modify $ Map.insert k v
