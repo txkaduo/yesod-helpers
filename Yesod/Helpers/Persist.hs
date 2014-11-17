@@ -8,6 +8,7 @@ import Yesod
 import Data.Maybe                           (catMaybes)
 import Database.Persist.Sql                 (transactionUndo, MonadSqlPersist)
 import Control.Monad.Trans.Except           (ExceptT, catchE, throwE)
+import Control.Monad                        (forM)
 import Data.List                            ((\\))
 
 import Control.Monad.State.Strict           (StateT)
@@ -21,6 +22,7 @@ import qualified Data.Map.Strict            as Map
 insertOrUpdateWithList ::
     (PersistEntity val, Eq val
     , PersistEntityBackend val ~ PersistMonadBackend m
+    , PersistUnique m
     , PersistQuery m
     ) =>
     [Filter val]
@@ -37,7 +39,11 @@ insertOrUpdateWithList fts new_ones = do
                             if v `elem` map entityVal old_entities
                                 then Nothing
                                 else Just v
-    new_keys <- mapM insert to_be_inserted
+    new_keys <- forM to_be_inserted $ \v -> do
+                    insertBy v
+                        >>= either
+                                (\(Entity k _) -> replace k v >> return k)
+                                return
     return $ (new_keys, to_be_deleted)
 
 
@@ -45,6 +51,7 @@ insertOrUpdateWithList fts new_ones = do
 replaceWithList ::
     (PersistEntity val, Eq val
     , PersistEntityBackend val ~ PersistMonadBackend m
+    , PersistUnique m
     , PersistQuery m
     ) =>
     [Filter val]
