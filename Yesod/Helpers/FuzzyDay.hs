@@ -1,11 +1,16 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Yesod.Helpers.FuzzyDay where
 
 import Prelude
 
+import qualified Data.Aeson                 as A
+import Data.Aeson.Types                     (Parser, typeMismatch)
+import Data.Scientific                      (floatingOrInteger)
 import Data.Time                            (toGregorian, fromGregorian, Day, diffDays)
 import Data.Monoid                          (mconcat)
 import Yesod.Helpers.Parsec
+import Yesod.Helpers.Aeson                  (parseTextByParsec)
 import Yesod.Helpers.SafeCopy
 import Text.Parsec
 
@@ -46,6 +51,13 @@ instance SimpleStringRep FuzzyDay where
                 y <- natural
                 return $ FuzzyDayY (fromIntegral y)
 
+parseFuzzyDayFromJson :: A.Value -> Parser FuzzyDay
+parseFuzzyDayFromJson (A.String t)   = parseTextByParsec simpleParser t
+parseFuzzyDayFromJson (A.Number num) = do
+    case floatingOrInteger num of
+        Left ( _ :: Double) -> fail "expecting a integer, but got a floating"
+        Right x             -> return $ FuzzyDayY x
+parseFuzzyDayFromJson v              = typeMismatch "integer" v
 
 toFuzzyDay :: Day -> FuzzyDay
 toFuzzyDay x = FuzzyDayYMD (fromIntegral y) m d
