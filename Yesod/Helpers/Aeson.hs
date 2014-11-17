@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Yesod.Helpers.Aeson where
 
 import Prelude
@@ -8,7 +9,6 @@ import qualified Data.Aeson             as A
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString        as B
 import qualified Text.Parsec            as PC
-import qualified Control.Monad.Trans.Reader as R
 import qualified Control.Monad.Trans.State as S
 import Control.Monad.Trans              (lift)
 import Data.List                        (intersperse)
@@ -22,6 +22,7 @@ import Data.ByteString                  (ByteString)
 import Text.Parsec                      (ParsecT)
 import Data.Functor.Identity            (Identity)
 import Data.Maybe                       (fromMaybe)
+import Data.Scientific                  (floatingOrInteger)
 
 import Yesod.Helpers.Parsec             (splitByParsec)
 
@@ -234,6 +235,18 @@ parseTextByParsec p t =
             Left err -> fail $ show err
             Right x -> return x
 
+
+-- | Parse an integer or Text, into a integer
+parseIntWithTextparsec :: Integral a =>
+    ParsecT Text () Identity a
+    -> Value
+    -> Parser a
+parseIntWithTextparsec p (A.String t)   = parseTextByParsec p t
+parseIntWithTextparsec _ (A.Number num) = do
+    case floatingOrInteger num of
+        Left ( _ :: Double) -> fail "expecting a integer, but got a floating"
+        Right x            -> return x
+parseIntWithTextparsec _ v              = typeMismatch "integer" v
 
 -- | like parseWordList, but somewhat more general
 parseListByParsec ::
