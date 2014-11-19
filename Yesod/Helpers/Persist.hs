@@ -6,9 +6,11 @@ import Prelude
 import Yesod
 
 import Data.Maybe                           (catMaybes)
-import Database.Persist.Sql                 (transactionUndo, MonadSqlPersist)
+import Database.Persist.Sql                 (transactionUndo, MonadSqlPersist
+                                            , Connection, connEscapeName)
 import Control.Monad.Trans.Except           (ExceptT, catchE, throwE)
 import Control.Monad                        (forM)
+import Data.Text                            (Text)
 import Data.List                            ((\\))
 
 import Control.Monad.State.Strict           (StateT)
@@ -165,3 +167,13 @@ cput ::
     ) =>
     Entity val -> CachedInMap val m ()
 cput (Entity k v) = S.modify $ Map.insert k v
+
+
+getFieldDBName :: PersistEntity a => EntityField a typ -> DBName
+getFieldDBName = fieldDB . persistFieldDef
+
+escFieldDBName :: PersistEntity a => Connection -> EntityField a typ -> Text
+escFieldDBName conn = connEscapeName conn . getFieldDBName
+
+escEntityDBName :: (PersistEntity a, Monad m) => Connection -> m a -> Text
+escEntityDBName conn = connEscapeName conn . entityDB . entityDef
