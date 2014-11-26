@@ -12,6 +12,7 @@ import Control.Monad.Trans.Except           (ExceptT, catchE, throwE)
 import Control.Monad                        (forM)
 import Data.Text                            (Text)
 import Data.List                            ((\\))
+import Data.Conduit                         (Sink, await)
 
 import Control.Monad.State.Strict           (StateT)
 import qualified Control.Monad.State.Strict as S
@@ -177,3 +178,13 @@ escFieldDBName conn = connEscapeName conn . getFieldDBName
 
 escEntityDBName :: (PersistEntity a, Monad m) => Connection -> m a -> Text
 escEntityDBName conn = connEscapeName conn . entityDB . entityDef
+
+
+sinkEntityAsMap :: Monad m => Sink (Entity a) m (Map (Key a) a)
+sinkEntityAsMap = go Map.empty
+    where
+        go s = do
+            mx <- await
+            case mx of
+                Nothing             -> return s
+                Just (Entity k v)   -> go $ Map.insert k v s
