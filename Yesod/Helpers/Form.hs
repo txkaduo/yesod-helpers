@@ -131,6 +131,26 @@ entityField invalid_msg not_found_msg =
             (lift $ runDB $ get k) >>= maybe (throwE not_found_msg) (return . Entity k)
 
 
+entityUniqueKeyField ::
+    ( RenderMessage site msg
+    , RenderMessage site FormMessage
+    , PersistMonadBackend (YesodDB site) ~ PersistEntityBackend val
+    , PersistUnique (YesodDB site)
+    , PersistEntity val
+    , YesodPersist site
+    , PathPiece (Key val)
+    ) =>
+    (Text -> msg)
+    -> (Text -> Unique val)
+    -> Field (HandlerT site IO) (Entity val)
+entityUniqueKeyField not_found_msg mk_unique =
+    checkMMap f (toPathPiece . entityKey) strippedTextField
+    where
+        f t = runExceptT $ do
+                (lift $ runDB $ getBy $ mk_unique t)
+                    >>= maybe (throwE $ not_found_msg t) return
+
+
 -- | parse the content in textarea, into a list of values
 -- using methods of SimpleStringRep
 simpleEncodedListTextareaField ::
