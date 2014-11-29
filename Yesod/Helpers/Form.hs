@@ -24,6 +24,7 @@ import qualified Data.Aeson.Types           as A
 import qualified Control.Monad.Trans.State.Strict as SS
 import Control.Monad.RWS.Lazy               (RWST)
 import Text.Blaze                           (Markup)
+import Data.Conduit.Binary                  (sourceLbs)
 
 import Data.Text                            (Text)
 import Data.Maybe                           (catMaybes)
@@ -311,12 +312,6 @@ ifFormResult ::
 ifFormResult = caseFormResult False
 
 
-data SunkFileInfo = SunkFileInfo {
-                        sfiFileInfo :: FileInfo
-                        , sfiContent :: LB.ByteString
-                    }
-
-
 -- | modify fileField to a size-limited one.
 -- result type has been changed to SunkFileInfo.
 limitedSizeFileField ::
@@ -326,15 +321,18 @@ limitedSizeFileField ::
     ) =>
     (Int -> msg)        -- ^ make a message when file size exceeds limit
     -> Maybe Int        -- ^ the file size limit
-    -> Field m SunkFileInfo
-limitedSizeFileField mk_msg m_max_size = checkMMap f sfiFileInfo fileField
+    -> Field m FileInfo
+limitedSizeFileField mk_msg m_max_size = checkM f fileField
     where
         f fi = runExceptT $ do
-            liftM (SunkFileInfo fi) $
-                case m_max_size of
-                    Nothing         -> lift $ fiReadUnlimited fi
-                    Just max_size   -> (lift $ fiReadLimited max_size fi)
-                                        >>= maybe (throwE $ mk_msg max_size) return
+                bs <- case m_max_size of
+                        Nothing         -> lift $ fiReadUnlimited fi
+                        Just max_size   -> (lift $ fiReadLimited max_size fi)
+                                            >>= maybe
+                                                (throwE $ mk_msg max_size)
+                                                return
+                return $ fi { fileSourceRaw = sourceLbs bs }
+
 
 -- | convert a FormResult containing a Either into a vanilla one
 -- i.e. convert a Left value into FormFailure.
