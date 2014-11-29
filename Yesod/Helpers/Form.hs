@@ -4,10 +4,18 @@
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE LiberalTypeSynonyms #-}
+{-# LANGUAGE CPP #-}
 module Yesod.Helpers.Form where
 
 import Prelude
 import Yesod
+
+#if MIN_VERSION_yesod_form(1, 3, 8)
+import Yesod.Form.Bootstrap3                ( renderBootstrap3
+                                            , BootstrapFormLayout(BootstrapBasicForm)
+                                            )
+#endif
+import Yesod.Core.Types                     (fileSourceRaw)
 
 import qualified Data.Text.Encoding         as TE
 import qualified Data.Text                  as T
@@ -48,7 +56,12 @@ labelNameToFs label name = FieldSettings
 minimialLayoutBody :: Yesod site => WidgetT site IO () -> HandlerT site IO Html
 minimialLayoutBody widget = do
     pc <- widgetToPageContent widget
-    giveUrlRenderer $ [hamlet|^{pageBody pc}|]
+#if MIN_VERSION_yesod_core(1, 2, 20)
+    withUrlRenderer
+#else
+    giveUrlRenderer
+#endif
+        $ [hamlet|^{pageBody pc}|]
 
 -- | 把 form 的 html 代码用 json 打包返回
 jsonOutputForm :: Yesod site => WidgetT site IO () -> HandlerT site IO Value
@@ -373,7 +386,16 @@ renderBootstrapS :: Monad m =>
 renderBootstrapS extra result = do
     views <- liftM reverse $ SS.get
     let aform = formToAForm $ return (result, views)
-    lift $ renderBootstrap aform extra
+    lift $
+#if MIN_VERSION_yesod_form(1, 3, 8)
+        -- renderBootstrap is deprecated, but the new recommended function
+        -- is for bootstrap v3.
+        -- We assume that bootstrap v3 is used here.
+        renderBootstrap3 BootstrapBasicForm
+#else
+        renderBootstrap
+#endif
+            aform extra
 
 -- | combines renderBootstrapS and smToForm
 renderBootstrapS' :: Monad m =>
