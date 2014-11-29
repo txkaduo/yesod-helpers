@@ -71,6 +71,8 @@ library
                      , streaming-commons
                      , containers
                      , scientific
+                     , zip-archive
+                     , resourcet
 
   -- hs-source-dirs:      
   default-language:    Haskell2010

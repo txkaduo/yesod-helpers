@@ -4,6 +4,7 @@
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE LiberalTypeSynonyms #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE CPP #-}
 module Yesod.Helpers.Form where
 
@@ -21,20 +22,25 @@ import qualified Data.Text.Encoding         as TE
 import qualified Data.Text                  as T
 import qualified Data.ByteString.Lazy       as LB
 import qualified Data.Aeson.Types           as A
+import qualified Codec.Archive.Zip          as Zip
 import qualified Control.Monad.Trans.State.Strict as SS
 import Control.Monad.RWS.Lazy               (RWST)
 import Text.Blaze                           (Markup)
-import Data.Conduit.Binary                  (sourceLbs)
+import Data.Conduit                         (($$))
+import Control.Monad.Trans.Resource         (runResourceT)
+import Data.Conduit.Binary                  (sourceLbs, sinkLbs)
 
 import Data.Text                            (Text)
 import Data.Maybe                           (catMaybes)
 import Text.Blaze.Renderer.Utf8             (renderMarkup)
 import Text.Blaze.Internal                  (MarkupM(Empty))
-import Control.Monad                        (liftM, void)
+import Control.Monad                        (liftM, void, forM)
 import Control.Applicative                  (Applicative, pure, (<|>))
 import Text.Parsec                          (parse, sepEndBy, many1, space, newline
                                             , eof, skipMany)
 import Control.Monad.Trans.Except           (runExceptT, throwE)
+import Data.Aeson.Types                     (parseEither)
+import Data.Yaml                            (decodeEither)
 
 import Yesod.Helpers.Parsec
 import Yesod.Helpers.Upload                 (fiReadLimited, fiReadUnlimited)
@@ -405,3 +411,73 @@ renderBootstrapS' extra result = do
 
 smToForm :: Monad m => SMForm m a -> MForm m a
 smToForm = flip SS.evalStateT []
+
+
+-- | a form input field that accept an uploaded YAML file and parse it
+yamlFileField ::
+    ( RenderMessage (HandlerSite m) FormMessage
+    , RenderMessage (HandlerSite m) msg
+    , FromJSON a, MonadResource m
+    ) =>
+    (String -> String -> msg)
+                            -- ^ error message when fail to parse Yaml file
+                            -- 1st arg: file_name
+                            -- 2nd arg: parse error
+    -> (String -> a -> A.Parser b)
+                            -- ^ the parser
+    -> Field m FileInfo
+    -> Field m (FileInfo, b)
+yamlFileField yaml_err p file_field = do
+    checkMMap parse_sunk fst file_field
+    where
+        parse_sunk fi = runExceptT $ do
+            let file_name = T.unpack $ fileName fi
+            bs <- liftIO $ runResourceT $ fileSourceRaw fi $$ sinkLbs
+            either (throwE . yaml_err file_name) (return . (fi,)) $
+                (decodeEither $ LB.toStrict bs)
+                    >>= parseEither (p file_name)
+
+
+-- | a form input field that accept
+-- * an uploaded YAML file,
+-- * or zip file of many YAML files
+-- then parse it
+zippedYamlFilesField ::
+    ( RenderMessage (HandlerSite m) FormMessage
+    , RenderMessage (HandlerSite m) msg
+    , FromJSON a, MonadResource m
+    ) =>
+    (String -> msg)
+    -> (String -> String -> msg)
+                            -- ^ error message when fail to parse Yaml file
+                            -- 1st arg: file_name
+                            -- 2nd arg: parse error
+    -> (String -> a -> A.Parser b)
+                            -- ^ the parser
+    -> Field m FileInfo
+    -> Field m (FileInfo, [b])
+zippedYamlFilesField unzip_err yaml_err p file_field =
+    checkMMap parse_sunk fst file_field
+    where
+        parse_sunk fi = runExceptT $ do
+            bs <- liftIO $ runResourceT $ fileSourceRaw fi $$ sinkLbs
+            if ct == "application/zip"
+                then parse_fi_zip fi bs
+                else parse_fi_one fi bs
+            where
+                ct = fileContentType fi
+
+        parse_fi_one fi bs = do
+            let file_name = T.unpack $ fileName fi
+            either (throwE . yaml_err file_name) (return . (fi,) . (:[])) $
+                (decodeEither $ LB.toStrict bs)
+                    >>= parseEither (p file_name)
+
+        parse_fi_zip fi bs = do
+            arc <- either (throwE . unzip_err) return $
+                            Zip.toArchiveOrFail bs
+            fmap (fi,) $ forM (Zip.zEntries arc) $ \entry -> do
+                let file_bs     = LB.toStrict $ Zip.fromEntry entry
+                    file_name   = Zip.eRelativePath entry
+                either (throwE . yaml_err file_name) return $
+                    decodeEither file_bs >>= parseEither (p file_name)
