@@ -3,7 +3,6 @@ module Yesod.Helpers.Upload where
 import Prelude
 import Yesod
 
-import Control.Monad                        (liftM)
 import Yesod.Core.Types                     (fileSourceRaw)
 import Data.Conduit                         (($=), ($$))
 import qualified Data.Conduit.Binary        as CB
