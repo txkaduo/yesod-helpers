@@ -7,6 +7,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 module Yesod.Helpers.Form where
 
 import Prelude
@@ -22,15 +23,18 @@ import Yesod.Core.Types                     (fileSourceRaw)
 import qualified Data.Text.Encoding         as TE
 import qualified Data.Text                  as T
 import qualified Data.ByteString.Lazy       as LB
+import qualified Data.ByteString            as B
 import qualified Data.Aeson.Types           as A
 import qualified Codec.Archive.Zip          as Zip
 import qualified Control.Monad.Trans.State.Strict as SS
 import qualified Data.Conduit.Attoparsec    as CA
 import qualified Data.Attoparsec.ByteString as Atto
 
+import Data.Typeable                        (Typeable)
+import Control.Exception                    (Exception)
 import Control.Monad.RWS.Lazy               (RWST)
 import Text.Blaze                           (Markup)
-import Data.Conduit                         (($$))
+import Data.Conduit                         (($$), Conduit, yield, await, ($=))
 import Control.Monad.Trans.Resource         (runResourceT)
 import Data.Conduit.Binary                  (sourceLbs, sinkLbs)
 
@@ -39,16 +43,15 @@ import Data.Maybe                           (catMaybes)
 import Text.Blaze.Renderer.Utf8             (renderMarkup)
 import Text.Blaze.Internal                  (MarkupM(Empty))
 import Control.Monad                        (liftM, void, forM)
-import Control.Monad.Catch                  (catch, MonadCatch)
+import Control.Monad.Catch                  (catch, throwM, MonadCatch, MonadThrow)
 import Control.Applicative                  (Applicative, pure, (<|>))
 import Text.Parsec                          (parse, sepEndBy, many1, space, newline
                                             , eof, skipMany)
-import Control.Monad.Trans.Except           (runExceptT, throwE)
+import Control.Monad.Trans.Except           (runExceptT, throwE, ExceptT(..))
 import Data.Aeson.Types                     (parseEither)
 import Data.Yaml                            (decodeEither)
 
 import Yesod.Helpers.Parsec
-import Yesod.Helpers.Upload                 (fiReadLimited, fiReadUnlimited)
 
 nameIdToFs :: Text -> Text -> FieldSettings site
 nameIdToFs name idName = FieldSettings "" Nothing (Just idName) (Just name) []
@@ -323,26 +326,66 @@ ifFormResult ::
 ifFormResult = caseFormResult False
 
 
+data BytestringTooLarge = BytestringTooLarge
+                        deriving (Show, Typeable)
+
+instance Exception BytestringTooLarge
+
+limitedSizeConduitBs ::
+    (MonadThrow m) =>
+    Int -> Conduit B.ByteString m B.ByteString
+limitedSizeConduitBs max_size = go 0
+    where
+        go cnt = do
+            mx <- await
+            case mx of
+                Nothing -> return ()
+                Just x ->  do
+                    let new_cnt = cnt + B.length x
+                    if new_cnt > max_size
+                        then throwM BytestringTooLarge
+                        else yield x >> go new_cnt
+
+
+-- | catch exception in field's parse functions,
+-- report it as an error message.
+fieldExceptionToMessage :: forall m e msg a.
+    (
+      RenderMessage (HandlerSite m) FormMessage
+    , RenderMessage (HandlerSite m) msg
+    , Exception e
+    , MonadCatch m
+    ) =>
+    (e -> msg)           -- ^ make a message when file size exceeds limit
+    -> Field m a
+    -> Field m a
+fieldExceptionToMessage mk_msg f = f { fieldParse  = p }
+    where
+        p txts fis = runExceptT $ do
+            (ExceptT $ fieldParse f txts fis)
+                `catch` (\err -> throwE $ SomeMessage $ mk_msg err)
+
+
 -- | modify fileField to a size-limited one.
--- result type has been changed to SunkFileInfo.
-limitedSizeFileField ::
+limitFileSize ::
     (MonadResource m
     , RenderMessage (HandlerSite m) FormMessage
     , RenderMessage (HandlerSite m) msg
+    , MonadCatch m
+    , Integral i
     ) =>
-    (Int -> msg)        -- ^ make a message when file size exceeds limit
-    -> Maybe Int        -- ^ the file size limit
+    msg         -- ^ make a message when file size exceeds limit
+    -> i        -- ^ the file size limit
     -> Field m FileInfo
-limitedSizeFileField mk_msg m_max_size = checkM f fileField
-    where
-        f fi = runExceptT $ do
-                bs <- case m_max_size of
-                        Nothing         -> lift $ fiReadUnlimited fi
-                        Just max_size   -> (lift $ fiReadLimited max_size fi)
-                                            >>= maybe
-                                                (throwE $ mk_msg max_size)
-                                                return
-                return $ fi { fileSourceRaw = sourceLbs bs }
+    -> Field m FileInfo
+limitFileSize err_msg max_size field =
+    let h (_ :: BytestringTooLarge) = err_msg
+        c       = limitedSizeConduitBs (fromIntegral max_size)
+        f fi    = return
+                    (Right $ fi { fileSourceRaw = fileSourceRaw fi $= c }
+                        :: Either Text FileInfo
+                    )
+    in fieldExceptionToMessage h $ checkM f field
 
 
 -- | convert a FormResult containing a Either into a vanilla one
