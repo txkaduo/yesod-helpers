@@ -6,6 +6,7 @@
 {-# LANGUAGE LiberalTypeSynonyms #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Yesod.Helpers.Form where
 
 import Prelude
@@ -24,6 +25,9 @@ import qualified Data.ByteString.Lazy       as LB
 import qualified Data.Aeson.Types           as A
 import qualified Codec.Archive.Zip          as Zip
 import qualified Control.Monad.Trans.State.Strict as SS
+import qualified Data.Conduit.Attoparsec    as CA
+import qualified Data.Attoparsec.ByteString as Atto
+
 import Control.Monad.RWS.Lazy               (RWST)
 import Text.Blaze                           (Markup)
 import Data.Conduit                         (($$))
@@ -35,6 +39,7 @@ import Data.Maybe                           (catMaybes)
 import Text.Blaze.Renderer.Utf8             (renderMarkup)
 import Text.Blaze.Internal                  (MarkupM(Empty))
 import Control.Monad                        (liftM, void, forM)
+import Control.Monad.Catch                  (catch, MonadCatch)
 import Control.Applicative                  (Applicative, pure, (<|>))
 import Text.Parsec                          (parse, sepEndBy, many1, space, newline
                                             , eof, skipMany)
@@ -481,3 +486,80 @@ zippedYamlFilesField unzip_err yaml_err p file_field =
                     file_name   = Zip.eRelativePath entry
                 either (throwE . yaml_err file_name) return $
                     decodeEither file_bs >>= parseEither (p file_name)
+
+
+-- | accept an uploaded file and parse it with an Attoparsec Parser
+attoparsecFileField ::
+    ( RenderMessage (HandlerSite m) FormMessage
+    , RenderMessage (HandlerSite m) msg
+    , MonadResource m, MonadCatch m
+    ) =>
+    (String -> String -> msg)
+                            -- ^ error message when fail to parse Yaml file
+                            -- 1st arg: file_name
+                            -- 2nd arg: parse error
+    -> (String -> Atto.Parser b)
+                            -- ^ the parser
+    -> Field m FileInfo
+    -> Field m (FileInfo, b)
+attoparsecFileField parse_err p file_field = do
+    checkMMap parse_sunk fst file_field
+    where
+        parse_sunk fi = runExceptT $ do
+            let file_name = T.unpack $ fileName fi
+            (liftM (fi,) $
+                liftIO $ runResourceT $
+                    fileSourceRaw fi $$ CA.sinkParser (p file_name)
+                ) `catch` (\(e :: CA.ParseError) ->
+                                throwE $ parse_err file_name $ show e
+                            )
+
+
+-- | accept an uploaded file and parse it with an Attoparsec Parser
+-- If uploaded file is a zip file, parse files in it one by one.
+zippedAttoparsecFilesField ::
+    ( RenderMessage (HandlerSite m) FormMessage
+    , RenderMessage (HandlerSite m) msg
+    , MonadResource m, MonadCatch m
+    ) =>
+    (String -> msg)
+    -> (String -> String -> msg)
+                            -- ^ error message when fail to parse Yaml file
+                            -- 1st arg: file_name
+                            -- 2nd arg: parse error
+    -> (String -> Atto.Parser b)
+                            -- ^ the parser
+    -> Field m FileInfo
+    -> Field m (FileInfo, [b])
+zippedAttoparsecFilesField unzip_err parse_err p file_field = do
+    checkMMap parse_sunk fst file_field
+    where
+        parse_sunk fi = runExceptT $ do
+            if ct == "application/zip"
+                then parse_fi_zip fi
+                else parse_fi_one fi
+            where
+                ct = fileContentType fi
+
+        parse_fi_one fi = do
+            let file_name = T.unpack $ fileName fi
+            (liftM ((fi,) . (:[])) $
+                liftIO $ runResourceT $
+                    fileSourceRaw fi $$ CA.sinkParser (p file_name)
+                ) `catch` (\(e :: CA.ParseError) ->
+                                throwE $ parse_err file_name $ show e
+                            )
+
+        parse_fi_zip fi = do
+            bs <- liftIO $ runResourceT $ fileSourceRaw fi $$ sinkLbs
+            arc <- either (throwE . unzip_err) return $
+                            Zip.toArchiveOrFail bs
+            fmap (fi,) $ forM (Zip.zEntries arc) $ \entry -> do
+                let file_bs     = LB.toStrict $ Zip.fromEntry entry
+                    file_name   = Zip.eRelativePath entry
+                (liftIO $ runResourceT $
+                    sourceLbs (LB.fromStrict file_bs) $$ CA.sinkParser (p file_name)
+                    ) `catch` (\(e :: CA.ParseError) ->
+                                    throwE $ parse_err file_name $ show e
+                                )
+
