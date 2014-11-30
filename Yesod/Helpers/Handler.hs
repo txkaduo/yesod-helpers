@@ -6,7 +6,6 @@ module Yesod.Helpers.Handler where
 import Prelude
 import Yesod
 import qualified Control.Monad.Trans.Reader as R
-import qualified Data.Aeson.Types           as A
 
 import Network.Wai                          (requestHeaders)
 import Data.Time                            (UTCTime)
