@@ -509,11 +509,19 @@ zippedYamlFilesField unzip_err yaml_err p file_field =
     where
         parse_sunk fi = runExceptT $ do
             bs <- liftIO $ runResourceT $ fileSourceRaw fi $$ sinkLbs
-            if ct == "application/zip"
+            let magic_bytes = LB.take 4 bs
+            let is_zip = ct == "application/zip" ||
+                            (ct == ct_unknown && magic_bytes `elem` zip_magic_bs)
+            if is_zip
                 then parse_fi_zip fi bs
                 else parse_fi_one fi bs
             where
                 ct = fileContentType fi
+                ct_unknown = "application/octet-stream"
+                zip_magic_bs =  [ LB.pack [ 0x50, 0x4b, 0x03, 0x04 ]
+                                , LB.pack [ 0x50, 0x4b, 0x05, 0x06 ]
+                                , LB.pack [ 0x50, 0x4b, 0x07, 0x08 ]
+                                ]
 
         parse_fi_one fi bs = do
             let file_name = T.unpack $ fileName fi
@@ -578,11 +586,20 @@ zippedAttoparsecFilesField unzip_err parse_err p file_field = do
     checkMMap parse_sunk fst file_field
     where
         parse_sunk fi = runExceptT $ do
-            if ct == "application/zip"
+            bs <- liftIO $ runResourceT $ fileSourceRaw fi $$ sinkLbs
+            let magic_bytes = LB.take 4 bs
+            let is_zip = ct == "application/zip" ||
+                            (ct == ct_unknown && magic_bytes `elem` zip_magic_bs)
+            if is_zip
                 then parse_fi_zip fi
                 else parse_fi_one fi
             where
                 ct = fileContentType fi
+                ct_unknown = "application/octet-stream"
+                zip_magic_bs =  [ LB.pack [ 0x50, 0x4b, 0x03, 0x04 ]
+                                , LB.pack [ 0x50, 0x4b, 0x05, 0x06 ]
+                                , LB.pack [ 0x50, 0x4b, 0x07, 0x08 ]
+                                ]
 
         parse_fi_one fi = do
             let file_name = T.unpack $ fileName fi
