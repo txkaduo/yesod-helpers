@@ -11,6 +11,7 @@ import qualified Data.ByteString        as B
 import qualified Text.Parsec            as PC
 import qualified Control.Monad.Trans.State as S
 import Control.Monad.Trans              (lift)
+import Control.Monad                    (when)
 import Data.List                        (intersperse)
 
 import Text.Parsec.Text                 ()
@@ -264,3 +265,23 @@ parseListByParsec type_name sep p (A.String t) =
     reportExpected type_name $ parseTextByParsec (p `PC.sepBy` sep) t
 
 parseListByParsec type_name _ _ v = typeMismatch type_name v
+
+
+-- | parse a subfield: required a text, strip it before return
+reqStripNonEmptyText :: Object -> Text -> SubFieldParser Text
+reqStripNonEmptyText obj name = do
+    atField (.:) obj name $ \x' -> do
+        let x = T.strip x'
+        when (T.null x) $ fail $ (T.unpack name) ++ " cannot be empty"
+        return x
+
+
+-- | parse a subfield: optional text, strip it before return
+optStripNonEmptyText :: Object -> Text -> SubFieldParser (Maybe Text)
+optStripNonEmptyText obj name = do
+    atField (.:?*) obj name $ \x' -> do
+        let x = fmap T.strip x'
+        when (maybe False T.null x) $ fail $ (T.unpack name) ++ " cannot be empty"
+        return x
+
+
