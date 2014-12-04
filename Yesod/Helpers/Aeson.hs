@@ -236,6 +236,14 @@ parseTextByParsec p t =
             Left err -> fail $ show err
             Right x -> return x
 
+-- | Parse text or number value by coercing input as Text
+parseNumOrText :: (Text -> Parser a) -> A.Value -> Parser a
+parseNumOrText p (A.String t)   = p t
+parseNumOrText p (A.Number num) = do
+    case floatingOrInteger num of
+        Left (x :: Double)      -> p $ T.pack $ show x
+        Right (x :: Integer)    -> p $ T.pack $ show x
+parseNumOrText _ v              = typeMismatch "text" v
 
 -- | Parse an integer or Text, into a integer
 parseIntWithTextparsec :: Integral a =>
