@@ -31,6 +31,7 @@ library
                        Yesod.Helpers.Upload
                        Yesod.Helpers.SafeCopy
                        Yesod.Helpers.Acid
+                       Yesod.Helpers.About
 
   -- other-modules:       
   -- other-extensions:    
@@ -73,6 +74,7 @@ library
                      , scientific
                      , zip-archive
                      , resourcet
+                     , process
 
   -- hs-source-dirs:      
   default-language:    Haskell2010
