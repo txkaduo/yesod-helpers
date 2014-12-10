@@ -12,7 +12,8 @@ import qualified Text.Parsec            as PC
 import qualified Control.Monad.Trans.State as S
 import Control.Monad.Trans              (lift)
 import Control.Monad                    (when)
-import Data.List                        (intersperse)
+import Data.List                        (intersperse, sortBy)
+import Data.Ord                         (comparing)
 
 import Text.Parsec.Text                 ()
 import Data.Text                        (Text)
@@ -22,8 +23,9 @@ import Data.List                        (find)
 import Data.ByteString                  (ByteString)
 import Text.Parsec                      (ParsecT)
 import Data.Functor.Identity            (Identity)
-import Data.Maybe                       (fromMaybe)
+import Data.Maybe                       (fromMaybe, listToMaybe)
 import Data.Scientific                  (floatingOrInteger)
+import Text.ParserCombinators.ReadP     (ReadP, readP_to_S)
 
 import Yesod.Helpers.Parsec             (splitByParsec)
 
@@ -235,6 +237,23 @@ parseTextByParsec p t =
         case PC.parse p "" t of
             Left err -> fail $ show err
             Right x -> return x
+
+
+-- | use a ReadP to parse text value
+parseTextByReadP :: String -> ReadP a -> Text -> Parser a
+parseTextByReadP type_name rp t = do
+    case listToMaybe $ sort_result $ readP_to_S rp (T.unpack t) of
+        Nothing         -> fail $ "faied to parse as type " ++ type_name
+                            ++ " from string: " ++ t'
+        Just (x, left)  -> do
+                            if null left
+                                then return x
+                                else fail $ "faied to parse as type " ++ type_name
+                                    ++ ": unexpected extra string " ++ show left
+    where
+        sort_result = sortBy (comparing $ length . snd)
+        t' = T.unpack t
+
 
 -- | Parse text or number value by coercing input as Text
 parseNumOrText :: (Text -> Parser a) -> A.Value -> Parser a
