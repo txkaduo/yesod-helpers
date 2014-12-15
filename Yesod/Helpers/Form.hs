@@ -36,6 +36,8 @@ import Control.Monad.RWS.Lazy               (RWST)
 import Text.Blaze                           (Markup)
 import Data.Conduit                         (($$), Conduit, yield, await, ($=))
 import Control.Monad.Trans.Resource         (runResourceT)
+import Control.Monad.Trans.Maybe            (runMaybeT)
+import Control.Monad                        (mzero, when)
 import Data.Conduit.Binary                  (sourceLbs, sinkLbs)
 
 import Data.Text                            (Text)
@@ -532,11 +534,13 @@ zippedYamlFilesField unzip_err yaml_err p file_field =
         parse_fi_zip fi bs = do
             arc <- either (throwE . unzip_err) return $
                             Zip.toArchiveOrFail bs
-            fmap (fi,) $ forM (Zip.zEntries arc) $ \entry -> do
-                let file_bs     = LB.toStrict $ Zip.fromEntry entry
-                    file_name   = Zip.eRelativePath entry
-                either (throwE . yaml_err file_name) return $
-                    decodeEither file_bs >>= parseEither (p file_name)
+            fmap (fi,) $ liftM catMaybes $ forM (Zip.zEntries arc) $
+                \entry -> runMaybeT $ do
+                    let file_bs     = LB.toStrict $ Zip.fromEntry entry
+                        file_name   = Zip.eRelativePath entry
+                    when (B.length file_bs <= 0) $ mzero
+                    lift $ either (throwE . yaml_err file_name) return $
+                            decodeEither file_bs >>= parseEither (p file_name)
 
 
 -- | accept an uploaded file and parse it with an Attoparsec Parser
@@ -614,11 +618,13 @@ zippedAttoparsecFilesField unzip_err parse_err p file_field = do
             bs <- liftIO $ runResourceT $ fileSourceRaw fi $$ sinkLbs
             arc <- either (throwE . unzip_err) return $
                             Zip.toArchiveOrFail bs
-            fmap (fi,) $ forM (Zip.zEntries arc) $ \entry -> do
+            fmap (fi,) $ liftM catMaybes $ forM (Zip.zEntries arc) $ \entry -> runMaybeT $ do
                 let file_bs     = LB.toStrict $ Zip.fromEntry entry
                     file_name   = Zip.eRelativePath entry
-                (liftIO $ runResourceT $
-                    sourceLbs (LB.fromStrict file_bs) $$ CA.sinkParser (p file_name)
+                when (B.length file_bs <= 0) $ mzero
+                lift $
+                    (liftIO $ runResourceT $
+                        sourceLbs (LB.fromStrict file_bs) $$ CA.sinkParser (p file_name)
                     ) `catch` (\(e :: CA.ParseError) ->
                                     throwE $ parse_err file_name $ show e
                                 )
