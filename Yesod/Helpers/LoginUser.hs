@@ -34,9 +34,8 @@ class
 #if MIN_VERSION_persistent(2, 0, 0)
     , ToJSON (BackendKey (PersistEntityBackend u))
     , ToBackendKey (PersistEntityBackend u) u
-    ) =>
 #endif
-    LoginUser u where
+    ) => LoginUser u where
 
     -- | 对应此种用户的 session key
     loginIdentSK :: Monad m =>
