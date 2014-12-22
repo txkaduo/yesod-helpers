@@ -96,10 +96,28 @@ redirectOrJson msg route = do
         rdr = redirect route
 
 -- | 把一个 Key 用JSON字串表示
-jsonEncodeKey :: Key a -> Text
-jsonEncodeKey = TE.decodeUtf8 . LB.toStrict . A.encode . unKey
+jsonEncodeKey ::
+#if MIN_VERSION_persistent(2, 0, 0)
+    ( ToJSON (BackendKey backend)
+    , ToBackendKey backend a
+    ) =>
+#endif
+    Key a -> Text
+jsonEncodeKey = TE.decodeUtf8 . LB.toStrict . A.encode .
+#if MIN_VERSION_persistent(2, 0, 0)
+                    toBackendKey
+#else
+                    unKey
+#endif
 
-jsonDecodeKey :: Text -> Either String (Key a)
+jsonDecodeKey ::
+#if MIN_VERSION_persistent(2, 0, 0)
+    ( ToJSON (BackendKey backend)
+    , ToBackendKey backend a
+    , backend ~ PersistEntityBackend a
+    ) =>
+#endif
+    Text -> Either String (Key a)
 jsonDecodeKey k =
     case parseOnly AP.value (TE.encodeUtf8 k) of
         Left err ->
@@ -114,11 +132,16 @@ jsonDecodeKey k =
 
 getOrRedirectJH ::
     ( PersistEntity val
-    , YesodPersist site
+#if MIN_VERSION_persistent(2, 0, 0)
+    , YesodPersistBackend site ~ PersistEntityBackend val
+    , PersistStore (YesodPersistBackend site)
+#else
     , PersistMonadBackend (YesodDB site) ~ PersistEntityBackend val
+    , PersistStore (YesodPersistBackend site (HandlerT site IO))
+#endif
+    , YesodPersist site
     , RenderMessage site message
     , RedirectUrl site url
-    , PersistStore (YesodPersistBackend site (HandlerT site IO))
     ) =>
     message -> url -> Key val -> HandlerT site IO val
 getOrRedirectJH msg route key = do
@@ -126,11 +149,16 @@ getOrRedirectJH msg route key = do
 
 getByOrRedirectJH ::
     ( PersistEntity val
-    , YesodPersist site
+#if MIN_VERSION_persistent(2, 0, 0)
+    , YesodPersistBackend site ~ PersistEntityBackend val
+    , PersistUnique (YesodPersistBackend site)
+#else
     , PersistMonadBackend (YesodDB site) ~ PersistEntityBackend val
+    , PersistUnique (YesodPersistBackend site (HandlerT site IO))
+#endif
+    , YesodPersist site
     , RenderMessage site message
     , RedirectUrl site url
-    , PersistUnique (YesodPersistBackend site (HandlerT site IO))
     ) =>
     message -> url -> Unique val -> HandlerT site IO (Entity val)
 getByOrRedirectJH msg route u_key = do

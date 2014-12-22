@@ -29,7 +29,14 @@ import Yesod.Helpers.Handler                (lookupReqAccept, matchMimeType)
 -- 曾经使用过把要登录的用户类型记录在 session 里，
 -- 让负责登录的 Route 取出加以选择。
 -- 这种方法并不优雅。
-class (PersistEntity u, Typeable u) => LoginUser u where
+class
+    (PersistEntity u, Typeable u
+#if MIN_VERSION_persistent(2, 0, 0)
+    , ToJSON (BackendKey (PersistEntityBackend u))
+    , ToBackendKey (PersistEntityBackend u) u
+    ) =>
+#endif
+    LoginUser u where
 
     -- | 对应此种用户的 session key
     loginIdentSK :: Monad m =>
@@ -48,10 +55,15 @@ class (PersistEntity u, Typeable u) => LoginUser u where
 
 
 getLoggedInUser :: forall u site.
-    (PersistEntityBackend u ~ PersistMonadBackend (YesodDB site)
+    ( LoginUser u
+#if MIN_VERSION_persistent(2, 0, 0)
+    , PersistEntityBackend u ~ YesodPersistBackend site
+    , PersistStore (YesodPersistBackend site)
+#else
+    , PersistEntityBackend u ~ PersistMonadBackend (YesodDB site)
     , PersistStore (YesodDB site)
+#endif
     , YesodPersist site
-    , LoginUser u
     ) =>
     HandlerT site IO (Maybe (Entity u))
 getLoggedInUser = do
@@ -87,11 +99,16 @@ data LoggedInHandler u site m a =
                     -- ^ the real handler function
 
 runLoggedInHandler ::
-    (PersistEntityBackend u ~ PersistMonadBackend (YesodDB site)
-    , PersistStore (YesodDB site)
-    , YesodPersist site
-    , LoginUser u
+    ( LoginUser u
     , RenderMessage site message
+#if MIN_VERSION_persistent(2, 0, 0)
+    , PersistEntityBackend u ~ YesodPersistBackend site
+    , PersistStore (YesodPersistBackend site)
+#else
+    , PersistEntityBackend u ~ PersistMonadBackend (YesodDB site)
+    , PersistStore (YesodDB site)
+#endif
+    , YesodPersist site
     ) =>
     message -> LoggedInHandler u site IO a -> HandlerT site IO a
 runLoggedInHandler msg (LoggedInHandler rdr h) = do

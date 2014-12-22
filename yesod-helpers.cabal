@@ -38,12 +38,13 @@ library
                        Yesod.Helpers.About
 
   -- other-modules:       
-  -- other-extensions:    
+  default-extensions:  CPP
+
   build-depends:       base >=4.7 && <4.8
                      , wai
                      , yesod
                      , yesod-form
-                     , persistent	== 1.*
+                     , persistent
                      , text
                      , time
                      , bytestring
@@ -105,6 +106,7 @@ test-suite test
                  , aeson
                  , text
                  , persistent
+                 , persistent-template
                  , safecopy
                  , persistent
                  , cereal

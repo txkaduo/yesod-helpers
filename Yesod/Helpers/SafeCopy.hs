@@ -1,8 +1,11 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE UndecidableInstances #-}
 module Yesod.Helpers.SafeCopy where
 
+import qualified Data.Text                  as T
 import Data.SafeCopy
 import Data.Typeable                        (Typeable)
 import Yesod hiding (get)
@@ -22,24 +25,29 @@ import Data.Word                            (Word8)
 import Yesod.Helpers.Parsec
 
 newtype SafeCopyId val = SafeCopyId { unSafeCopyId :: Key val }
-                        deriving (Eq, Ord, Show, Typeable)
+                        deriving (Typeable)
 
-instance SafeCopy (SafeCopyId val) where
+deriving instance (Eq (Key val)) => Eq (SafeCopyId val)
+deriving instance (Ord (Key val)) => Ord (SafeCopyId val)
+deriving instance (Show (Key val)) => Show (SafeCopyId val)
+
+instance PersistEntity val => SafeCopy (SafeCopyId val) where
     putCopy (SafeCopyId k) = contain $ putCopySafeCopyInside k
 
     getCopy = contain $ SafeCopyId <$> getCopySafeCopyInside
 
-putCopySafeCopyInside :: KeyBackend b val -> Put
+putCopySafeCopyInside :: (PersistField (Key val)) => Key val -> Put
 putCopySafeCopyInside k =
-    case unKey k of
+    case toPersistValue k of
         PersistInt64 x      -> put (1 :: Word8) >> put x
         PersistObjectId x   -> put (2 :: Word8) >> put x
         PersistByteString x -> put (3 :: Word8) >> put x
         PersistDbSpecific x -> put (4 :: Word8) >> put x
         _                   -> error "unexpected PersistValue in Key"
 
-getCopySafeCopyInside :: Get (KeyBackend b val)
-getCopySafeCopyInside = Key <$> get_pv
+getCopySafeCopyInside :: (PersistField (Key val)) => Get (Key val)
+getCopySafeCopyInside = do
+    (fromPersistValue <$> get_pv) >>= either (fail . T.unpack) return
     where
         get_pv = do
             x <- get
@@ -48,12 +56,13 @@ getCopySafeCopyInside = Key <$> get_pv
                 2 -> PersistObjectId <$> get
                 3 -> PersistByteString <$> get
                 4 -> PersistDbSpecific <$> get
-                _ -> fail $ "unexpected/unknown PersistValue type tag: " ++ show x
+                _ -> fail $ "unexpected/unknown PersistValue type tag: "
+                                ++ show x
 
-putCopyAnyId :: KeyBackend b val -> Contained Put
+putCopyAnyId :: PersistField (Key val) => Key val -> Contained Put
 putCopyAnyId = contain . putCopySafeCopyInside
 
-getCopyAnyId :: Contained (Get (KeyBackend b val))
+getCopyAnyId :: PersistField (Key val) => Contained (Get (Key val))
 getCopyAnyId = contain $ getCopySafeCopyInside
 
 putCopySimpleEncoded :: SimpleStringRep a => a -> Contained Put
@@ -72,7 +81,9 @@ getCopySimpleEncoded = contain getCopySimpleEncodedInside
 putCopyAnyEntity :: (SafeCopy (Key val), SafeCopy val) => Entity val -> Contained Put
 putCopyAnyEntity x = contain $ safePut (entityKey x, entityVal x)
 
-getCopyAnyEntity :: (SafeCopy (Key val), SafeCopy val) => Contained (Get (Entity val))
+getCopyAnyEntity ::
+    (PersistEntity val, SafeCopy (Key val), SafeCopy val) =>
+    Contained (Get (Entity val))
 getCopyAnyEntity = contain $ fmap (uncurry Entity) safeGet
 
 

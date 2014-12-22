@@ -1,14 +1,21 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Main where
 
 import Prelude
 import System.Exit
 import Text.Parsec
 import Database.Persist
+import Database.Persist.TH
+import Database.Persist.Sql
 import Data.ByteString.Base16               as B16
 import qualified Data.ByteString.Char8      as C8
 
@@ -116,18 +123,19 @@ testAnySafeCopy x = do
                             putStrLn $ "FAIL: safeGet return different value: " ++ show x2
                             putStrLn $ "      original value: " ++ show x
 
-data Dummy
-type DummyId = KeyBackend Int Dummy
-instance SafeCopy (KeyBackend Int Dummy) where
+share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
+Dummy
+|]
+instance SafeCopy (Key Dummy) where
     putCopy = putCopyAnyId
     getCopy = getCopyAnyId
 
 testSafeCopy :: IO ()
 testSafeCopy = do
     testAnySafeCopy (FuzzyDayY 2014)
-    testAnySafeCopy (SafeCopyId (Key (PersistInt64 1)) :: SafeCopyId Dummy)
-    testAnySafeCopy (SafeCopyId (Key (PersistInt64 1134242)) :: SafeCopyId Dummy)
-    testAnySafeCopy (SafeCopyId (Key (PersistInt64 113424224234)) :: SafeCopyId Dummy)
+    testAnySafeCopy (SafeCopyId (toSqlKey 1) :: SafeCopyId Dummy)
+    testAnySafeCopy (SafeCopyId (toSqlKey 1134242) :: SafeCopyId Dummy)
+    testAnySafeCopy (SafeCopyId (toSqlKey 113424224234) :: SafeCopyId Dummy)
 
 
 main :: IO ()

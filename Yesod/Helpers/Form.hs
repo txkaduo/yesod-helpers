@@ -5,7 +5,6 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE LiberalTypeSynonyms #-}
 {-# LANGUAGE TupleSections #-}
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 module Yesod.Helpers.Form where
@@ -144,8 +143,13 @@ simpleEncodedField mk_msg = checkMMap f (T.pack . simpleEncode) textField
 entityField ::
     ( RenderMessage site msg
     , RenderMessage site FormMessage
+#if MIN_VERSION_persistent(2, 0, 0)
+    , PersistEntityBackend val ~ YesodPersistBackend site
+    , PersistStore (YesodPersistBackend site)
+#else
     , PersistMonadBackend (YesodDB site) ~ PersistEntityBackend val
     , PersistStore (YesodDB site)
+#endif
     , PersistEntity val
     , YesodPersist site
     , PathPiece (Key val)
@@ -164,8 +168,14 @@ entityField invalid_msg not_found_msg =
 entityUniqueKeyField ::
     ( RenderMessage site msg
     , RenderMessage site FormMessage
+#if MIN_VERSION_persistent(2, 0, 0)
+    , PersistEntityBackend val ~ YesodPersistBackend site
+    , PersistStore (YesodPersistBackend site)
+    , PersistUnique (YesodPersistBackend site)
+#else
     , PersistMonadBackend (YesodDB site) ~ PersistEntityBackend val
     , PersistUnique (YesodDB site)
+#endif
     , PersistEntity val
     , YesodPersist site
     , PathPiece (Key val)
@@ -279,8 +289,13 @@ stripUpFront fd = fd { fieldParse = new_parse }
 checkFieldDBUnique ::
     ( YesodPersist site, PersistEntity val
     , RenderMessage site msg
+#if MIN_VERSION_persistent(2, 0, 0)
+    , PersistEntityBackend val ~ YesodPersistBackend site
+    , PersistUnique (YesodPersistBackend site)
+#else
     , PersistUnique (YesodDB site)
     , PersistMonadBackend (YesodDB site) ~ PersistEntityBackend val
+#endif
     ) =>
     (a -> Unique val)
     -> msg

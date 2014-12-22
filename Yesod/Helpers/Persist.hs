@@ -6,9 +6,21 @@ import Prelude
 import Yesod
 
 import Data.Maybe                           (catMaybes)
-import Database.Persist.Sql                 (transactionUndo, MonadSqlPersist
-                                            , Connection, connEscapeName)
+
+#if MIN_VERSION_persistent(2, 0, 0)
+import Database.Persist.Sql                 (SqlBackend)
+#else
+import Database.Persist.Sql                 (MonadSqlPersist, Connection)
+#endif
+import Database.Persist.Sql                 (transactionUndo
+                                            , connEscapeName)
+
 import Control.Monad.Trans.Except           (ExceptT, catchE, throwE)
+
+#if MIN_VERSION_persistent(2, 0, 0)
+import Control.Monad.Trans.Reader           (ReaderT)
+#endif
+
 import Control.Monad                        (forM)
 import Data.Text                            (Text)
 import Data.List                            ((\\))
@@ -24,9 +36,17 @@ import qualified Data.Map.Strict            as Map
 -- Try hard to retain old records that are the same as new ones.
 insertOrUpdateWithList ::
     (PersistEntity val, Eq val
+#if MIN_VERSION_persistent(2, 0, 0)
+    , PersistEntityBackend val ~ backend
+    , PersistUnique backend
+    , PersistQuery backend
+    , m ~ ReaderT backend n
+    , MonadIO n
+#else
     , PersistEntityBackend val ~ PersistMonadBackend m
     , PersistUnique m
     , PersistQuery m
+#endif
     ) =>
     [Filter val]
     -> [val]                -- ^ new values
@@ -53,9 +73,17 @@ insertOrUpdateWithList fts new_ones = do
 -- | like insertOrUpdateWithList, but also delete untouched keys.
 replaceWithList ::
     (PersistEntity val, Eq val
+#if MIN_VERSION_persistent(2, 0, 0)
+    , PersistEntityBackend val ~ backend
+    , PersistUnique backend
+    , PersistQuery backend
+    , m ~ ReaderT backend n
+    , MonadIO n
+#else
     , PersistEntityBackend val ~ PersistMonadBackend m
     , PersistUnique m
     , PersistQuery m
+#endif
     ) =>
     [Filter val]
     -> [val]                -- ^ new values
@@ -68,38 +96,66 @@ replaceWithList fts new_ones = do
 
 -- | Automatically undo transaction when there is error throwE'ed
 -- in wrapped function.
-undoTransWhenE :: (MonadSqlPersist m) =>
-    ExceptT e m a -> ExceptT e m a
+undoTransWhenE ::
+#if MIN_VERSION_persistent(2, 0, 0)
+    (MonadIO m) =>
+    ExceptT e (ReaderT SqlBackend m) a
+    -> ExceptT e (ReaderT SqlBackend m) a
+#else
+    (MonadSqlPersist m) => ExceptT e m a -> ExceptT e m a
+#endif
 undoTransWhenE f = catchE f h
     where
-        h err = transactionUndo >> throwE err
+        h err = lift transactionUndo >> throwE err
 
 
 -- | wrapped 'get', throwE when record does not exist.
 getOrE ::
-    ( PersistStore m
-    , PersistEntity val
+    ( PersistEntity val
+#if MIN_VERSION_persistent(2, 0, 0)
+    , PersistEntityBackend val ~ backend
+    , PersistStore backend
+    , m ~ ReaderT backend n
+    , MonadIO n
+#else
+    , PersistStore m
     , PersistEntityBackend val ~ PersistMonadBackend m
+#endif
     ) =>
     e -> Key val -> ExceptT e m val
-getOrE err k = get k >>= maybe (throwE err) return
+getOrE err k = lift (get k) >>= maybe (throwE err) return
 
 
 -- | wrapped 'getBy', throwE when record does not exist.
 getByOrE ::
-    ( PersistUnique m
-    , PersistEntity val
+    ( PersistEntity val
+#if MIN_VERSION_persistent(2, 0, 0)
+    , PersistEntityBackend val ~ backend
+    , PersistUnique backend
+    , m ~ ReaderT backend n
+    , MonadIO n
+#else
     , PersistEntityBackend val ~ PersistMonadBackend m
+    , PersistUnique m
+#endif
     ) =>
     e -> Unique val -> ExceptT e m (Entity val)
-getByOrE err k = getBy k >>= maybe (throwE err) return
+getByOrE err k = lift (getBy k) >>= maybe (throwE err) return
 
 
 -- | update or replace a record
 insertOrUpdate ::
-    ( PersistUnique m, PersistQuery m
-    , PersistEntity val
+    ( PersistEntity val
+#if MIN_VERSION_persistent(2, 0, 0)
+    , PersistEntityBackend val ~ backend
+    , PersistUnique backend
+    , PersistQuery backend
+    , m ~ ReaderT backend n
+    , MonadIO n
+#else
     , PersistEntityBackend val ~ PersistMonadBackend m
+    , PersistUnique m, PersistQuery m
+#endif
     ) =>
     val                 -- ^ new value to insert
     -> [Update val]     -- ^ update commands to exec when old record
@@ -116,8 +172,17 @@ insertOrUpdate v updates = do
 -- | Delete all records matching the given criterion
 -- , except those whose keys in a specific list.
 deleteWhereExcept ::
-    ( PersistEntity val, PersistStore m, PersistQuery m
+    ( PersistEntity val
+#if MIN_VERSION_persistent(2, 0, 0)
+    , PersistEntityBackend val ~ backend
+    , PersistStore backend
+    , PersistQuery backend
+    , m ~ ReaderT backend n
+    , MonadIO n
+#else
     , PersistEntityBackend val ~ PersistMonadBackend m
+    , PersistStore m, PersistQuery m
+#endif
     ) =>
     [Filter val]
     -> [Key val]
@@ -134,8 +199,16 @@ type CachedInMap val m = StateT (Map (Key val) val) m
 -- | when we don't should that might reselect the same record multiple times,
 -- use this function to reduce DB access.
 cget ::
-    ( PersistStore m, PersistEntity val
+    ( PersistEntity val
+#if MIN_VERSION_persistent(2, 0, 0)
+    , PersistEntityBackend val ~ backend
+    , PersistStore backend
+    , m ~ ReaderT backend n
+    , MonadIO n
+#else
     , PersistEntityBackend val ~ PersistMonadBackend m
+    , PersistStore m
+#endif
     , Ord (Key val)
     ) =>
     Key val
@@ -145,25 +218,41 @@ cget k = do
     case mv of
         Just v -> return $ Just v
         Nothing -> do
-            mv2 <- get k
+            mv2 <- lift $ get k
             maybe (return ()) (S.modify . Map.insert k) mv2
             return mv2
 
 cselectList ::
-    ( PersistQuery m, PersistEntity val
+    ( PersistEntity val
+#if MIN_VERSION_persistent(2, 0, 0)
+    , PersistEntityBackend val ~ backend
+    , PersistQuery backend
+    , m ~ ReaderT backend n
+    , MonadIO n
+#else
     , PersistEntityBackend val ~ PersistMonadBackend m
+    , PersistQuery m
+#endif
     , Ord (Key val)
     ) =>
     [Filter val] -> [SelectOpt val]
     -> CachedInMap val m [Entity val]
 cselectList f o = do
-    records <- selectList f o
+    records <- lift $ selectList f o
     mapM_ cput records
     return records
 
 cput ::
-    ( PersistStore m, PersistEntity val
+    ( PersistEntity val
+#if MIN_VERSION_persistent(2, 0, 0)
+    , PersistEntityBackend val ~ backend
+    , PersistStore backend
+    , m ~ ReaderT backend n
+    , MonadIO n
+#else
     , PersistEntityBackend val ~ PersistMonadBackend m
+    , PersistStore m
+#endif
     , Ord (Key val)
     ) =>
     Entity val -> CachedInMap val m ()
@@ -173,10 +262,22 @@ cput (Entity k v) = S.modify $ Map.insert k v
 getFieldDBName :: PersistEntity a => EntityField a typ -> DBName
 getFieldDBName = fieldDB . persistFieldDef
 
-escFieldDBName :: PersistEntity a => Connection -> EntityField a typ -> Text
+escFieldDBName :: PersistEntity a =>
+#if MIN_VERSION_persistent(2, 0, 0)
+    SqlBackend
+#else
+    Connection
+#endif
+    -> EntityField a typ -> Text
 escFieldDBName conn = connEscapeName conn . getFieldDBName
 
-escEntityDBName :: (PersistEntity a, Monad m) => Connection -> m a -> Text
+escEntityDBName :: (PersistEntity a, Monad m) =>
+#if MIN_VERSION_persistent(2, 0, 0)
+    SqlBackend
+#else
+    Connection
+#endif
+    -> m a -> Text
 escEntityDBName conn = connEscapeName conn . entityDB . entityDef
 
 
