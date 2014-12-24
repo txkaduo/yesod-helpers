@@ -5,6 +5,7 @@ module Yesod.Helpers.Handler where
 
 import Prelude
 import Yesod
+import Yesod.Core.Types                     (HandlerT(..), handlerRequest)
 import qualified Control.Monad.Trans.Reader as R
 
 import Network.Wai                          (requestHeaders)
@@ -140,3 +141,27 @@ lookupReqAccept lst = do
                                 flip map lst $
                                     \(f, x) ->
                                         fmap (, x) $ findIndex f cts
+
+
+-- | runFormGet needs a special parameter "_hasdata",
+-- if it does not exist, runFormGet consider no form data input at all.
+-- Use this function to workaround this.
+withHasDataGetParam :: HandlerT site m a -> HandlerT site m a
+withHasDataGetParam f = withAlteredYesodRequest add_has_data_req f
+    where
+        getKey = "_hasdata"     -- 这个值 Yesod 没有 export 出来
+
+        add_has_data_req req =
+                req { reqGetParams = add_has_data $ reqGetParams req }
+
+        add_has_data ps = maybe ((getKey, "") : ps) (const ps) $
+                                lookup getKey ps
+
+
+-- | modify YesodRequest before executing inner Handler code
+withAlteredYesodRequest ::
+    (YesodRequest -> YesodRequest)
+    -> HandlerT site m a -> HandlerT site m a
+withAlteredYesodRequest change f = HandlerT $ unHandlerT f . modify_hd
+    where
+        modify_hd hd = hd { handlerRequest = change $ handlerRequest hd }
