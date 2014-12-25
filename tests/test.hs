@@ -24,6 +24,7 @@ import Network                              (PortID(..))
 import Yesod.Helpers.Types
 import Yesod.Helpers.Parsec
 import Yesod.Helpers.FuzzyDay
+import Yesod.Helpers.Form
 
 import Data.SafeCopy
 import Data.Serialize
@@ -138,6 +139,39 @@ testSafeCopy = do
     testAnySafeCopy (SafeCopyId (toSqlKey 113424224234) :: SafeCopyId Dummy)
 
 
+testParseGroups :: IO ()
+testParseGroups = do
+    test_it (p_ints (char ';')) "1" [1]
+    test_it (p_ints (char ';')) "1;2;3;" [1,2,3]
+    test_it (p_ints (char ';')) "1;2;3" [1,2,3]
+
+    test_it (p_ints newline) "1\n2\n3\n" [1,2,3]
+    test_it (p_ints newline) "1\n2\n3" [1,2,3]
+
+    where
+        p_ints :: CharParser a -> CharParser [Int]
+        p_ints sep = parseToList sep simpleParser
+
+        test_it p t expected = do
+            case parse p "" t of
+                Left err -> do
+                    putStrLn $
+                        "FAIL: testParseGroups failed, parse error: "
+                            ++ show err
+                            ++ " text was: " ++ show t
+                    exitFailure
+                Right xs -> do
+                    if xs /= expected
+                        then do
+                            putStrLn $
+                                "FAIL: testParseGroups failed, not expected: "
+                                        ++ show xs
+                                        ++ ", expect " ++ show expected
+                                        ++ ", text was: " ++ show t
+                            exitFailure
+                        else return ()
+
+
 main :: IO ()
 main = do
     testVerConstraint
@@ -145,3 +179,4 @@ main = do
     test_parseSeconds
     test_parseIntGrouping
     testSafeCopy
+    testParseGroups

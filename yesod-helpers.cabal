@@ -51,6 +51,7 @@ library
                      , blaze-markup
                      , attoparsec
                      , parsec3
+                     , parsec3-numbers
                      , aeson
                      , shakespeare
                      , old-locale

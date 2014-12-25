@@ -228,13 +228,19 @@ encodedListTextareaField ::
 encodedListTextareaField (p_sep, sep) (p, render) mk_msg =
     checkMMap f (Textarea . T.intercalate sep . map render) textareaField
     where
-        f t = case parse
-                (skipMany p_sep >> p `sepEndBy` (eof <|> (void $ many1 p_sep)))
-                "" (unTextarea t)
+        f t = case parse (parseToList p_sep p) "" (unTextarea t)
                 of
                 Left err -> return $ Left $ mk_msg $ show err
                 Right x -> return $ Right x
 
+-- | This helper function is for encodedListTextareaField.
+-- Logcially, all it do is:
+-- skipMany p_sep >> p `sepEndBy` (eof <|> (void $ many1 p_sep))
+-- But if 'p' 'p_sep' overlaps, there will be problems.
+parseToList :: CharParser b -> CharParser a -> CharParser [a]
+parseToList p_sep p = do
+    -- if p eats some char of 'p_sep' the following line failed
+    skipMany p_sep >> p `sepEndBy` (eof <|> (void $ many1 p_sep))
 
 -- | parse every line in textarea, each nonempty line parsed as a single value
 lineSepListTextareaField ::

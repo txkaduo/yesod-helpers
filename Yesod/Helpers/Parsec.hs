@@ -26,6 +26,7 @@ import qualified Data.Aeson                 as A
 import qualified Data.Aeson.Types           as AT
 import qualified Data.Text                  as T
 import qualified Text.Parsec.Token          as PT
+import qualified Text.Parsec.Number         as PN
 import qualified Data.ByteString.Base16     as B16
 import qualified Data.ByteString.UTF8       as B8
 import qualified Data.ByteString            as B
@@ -46,15 +47,16 @@ class SimpleStringRep a where
 
 instance SimpleStringRep Double where
     simpleEncode = show
-    simpleParser = float
+    simpleParser = fmap (either (fromIntegral :: Integer -> Double) id)
+                    PN.natFloat
 
 instance SimpleStringRep Int where
     simpleEncode = show
-    simpleParser = fmap fromIntegral integer
+    simpleParser = PN.int
 
 instance SimpleStringRep Integer where
     simpleEncode = show
-    simpleParser = integer
+    simpleParser = PN.int
 
 instance SimpleStringRep ByteString where
     simpleEncode = B8.toString . B16.encode
