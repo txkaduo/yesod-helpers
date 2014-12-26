@@ -19,6 +19,10 @@ Flag dev
     Description:   Turn on development settings, like disable optimization.
     Default:       True
 
+Flag parsec3
+    Description:   Use parsec3
+    Default:       False
+
 library
   exposed-modules:     Yesod.Helpers.Form
                        Yesod.Helpers.Handler
@@ -50,7 +54,6 @@ library
                      , bytestring
                      , blaze-markup
                      , attoparsec
-                     , parsec3
                      , parsec3-numbers
                      , aeson
                      , shakespeare
@@ -81,6 +84,11 @@ library
                      , zip-archive
                      , resourcet
                      , process
+
+  if flag(parsec3)
+      build-depends:   parsec3
+  else
+      build-depends:   parsec == 3.*
 
   -- hs-source-dirs:      
   default-language:    Haskell2010
