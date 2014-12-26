@@ -148,9 +148,14 @@ testParseGroups = do
     test_it (p_ints newline) "1\n2\n3\n" [1,2,3]
     test_it (p_ints newline) "1\n2\n3" [1,2,3]
 
+    test_it (p_double newline) "1.0\n2.0\n3.0" [1.0,2.0,3.0]
+
     where
         p_ints :: CharParser a -> CharParser [Int]
         p_ints sep = parseToList sep simpleParser
+
+        p_double :: CharParser a -> CharParser [Double]
+        p_double sep = parseToList sep simpleParser
 
         test_it p t expected = do
             case parse p "" t of

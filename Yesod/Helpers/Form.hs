@@ -46,7 +46,8 @@ import Text.Blaze.Internal                  (MarkupM(Empty))
 import Control.Monad                        (liftM, void, forM)
 import Control.Monad.Catch                  (catch, throwM, MonadCatch, MonadThrow)
 import Control.Applicative                  (Applicative, pure, (<|>))
-import Text.Parsec                          (parse, sepEndBy, many1, space, newline
+import Text.Parsec                          (parse, sepEndBy, many1
+                                            , space, newline, try, string
                                             , eof, skipMany)
 import Control.Monad.Trans.Except           (runExceptT, throwE, ExceptT(..))
 import Data.Aeson.Types                     (parseEither)
@@ -255,7 +256,10 @@ lineSepListTextareaField ::
     -> (String -> msg)      -- ^ a function to generate a error message
     -> Field m [a]
 lineSepListTextareaField =
-    encodedListTextareaField (newline, "\n")
+    encodedListTextareaField (eol, "\n")
+    where
+        eol :: CharParser ()
+        eol = try (void newline) <|> (void $ string "\r\n")
 
 
 -- | use whitespace to separate strings, and parsed into a list of values
