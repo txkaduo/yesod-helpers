@@ -240,7 +240,9 @@ encodedListTextareaField (p_sep, sep) (p, render) mk_msg =
 parseToList :: CharParser b -> CharParser a -> CharParser [a]
 parseToList p_sep p = do
     -- if p eats some char of 'p_sep' the following line failed
-    skipMany p_sep >> p `sepEndBy` (eof <|> (void $ many1 p_sep))
+    x <- skipMany p_sep >> p `sepEndBy` (eof <|> (void $ many1 p_sep))
+    eof
+    return x
 
 -- | parse every line in textarea, each nonempty line parsed as a single value
 lineSepListTextareaField ::
