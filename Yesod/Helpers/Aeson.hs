@@ -230,9 +230,9 @@ reportExpected expected f = modifyFailure report f
 
 
 -- | parse text value by Parsec parser
-parseTextByParsec ::
+parseTextByParsec :: Monad m =>
     ParsecT Text () Identity a
-    -> Text -> Parser a
+    -> Text -> m a
 parseTextByParsec p t =
         case PC.parse p "" t of
             Left err -> fail $ show err
