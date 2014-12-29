@@ -23,6 +23,10 @@ Flag parsec3
     Description:   Use parsec3
     Default:       False
 
+Flag old-transformers
+    Description:   Use pre-0.4 version of transformers
+    Default:       False
+
 library
   exposed-modules:     Yesod.Helpers.Form
                        Yesod.Helpers.Handler
@@ -61,7 +65,6 @@ library
                      , http-types
                      , exceptions
                      , template-haskell
-                     , transformers
                      , mtl
                      , vector
                      , base16-bytestring
@@ -89,6 +92,12 @@ library
       build-depends:   parsec3
   else
       build-depends:   parsec == 3.*
+
+  if flag(old-transformers)
+     build-depends:    transformers < 0.4.0
+                     , transformers-compat
+  else
+     build-depends:    transformers >= 0.4.0
 
   -- hs-source-dirs:      
   default-language:    Haskell2010
