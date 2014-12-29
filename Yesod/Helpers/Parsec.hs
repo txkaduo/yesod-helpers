@@ -234,6 +234,16 @@ parsePortID :: CharParser PortID
 parsePortID = try (fmap (PortNumber . fromIntegral) natural)
                     <|> fmap Service (many1 anyChar)
 
+eol :: CharParser String
+eol = try (fmap return newline) <|> (string "\r\n")
+
+
+-- | This helper function is for encodedListTextareaField.
+manySepEndBy :: CharParser b -> CharParser a -> CharParser [a]
+manySepEndBy p_sep p = do
+    -- if p eats some char of 'p_sep' the following line failed
+    skipMany p_sep >> p `sepEndBy` (void $ many1 p_sep)
+
 ----------------------------------------------------------------------
 
 sqlTypeFunD :: Exp -> Dec

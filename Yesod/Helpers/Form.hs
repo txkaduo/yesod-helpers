@@ -43,12 +43,10 @@ import Data.Text                            (Text)
 import Data.Maybe                           (catMaybes)
 import Text.Blaze.Renderer.Utf8             (renderMarkup)
 import Text.Blaze.Internal                  (MarkupM(Empty))
-import Control.Monad                        (liftM, void, forM)
+import Control.Monad                        (liftM, forM)
 import Control.Monad.Catch                  (catch, throwM, MonadCatch, MonadThrow)
-import Control.Applicative                  (Applicative, pure, (<|>))
-import Text.Parsec                          (parse, sepEndBy, many1
-                                            , space, newline, try, string
-                                            , eof, skipMany)
+import Control.Applicative                  (Applicative, pure, (<*))
+import Text.Parsec                          (parse, space, eof)
 import Control.Monad.Trans.Except           (runExceptT, throwE, ExceptT(..))
 import Data.Aeson.Types                     (parseEither)
 import Data.Yaml                            (decodeEither)
@@ -229,21 +227,10 @@ encodedListTextareaField ::
 encodedListTextareaField (p_sep, sep) (p, render) mk_msg =
     checkMMap f (Textarea . T.intercalate sep . map render) textareaField
     where
-        f t = case parse (parseToList p_sep p) "" (unTextarea t)
-                of
+        f t = case parse (manySepEndBy p_sep p <* eof) "" (unTextarea t) of
                 Left err -> return $ Left $ mk_msg $ show err
                 Right x -> return $ Right x
 
--- | This helper function is for encodedListTextareaField.
--- Logcially, all it do is:
--- skipMany p_sep >> p `sepEndBy` (eof <|> (void $ many1 p_sep))
--- But if 'p' 'p_sep' overlaps, there will be problems.
-parseToList :: CharParser b -> CharParser a -> CharParser [a]
-parseToList p_sep p = do
-    -- if p eats some char of 'p_sep' the following line failed
-    x <- skipMany p_sep >> p `sepEndBy` (eof <|> (void $ many1 p_sep))
-    eof
-    return x
 
 -- | parse every line in textarea, each nonempty line parsed as a single value
 lineSepListTextareaField ::
@@ -255,11 +242,7 @@ lineSepListTextareaField ::
                             -- ^ parse a single value and render a single value
     -> (String -> msg)      -- ^ a function to generate a error message
     -> Field m [a]
-lineSepListTextareaField =
-    encodedListTextareaField (eol, "\n")
-    where
-        eol :: CharParser ()
-        eol = try (void newline) <|> (void $ string "\r\n")
+lineSepListTextareaField = encodedListTextareaField (eol, "\n")
 
 
 -- | use whitespace to separate strings, and parsed into a list of values

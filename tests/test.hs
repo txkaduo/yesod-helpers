@@ -13,6 +13,7 @@ module Main where
 import Prelude
 import System.Exit
 import Text.Parsec
+import Control.Applicative
 import Database.Persist
 import Database.Persist.TH
 import Database.Persist.Sql
@@ -152,10 +153,10 @@ testParseGroups = do
 
     where
         p_ints :: CharParser a -> CharParser [Int]
-        p_ints sep = parseToList sep simpleParser
+        p_ints sep = manySepEndBy sep simpleParser <* eof
 
         p_double :: CharParser a -> CharParser [Double]
-        p_double sep = parseToList sep simpleParser
+        p_double sep = manySepEndBy sep simpleParser <* eof
 
         test_it p t expected = do
             case parse p "" t of
