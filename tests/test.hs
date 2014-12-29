@@ -180,9 +180,17 @@ testParseGroups = do
 test_humanParseFuzzyDay :: IO ()
 test_humanParseFuzzyDay = do
     let f = testAnyCharParser humanParseFuzzyDay
+    f "2014.9" $ FuzzyDayYM 2014 9
+    f "2014.09" $ FuzzyDayYM 2014 9
+    f "2014/1" $ FuzzyDayYM 2014 1
     f "2014 /1" $ FuzzyDayYM 2014 1
-    f "2014 . 1" $ FuzzyDayYM 2014 1
+    -- f "2014 . 1" $ FuzzyDayYM 2014 1
     f "2014 年 1" $ FuzzyDayYM 2014 1
+    f "2014 年 1 月" $ FuzzyDayYM 2014 1
+    f "2014 年 1 月 2 日" $ FuzzyDayYMD 2014 1 2
+
+    let f2 = testAnyCharParser humanParseFuzzyDayRange
+    f2 "2009.08 - 2012.03" (FuzzyDayYM 2009 8, FuzzyDayYM 2012 3)
 
 main :: IO ()
 main = do

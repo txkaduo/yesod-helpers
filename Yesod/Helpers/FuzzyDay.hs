@@ -6,10 +6,13 @@ module Yesod.Helpers.FuzzyDay where
 import Prelude
 
 import Control.Monad
+import Control.Applicative                  ((<$>))
 import qualified Data.Aeson                 as A
+import qualified Text.Parsec.Number         as PN
 import Data.Aeson.Types                     (Parser, typeMismatch)
 import Data.Scientific                      (floatingOrInteger)
 import Data.Time                            (toGregorian, fromGregorian, Day, diffDays)
+import Data.Maybe                           (fromMaybe)
 import Data.Monoid                          (mconcat)
 import Yesod.Helpers.Parsec
 import Yesod.Helpers.Aeson                  (parseTextByParsec)
@@ -67,27 +70,39 @@ parseFuzzyDayFromJson v              = typeMismatch "integer" v
 humanParseFuzzyDay :: CharParser FuzzyDay
 humanParseFuzzyDay = do
     y <- p_year
-    _ <- try p_sep <|> (void $ symbol "年")
-    month <- optionMaybe $ do
-                m <- integer
-                optional $ try p_sep <|> (try $ void $ symbol "月")
-                return m
-    day <- optionMaybe $ do
-                d <- integer
-                optional $ try p_sep <|> (try $ void $ symbol "日")
-                return d
+    month_res <- optionMaybe $ try $ do
+                        spaces
+                        sep <- try $ spaces >> p_sep "年"
+                        spaces
+                        m <- PN.decimal
+                        return (m, sep)
+
+    (month, day) <- case month_res of
+        Nothing             -> return (Nothing, Nothing)
+        Just (month, sep) -> do
+            day <- optionMaybe $ try $ do
+                    sep2 <- optionMaybe $ spaces >> p_sep "月"
+                    spaces
+                    d <- PN.decimal
+                    when (not $ fromMaybe True $ cmp_sep sep <$> sep2) $
+                        fail $ "sep mismatch: " ++ (show sep) ++ " and " ++ show sep2
+
+                    case sep of
+                        Right _ -> space >> string "日" >> return ()
+                        _       -> return ()
+
+                    return d
+
+            return (Just month, day)
 
     case (month, day) of
-        (Nothing, Nothing)  -> return $ FuzzyDayY (fromIntegral y)
-        (Just m, Nothing)   -> return $ FuzzyDayYM (fromIntegral y) (fromIntegral m)
-        (Just m, Just d)    -> return $ FuzzyDayYMD
-                                            (fromIntegral y)
-                                            (fromIntegral m)
-                                            (fromIntegral d)
+        (Nothing, Nothing)  -> return $ FuzzyDayY y
+        (Just m, Nothing)   -> return $ FuzzyDayYM y m
+        (Just m, Just d)    -> return $ FuzzyDayYMD y m d
         (Nothing, Just _)   -> fail "got day field without month field"
     where
         p_year = do
-            y <- integer
+            y <- PN.decimal
             return $
                 if y < 40
                     then y + 1900
@@ -95,20 +110,24 @@ humanParseFuzzyDay = do
                         if y < 100
                             then y + 2000
                             else y
-        p_sep = do
-            choice
-                [ try $ void $ symbol "."
-                , try $ void $ symbol "/"
-                , try $ void $ symbol "-"
-                ]
-            return ()
+        p_sep x = do
+            (try $ fmap Left $ choice
+                        [ try $ string "."
+                        , try $ string "/"
+                        , try $ string "-"
+                        ]) <|> (fmap Right $ string x)
+
+        cmp_sep (Left x) (Left y)   = x == y
+        cmp_sep (Right _) (Right _) = True
+        cmp_sep _ _                 = False
 
 
 -- | Parse human-readable string
 humanParseFuzzyDayRange :: CharParser (FuzzyDay, FuzzyDay)
 humanParseFuzzyDayRange = do
     d1 <- humanParseFuzzyDay
-    optional $ (try $ symbol "-") <|> (try $ symbol "--")
+    optional $ (try $ spaces >> string "--" >> spaces)
+                <|> (try $ spaces >> string "-" >> spaces)
     d2 <- humanParseFuzzyDay
     return (d1, d2)
 
