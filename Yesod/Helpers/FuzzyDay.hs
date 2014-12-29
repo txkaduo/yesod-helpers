@@ -1,9 +1,11 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Yesod.Helpers.FuzzyDay where
 
 import Prelude
 
+import Control.Monad
 import qualified Data.Aeson                 as A
 import Data.Aeson.Types                     (Parser, typeMismatch)
 import Data.Scientific                      (floatingOrInteger)
@@ -51,13 +53,65 @@ instance SimpleStringRep FuzzyDay where
                 y <- natural
                 return $ FuzzyDayY (fromIntegral y)
 
+
 parseFuzzyDayFromJson :: A.Value -> Parser FuzzyDay
-parseFuzzyDayFromJson (A.String t)   = parseTextByParsec simpleParser t
+parseFuzzyDayFromJson (A.String t)   = parseTextByParsec humanParseFuzzyDay t
 parseFuzzyDayFromJson (A.Number num) = do
     case floatingOrInteger num of
         Left ( _ :: Double) -> fail "expecting a integer, but got a floating"
         Right x             -> return $ FuzzyDayY x
 parseFuzzyDayFromJson v              = typeMismatch "integer" v
+
+
+-- | Parse human-readable string, output a FuzzyDay
+humanParseFuzzyDay :: CharParser FuzzyDay
+humanParseFuzzyDay = do
+    y <- p_year
+    _ <- try p_sep <|> (void $ symbol "年")
+    month <- optionMaybe $ do
+                m <- integer
+                optional $ try p_sep <|> (try $ void $ symbol "月")
+                return m
+    day <- optionMaybe $ do
+                d <- integer
+                optional $ try p_sep <|> (try $ void $ symbol "日")
+                return d
+
+    case (month, day) of
+        (Nothing, Nothing)  -> return $ FuzzyDayY (fromIntegral y)
+        (Just m, Nothing)   -> return $ FuzzyDayYM (fromIntegral y) (fromIntegral m)
+        (Just m, Just d)    -> return $ FuzzyDayYMD
+                                            (fromIntegral y)
+                                            (fromIntegral m)
+                                            (fromIntegral d)
+        (Nothing, Just _)   -> fail "got day field without month field"
+    where
+        p_year = do
+            y <- integer
+            return $
+                if y < 40
+                    then y + 1900
+                    else
+                        if y < 100
+                            then y + 2000
+                            else y
+        p_sep = do
+            choice
+                [ try $ void $ symbol "."
+                , try $ void $ symbol "/"
+                , try $ void $ symbol "-"
+                ]
+            return ()
+
+
+-- | Parse human-readable string
+humanParseFuzzyDayRange :: CharParser (FuzzyDay, FuzzyDay)
+humanParseFuzzyDayRange = do
+    d1 <- humanParseFuzzyDay
+    optional $ (try $ symbol "-") <|> (try $ symbol "--")
+    d2 <- humanParseFuzzyDay
+    return (d1, d2)
+
 
 toFuzzyDay :: Day -> FuzzyDay
 toFuzzyDay x = FuzzyDayYMD (fromIntegral y) m d

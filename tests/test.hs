@@ -176,6 +176,12 @@ testParseGroups = do
                             exitFailure
                         else return ()
 
+test_humanParseFuzzyDay :: IO ()
+test_humanParseFuzzyDay = do
+    let f = testAnyCharParser humanParseFuzzyDay
+    f "2014 /1" $ FuzzyDayYM 2014 1
+    f "2014 . 1" $ FuzzyDayYM 2014 1
+    f "2014 年 1" $ FuzzyDayYM 2014 1
 
 main :: IO ()
 main = do
@@ -185,3 +191,4 @@ main = do
     test_parseIntGrouping
     testSafeCopy
     testParseGroups
+    test_humanParseFuzzyDay
