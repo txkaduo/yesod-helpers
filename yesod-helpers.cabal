@@ -111,7 +111,7 @@ test-suite test
                  , network
                  , bytestring
                  , base16-bytestring
-                 , parsec3
+                 , parsec
                  , aeson
                  , text
                  , persistent
