@@ -473,6 +473,24 @@ smToForm :: Monad m => SMForm m a -> MForm m a
 smToForm = flip SS.evalStateT []
 
 
+yamlTextareaField ::
+    ( RenderMessage (HandlerSite m) FormMessage
+    , RenderMessage (HandlerSite m) msg
+    , FromJSON a
+    , MonadResource m
+    ) =>
+    (String -> msg)         -- ^ error message when fail to parse Yaml file
+    -> (a -> A.Parser b)    -- ^ the parser
+    -> Field m (b, Textarea)
+yamlTextareaField yaml_err p =
+    checkMMap parse_input snd textareaField
+    where
+        parse_input t = runExceptT $ do
+            either (throwE . yaml_err) (return . (,t)) $ do
+                (decodeEither $ TE.encodeUtf8 $ unTextarea t)
+                    >>= parseEither p
+
+
 -- | a form input field that accept an uploaded YAML file and parse it
 yamlFileField ::
     ( RenderMessage (HandlerSite m) FormMessage
