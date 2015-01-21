@@ -96,6 +96,9 @@ data TimeTagged a = TimeTagged {
                     }
                     deriving (Typeable)
 
+instance Functor TimeTagged where
+    fmap f (TimeTagged t x) = TimeTagged t (f x)
+
 instance Default a => TimedDefault (TimeTagged a) where
     defTimed now = TimeTagged now def
 
