@@ -7,6 +7,7 @@ import qualified Data.Text              as T
 import qualified Data.Vector            as V
 import qualified Data.Aeson             as A
 import qualified Data.ByteString.Base16 as B16
+import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString        as B
 import qualified Text.Parsec            as PC
 import qualified Control.Monad.Trans.State as S
@@ -183,7 +184,15 @@ parseHexByteString type_name s = do
     let (good, invalid) = B16.decode $ encodeUtf8 s
     if B.null invalid
         then return good
-        else fail $ "cannot parse string as type '" ++ type_name ++ "'"
+        else fail $ "cannot parse hex-string as type '" ++ type_name ++ "'"
+
+-- | parse a base64-encoded string
+parseBase64ByteString :: String -> Text -> Parser ByteString
+parseBase64ByteString type_name s = do
+    case B64.decode $ encodeUtf8 s of
+        Left err    -> fail $ "cannot parse base64-string as type '"
+                                ++ type_name ++ "': " ++ err
+        Right good  -> return good
 
 
 -- | expecting a Array, parse each value in it
