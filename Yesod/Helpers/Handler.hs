@@ -7,6 +7,7 @@ import Prelude
 import Yesod
 import Yesod.Core.Types                     (HandlerT(..), handlerRequest)
 import qualified Control.Monad.Trans.Reader as R
+import qualified Data.Text                  as T
 
 import Network.Wai                          (requestHeaders)
 import Data.Time                            (UTCTime)
@@ -17,6 +18,9 @@ import Data.Text                            (Text)
 import Data.List                            (findIndex, sortBy)
 import Data.Ord                             (comparing)
 import Data.Maybe                           (listToMaybe, catMaybes)
+import Control.Applicative                  (Applicative(..))
+import Data.Monoid                          ((<>))
+import Network.HTTP.Types.Status            (mkStatus)
 
 
 setLastModified :: UTCTime -> HandlerT site IO ()
@@ -165,3 +169,76 @@ withAlteredYesodRequest ::
 withAlteredYesodRequest change f = HandlerT $ unHandlerT f . modify_hd
     where
         modify_hd hd = hd { handlerRequest = change $ handlerRequest hd }
+
+
+-- | like FormResult, but used when you want to manually validate get/post params
+data ParamResult a = ParamError [(Text, Text)]
+                    | ParamSuccess a
+                    deriving (Eq, Show)
+
+
+instance Functor ParamResult where
+    fmap _ (ParamError errs)    = ParamError errs
+    fmap f (ParamSuccess x)     = ParamSuccess (f x)
+
+
+instance Applicative ParamResult where
+    pure = ParamSuccess
+
+    (ParamError errs) <*> (ParamError errs2)    = ParamError (errs ++ errs2)
+    (ParamError errs) <*> (ParamSuccess _)      = ParamError errs
+    (ParamSuccess _) <*> (ParamError errs)      = ParamError errs
+    (ParamSuccess f) <*> (ParamSuccess x)       = ParamSuccess $ f x
+
+
+instance Monad ParamResult where
+    return = pure
+
+    (ParamError errs) >>= _ = ParamError errs
+    (ParamSuccess x)  >>= f = f x
+
+    fail msg = ParamError [("", T.pack msg)]
+
+
+httpErrorWhenParamError :: MonadHandler m => ParamResult a -> m a
+httpErrorWhenParamError (ParamSuccess x)    = return x
+httpErrorWhenParamError (ParamError errs)   =
+    sendResponseStatus (mkStatus 449 "Retry With") $
+        "Retry with valid parameters: " <> msg
+    where
+        msg = T.intercalate ", " $
+                flip map errs $ \(param_name, err_msg) ->
+                    if T.null err_msg
+                        then param_name
+                        else param_name <> "(" <> err_msg <> ")"
+
+
+mkParamErrorNoMsg :: Text -> ParamResult a
+mkParamErrorNoMsg p = ParamError [ (p, "") ]
+
+reqGetParamE :: MonadHandler m => Text -> m (ParamResult Text)
+reqGetParamE p = fmap (maybe (mkParamErrorNoMsg p) ParamSuccess) $ lookupGetParam p
+
+reqGetParamE' :: MonadHandler m => Text -> m (ParamResult Text)
+reqGetParamE' p = reqGetParamE p >>= return . nonEmptyParam p
+
+reqPostParamE :: MonadHandler m => Text -> m (ParamResult Text)
+reqPostParamE p = fmap (maybe (mkParamErrorNoMsg p) ParamSuccess) $ lookupPostParam p
+
+reqPostParamE' :: MonadHandler m => Text -> m (ParamResult Text)
+reqPostParamE' p = reqPostParamE p >>= return . nonEmptyParam p
+
+nonEmptyParam :: Text -> ParamResult Text -> ParamResult Text
+nonEmptyParam pn pr = do
+    x <- pr
+    if T.null x
+        then ParamError [(pn, "must not be empty")]
+        else ParamSuccess x
+
+paramErrorFromEither :: Text -> Either Text a -> ParamResult a
+paramErrorFromEither pn (Left err)  = ParamError [(pn, err)]
+paramErrorFromEither _  (Right x)   = ParamSuccess x
+
+validateParam :: Text -> (a -> Either Text b) -> ParamResult a -> ParamResult b
+validateParam pn f pr = do
+    pr >>= paramErrorFromEither pn . f
