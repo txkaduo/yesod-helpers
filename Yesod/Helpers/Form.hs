@@ -373,9 +373,8 @@ fieldExceptionToMessage :: forall m e msg a.
     -> Field m a
 fieldExceptionToMessage mk_msg f = f { fieldParse  = p }
     where
-        p txts fis = runExceptT $ do
-            (ExceptT $ fieldParse f txts fis)
-                `catch` (\err -> throwE $ SomeMessage $ mk_msg err)
+        p txts fis = fieldParse f txts fis
+                        `catch` (\err -> return $ Left $ SomeMessage $ mk_msg err)
 
 
 -- | modify fileField to a size-limited one.
@@ -589,14 +588,15 @@ attoparsecFileField ::
 attoparsecFileField parse_err p file_field = do
     checkMMap parse_sunk fst file_field
     where
-        parse_sunk fi = runExceptT $ do
-            let file_name = T.unpack $ fileName fi
-            (liftM (fi,) $
-                liftIO $ runResourceT $
-                    fileSourceRaw fi $$ CA.sinkParser (p file_name)
-                ) `catch` (\(e :: CA.ParseError) ->
-                                throwE $ parse_err file_name $ show e
-                            )
+        parse_sunk fi = do
+                        let file_name = T.unpack $ fileName fi
+                        (runExceptT $ do
+                            liftM (fi,) $
+                                liftIO $ runResourceT $
+                                    fileSourceRaw fi $$ CA.sinkParser (p file_name)
+                            ) `catch` (\(e :: CA.ParseError) ->
+                                            return $ Left $ parse_err file_name $ show e
+                                        )
 
 
 -- | accept an uploaded file and parse it with an Attoparsec Parser
@@ -636,11 +636,12 @@ zippedAttoparsecFilesField unzip_err parse_err p file_field = do
 
         parse_fi_one fi = do
             let file_name = T.unpack $ fileName fi
-            (liftM ((fi,) . (:[])) $
-                liftIO $ runResourceT $
-                    fileSourceRaw fi $$ CA.sinkParser (p file_name)
+            ExceptT $
+                (liftM Right $ liftM ((fi,) . (:[])) $
+                    liftIO $ runResourceT $
+                        fileSourceRaw fi $$ CA.sinkParser (p file_name)
                 ) `catch` (\(e :: CA.ParseError) ->
-                                throwE $ parse_err file_name $ show e
+                                return $ Left $ parse_err file_name $ show e
                             )
 
         parse_fi_zip fi = do
@@ -651,10 +652,10 @@ zippedAttoparsecFilesField unzip_err parse_err p file_field = do
                 let file_bs     = LB.toStrict $ Zip.fromEntry entry
                     file_name   = Zip.eRelativePath entry
                 when (B.length file_bs <= 0) $ mzero
-                lift $
-                    (liftIO $ runResourceT $
+                lift $ ExceptT $
+                    (liftM Right $ liftIO $ runResourceT $
                         sourceLbs (LB.fromStrict file_bs) $$ CA.sinkParser (p file_name)
                     ) `catch` (\(e :: CA.ParseError) ->
-                                    throwE $ parse_err file_name $ show e
+                                    return $ Left $ parse_err file_name $ show e
                                 )
 
