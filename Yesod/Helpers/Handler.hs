@@ -19,7 +19,8 @@ import Data.List                            (findIndex, sortBy)
 import Data.Ord                             (comparing)
 import Data.Maybe                           (listToMaybe, catMaybes)
 import Control.Applicative                  (Applicative(..))
-import Data.Monoid                          ((<>))
+import Data.Monoid                          ((<>), Monoid)
+import Data.String                          (IsString)
 import Network.HTTP.Types.Status            (mkStatus)
 
 
@@ -200,11 +201,17 @@ instance Monad ParamResult where
     fail msg = ParamError [("", T.pack msg)]
 
 
+httpErrorRetryWithValidParams ::
+    (IsString s, Monoid s, ToTypedContent s, MonadHandler m) =>
+    s -> m a
+httpErrorRetryWithValidParams msg = do
+    sendResponseStatus (mkStatus 449 "Retry With") $
+        "Retry with valid parameters: " <> msg
+
 httpErrorWhenParamError :: MonadHandler m => ParamResult a -> m a
 httpErrorWhenParamError (ParamSuccess x)    = return x
 httpErrorWhenParamError (ParamError errs)   =
-    sendResponseStatus (mkStatus 449 "Retry With") $
-        "Retry with valid parameters: " <> msg
+    httpErrorRetryWithValidParams msg
     where
         msg = T.intercalate ", " $
                 flip map errs $ \(param_name, err_msg) ->
