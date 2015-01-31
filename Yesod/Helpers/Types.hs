@@ -9,10 +9,58 @@ import System.Locale                        (defaultTimeLocale)
 import Control.Monad                        (mzero, void)
 import Data.List                            (intersperse)
 import Data.SafeCopy                        (SafeCopy, putCopy, getCopy)
+import Data.Text                            (Text)
+import Database.Persist                     (PersistField(..), SqlType(SqlString))
+import Database.Persist.Sql                 (PersistFieldSql(..))
 import qualified System.FilePath.Glob       as G
 import Text.Parsec
 import Yesod.Helpers.Parsec
 import Yesod.Helpers.SafeCopy
+
+-- 用 SafeCopy 提供的实现应该使用空间上更优，但迁移时不知道会不会很麻烦
+-- 用 deriveSafeCopySimpleEncoded 因为使用的是字串表达，迁移时比较容易做兼容
+-- 只是空间使用多一些。
+#define USE_SIMPLE_ENCODED_SAFECOPY
+
+#ifdef USE_SIMPLE_ENCODED_SAFECOPY
+-- import Yesod.Helpers.SafeCopy               ( deriveSafeCopySimpleEncoded )
+#else
+import Data.SafeCopy                        ( deriveSafeCopy, base )
+#endif
+
+
+data Gender = Male | Female
+            deriving (Show, Read, Eq, Ord, Enum, Bounded)
+
+$(derivePersistFieldS "Gender")
+$(deriveJsonS "Gender")
+
+#ifdef USE_SIMPLE_ENCODED_SAFECOPY
+$(deriveSafeCopySimpleEncoded ''Gender)
+#else
+$(deriveSafeCopy 0 'base ''Gender)
+#endif
+
+instance SimpleStringRep Gender where
+    simpleEncode Male   = "male"
+    simpleEncode Female = "female"
+
+    simpleParser = choice
+        [ try $ string "male" >> return Male
+        , try $ string "female" >> return Female
+        ]
+
+
+-- | A URL in Text.
+newtype UrlText = UrlText { unUrlText :: Text}
+                deriving (Show, Eq, Ord)
+
+instance PersistField UrlText where
+    toPersistValue = toPersistValue . unUrlText
+    fromPersistValue = fmap UrlText . fromPersistValue
+
+instance PersistFieldSql UrlText where
+    sqlType _ = SqlString
 
 
 newtype XTimeZone = XTimeZone { unXTimeZone :: TimeZone }
