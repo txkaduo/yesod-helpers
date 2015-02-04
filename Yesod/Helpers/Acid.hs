@@ -166,6 +166,13 @@ instance FromJSON AcidStateConfig where
                 <*> ( obj .:? "serve-port" )
 
 
+-- | if acid state configurated to use local file system
+acidStateConfigLocal :: AcidStateConfig -> Bool
+acidStateConfigLocal conf = case acidConfigConnect conf of
+                                Left _  -> True
+                                Right _ -> False
+
+
 acidServeOn :: (SafeCopy st) =>
     (CommChannel -> IO Bool)
     -> Int -> HostPreference
