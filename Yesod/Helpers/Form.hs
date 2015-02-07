@@ -622,6 +622,7 @@ zippedAttoparsecFilesField unzip_err parse_err p file_field = do
             bs <- liftIO $ runResourceT $ fileSourceRaw fi $$ sinkLbs
             let magic_bytes = LB.take 4 bs
             let is_zip = ct == "application/zip" ||
+                            ct == "application/x-zip-compressed" ||
                             (ct == ct_unknown && magic_bytes `elem` zip_magic_bs)
             if is_zip
                 then parse_fi_zip fi
