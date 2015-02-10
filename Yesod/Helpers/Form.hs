@@ -132,7 +132,17 @@ simpleEncodedField ::
     ) =>
     (String -> msg)     -- ^ a function to generate a error message
     -> Field m a
-simpleEncodedField mk_msg = checkMMap f (T.pack . simpleEncode) textField
+simpleEncodedField mk_msg = simpleEncodedField' mk_msg textField
+
+simpleEncodedField' ::
+    (SimpleStringRep a, Monad m
+    , RenderMessage (HandlerSite m) msg
+    , RenderMessage (HandlerSite m) FormMessage
+    ) =>
+    (String -> msg)     -- ^ a function to generate a error message
+    -> Field m Text
+    -> Field m a
+simpleEncodedField' mk_msg old_field = checkMMap f (T.pack . simpleEncode) old_field
     where
         f t = case parse simpleParser "" t of
                 Left err -> return $ Left $ mk_msg $ show err
