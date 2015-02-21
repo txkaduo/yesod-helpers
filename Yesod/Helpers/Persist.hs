@@ -1,5 +1,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ConstraintKinds #-}
 module Yesod.Helpers.Persist where
 
 import Prelude
@@ -32,21 +33,88 @@ import qualified Control.Monad.State.Strict as S
 import Data.Map.Strict                      (Map)
 import qualified Data.Map.Strict            as Map
 
+
+type PersistQueryUniqueMonad backend n m =
+#if MIN_VERSION_persistent(2, 0, 0)
+    ( PersistUnique backend
+    , PersistQuery backend
+        -- PersistUnique/PersistQuery implies PersistStore
+    , m ~ ReaderT backend n
+    , MonadIO n
+    )
+#else
+type PersistQueryUniqueMonad backend n m =
+    ( PersistUnique m
+    , PersistQuery m
+        -- PersistUnique/PersistQuery implies PersistStore
+    , backend ~ ()
+    , n ~ []
+    )
+#endif
+
+type IsPersistMonadOf backend n m val =
+#if MIN_VERSION_persistent(2, 0, 0)
+    ( PersistEntityBackend val ~ backend
+    , PersistEntity val
+    , m ~ ReaderT backend n
+    )
+#else
+    ( PersistEntityBackend val ~ PersistMonadBackend m
+    , PersistEntity val
+    , n ~ []
+    , backend ~ ()
+    )
+#endif
+
+type PersistUniqueMonad backend n m =
+#if MIN_VERSION_persistent(2, 0, 0)
+    ( PersistUnique backend
+        -- PersistUnique implies PersistStore
+    , m ~ ReaderT backend n
+    , MonadIO n
+    )
+#else
+    ( PersistUnique m
+        -- PersistUnique implies PersistStore
+    , backend ~ ()
+    , n ~ []
+    )
+#endif
+
+type PersistQueryMonad backend n m =
+#if MIN_VERSION_persistent(2, 0, 0)
+    ( PersistQuery backend
+        -- PersistQuery implies PersistStore
+    , m ~ ReaderT backend n
+    , MonadIO n
+    )
+#else
+    ( PersistQuery m
+        -- PersistQuery implies PersistStore
+    , backend ~ ()
+    , n ~ []
+    )
+#endif
+
+type PersistStoreMonad backend n m =
+#if MIN_VERSION_persistent(2, 0, 0)
+    ( PersistStore backend
+    , m ~ ReaderT backend n
+    , MonadIO n
+    )
+#else
+    ( PersistStore m
+    , backend ~ ()
+    , n ~ []
+    )
+#endif
+
 -- | select current records, replace them with the supplied new list.
 -- Try hard to retain old records that are the same as new ones.
 insertOrUpdateWithList ::
-    (PersistEntity val, Eq val
-#if MIN_VERSION_persistent(2, 0, 0)
-    , PersistEntityBackend val ~ backend
-    , PersistUnique backend
-    , PersistQuery backend
-    , m ~ ReaderT backend n
-    , MonadIO n
-#else
-    , PersistEntityBackend val ~ PersistMonadBackend m
-    , PersistUnique m
-    , PersistQuery m
-#endif
+    ( Eq val
+    , PersistQueryUniqueMonad backend n m
+    , IsPersistMonadOf backend n m val
     ) =>
     [Filter val]
     -> [val]                -- ^ new values
