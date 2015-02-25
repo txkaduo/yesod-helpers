@@ -87,6 +87,7 @@ library
                      , zip-archive
                      , resourcet
                      , process
+                     , simple-archive-conduit
 
   if flag(parsec3)
       build-depends:   parsec3
