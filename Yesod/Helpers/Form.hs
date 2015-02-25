@@ -555,8 +555,8 @@ archivedYamlFilesField archive_err yaml_err p file_field =
         parse_sunk fi = runExceptT $ do
             fe_list <- runResourceT $ do
                     (rsrc1, m_arc) <- (transPipe (transResourceT liftIO) $ fileSourceRaw fi)
-                                        $$+ AS.autoDecompressByCompressors AS.allKnownDetectiveCompressors
-                                        =$ AS.autoDetectArchive AS.allKnownDetectiveArchives
+                                        $= AS.autoDecompressByCompressors AS.allKnownDetectiveCompressors
+                                        $$+ AS.autoDetectArchive AS.allKnownDetectiveArchives
                     case m_arc of
                         Nothing -> do
                             -- not an archive, treat it as a single file
@@ -686,8 +686,8 @@ archivedAttoparsecFilesField archive_err parse_err p file_field = do
         parse_sunk fi = runExceptT $ do
             fe_list <- runResourceT $ do
                     (rsrc1, m_arc) <- (transPipe (transResourceT liftIO) $ fileSourceRaw fi)
-                                        $$+ AS.autoDecompressByCompressors AS.allKnownDetectiveCompressors
-                                        =$ AS.autoDetectArchive AS.allKnownDetectiveArchives
+                                        $= AS.autoDecompressByCompressors AS.allKnownDetectiveCompressors
+                                        $$+ AS.autoDetectArchive AS.allKnownDetectiveArchives
                     case m_arc of
                         Nothing -> do
                             -- not an archive, treat it as a single file
