@@ -43,7 +43,6 @@ type PersistQueryUniqueMonad backend n m =
     , MonadIO n
     )
 #else
-type PersistQueryUniqueMonad backend n m =
     ( PersistUnique m
     , PersistQuery m
         -- PersistUnique/PersistQuery implies PersistStore
