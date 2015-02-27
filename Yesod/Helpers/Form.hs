@@ -27,18 +27,20 @@ import qualified Data.Aeson.Types           as A
 import qualified Codec.Archive.Zip          as Zip
 import qualified Control.Monad.Trans.State.Strict as SS
 import qualified Data.Conduit.Attoparsec    as CA
+import qualified Data.Conduit.List          as CL
 import qualified Data.Attoparsec.ByteString as Atto
 
 import Data.Typeable                        (Typeable)
 import Control.Exception                    (Exception)
 import Control.Monad.RWS.Lazy               (RWST)
 import Text.Blaze                           (Markup)
-import Data.Conduit                         (($$), Conduit, yield, await, ($=))
-import Control.Monad.Trans.Resource         (runResourceT)
+import Data.Conduit                         (($$), Conduit, yield, await, ($=), ($$+-), ($$+), (=$), transPipe)
+import Control.Monad.Trans.Resource         (runResourceT, transResourceT)
 import Control.Monad.Trans.Maybe            (runMaybeT)
 import Control.Monad                        (mzero, when)
 import Data.Conduit.Binary                  (sourceLbs, sinkLbs)
 
+import Data.List                            (isSuffixOf)
 import Data.Text                            (Text)
 import Data.Maybe                           (catMaybes)
 import Text.Blaze.Renderer.Utf8             (renderMarkup)
@@ -47,9 +49,11 @@ import Control.Monad                        (liftM, forM)
 import Control.Monad.Catch                  (catch, throwM, MonadCatch, MonadThrow)
 import Control.Applicative                  (Applicative, pure, (<*))
 import Text.Parsec                          (parse, space, eof)
-import Control.Monad.Trans.Except           (runExceptT, throwE, ExceptT(..))
+import Control.Monad.Trans.Except           (runExceptT, throwE, ExceptT(..), withExceptT)
 import Data.Aeson.Types                     (parseEither)
 import Data.Yaml                            (decodeEither)
+
+import qualified Codec.Archive.Smooth.All as AS
 
 import Yesod.Helpers.Parsec
 
@@ -527,6 +531,56 @@ yamlFileField yaml_err p file_field = do
 
 -- | a form input field that accept
 -- * an uploaded YAML file,
+-- * or archive file (optionally compressed) of many YAML files
+-- then parse it
+-- Supported Archive file formats and compression format depend on simple-archive-conduit
+archivedYamlFilesField ::
+    ( RenderMessage (HandlerSite m) FormMessage
+    , RenderMessage (HandlerSite m) msg
+    , FromJSON a, MonadResource m
+    , MonadBaseControl IO m
+    ) =>
+    (String -> msg)
+    -> (String -> String -> msg)
+                            -- ^ error message when fail to parse Yaml file
+                            -- 1st arg: file_name
+                            -- 2nd arg: parse error
+    -> (String -> a -> A.Parser b)
+                            -- ^ the parser
+    -> Field m FileInfo
+    -> Field m (FileInfo, [b])
+archivedYamlFilesField archive_err yaml_err p file_field =
+    checkMMap parse_sunk fst file_field
+    where
+        parse_sunk fi = runExceptT $ do
+            fe_list <- runResourceT $ do
+                    (rsrc1, m_arc) <- (transPipe (transResourceT liftIO) $ fileSourceRaw fi)
+                                        $= AS.autoDecompressByCompressors AS.allKnownDetectiveCompressors
+                                        $$+ AS.autoDetectArchive AS.allKnownDetectiveArchives
+                    case m_arc of
+                        Nothing -> do
+                            -- not an archive, treat it as a single file
+                            bs <- rsrc1 $$+- sinkLbs
+                            let file_name = T.unpack $ fileName fi
+                            return $ return $ AS.FileEntry file_name bs
+
+                        Just ax -> do
+                            rsrc1
+                                $$+- (transPipe
+                                        (transResourceT $ withExceptT archive_err)
+                                        $ AS.extractFilesByDetectiveArchive ax)
+                                =$ CL.consume
+            fmap (fi,) $ liftM catMaybes $ forM fe_list $
+                \(AS.FileEntry file_name file_bs) -> runMaybeT $ do
+                    when (LB.length file_bs <= 0) $ mzero
+                    when (not $ ".yml" `isSuffixOf` file_name || ".yaml" `isSuffixOf` file_name)
+                        mzero
+                    lift $ either (throwE . yaml_err file_name) return $
+                            decodeEither (LB.toStrict file_bs) >>= parseEither (p file_name)
+
+
+-- | a form input field that accept
+-- * an uploaded YAML file,
 -- * or zip file of many YAML files
 -- then parse it
 zippedYamlFilesField ::
@@ -607,6 +661,55 @@ attoparsecFileField parse_err p file_field = do
                             ) `catch` (\(e :: CA.ParseError) ->
                                             return $ Left $ parse_err file_name $ show e
                                         )
+
+
+-- | accept an uploaded file and parse it with an Attoparsec Parser
+-- If uploaded file is a zip file, parse files in it one by one.
+archivedAttoparsecFilesField ::
+    ( RenderMessage (HandlerSite m) FormMessage
+    , RenderMessage (HandlerSite m) msg
+    , MonadResource m, MonadCatch m
+    , MonadBaseControl IO m
+    ) =>
+    (String -> msg)
+    -> (String -> String -> msg)
+                            -- ^ error message when fail to parse Yaml file
+                            -- 1st arg: file_name
+                            -- 2nd arg: parse error
+    -> (String -> Atto.Parser b)
+                            -- ^ the parser
+    -> Field m FileInfo
+    -> Field m (FileInfo, [b])
+archivedAttoparsecFilesField archive_err parse_err p file_field = do
+    checkMMap parse_sunk fst file_field
+    where
+        parse_sunk fi = runExceptT $ do
+            fe_list <- runResourceT $ do
+                    (rsrc1, m_arc) <- (transPipe (transResourceT liftIO) $ fileSourceRaw fi)
+                                        $= AS.autoDecompressByCompressors AS.allKnownDetectiveCompressors
+                                        $$+ AS.autoDetectArchive AS.allKnownDetectiveArchives
+                    case m_arc of
+                        Nothing -> do
+                            -- not an archive, treat it as a single file
+                            bs <- rsrc1 $$+- sinkLbs
+                            let file_name = T.unpack $ fileName fi
+                            return $ return $ AS.FileEntry file_name bs
+
+                        Just ax -> do
+                            rsrc1
+                                $$+- (transPipe
+                                        (transResourceT $ withExceptT archive_err)
+                                        $ AS.extractFilesByDetectiveArchive ax)
+                                =$ CL.consume
+            fmap (fi,) $ liftM catMaybes $ forM fe_list $
+                \(AS.FileEntry file_name file_bs) -> runMaybeT $ do
+                    when (LB.length file_bs <= 0) $ mzero
+                    lift $ ExceptT $
+                        (liftM Right $ liftIO $ runResourceT $
+                            sourceLbs file_bs $$ CA.sinkParser (p file_name)
+                        ) `catch` (\(e :: CA.ParseError) ->
+                                        return $ Left $ parse_err file_name $ show e
+                                    )
 
 
 -- | accept an uploaded file and parse it with an Attoparsec Parser
