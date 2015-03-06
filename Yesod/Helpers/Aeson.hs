@@ -248,10 +248,10 @@ parseTextByParsec p t =
             Right x -> return x
 
 
--- | use a ReadP to parse text value
-parseTextByReadP :: String -> ReadP a -> Text -> Parser a
-parseTextByReadP type_name rp t = do
-    case listToMaybe $ sort_result $ readP_to_S rp (T.unpack t) of
+-- | use a ReadS to parse text value
+parseTextByReadS :: String -> ReadS a -> Text -> Parser a
+parseTextByReadS type_name rs t = do
+    case listToMaybe $ sort_result $ rs $ T.unpack t of
         Nothing         -> fail $ "faied to parse as type " ++ type_name
                             ++ " from string: " ++ t'
         Just (x, left)  -> do
@@ -263,6 +263,14 @@ parseTextByReadP type_name rp t = do
         sort_result = sortBy (comparing $ length . snd)
         t' = T.unpack t
 
+-- | use a ReadP to parse text value
+parseTextByReadP :: String -> ReadP a -> Text -> Parser a
+parseTextByReadP type_name rp t = do
+    parseTextByReadS type_name (readP_to_S rp) t
+
+parseTextByRead :: Read a => String -> Text -> Parser a
+parseTextByRead type_name t = do
+    parseTextByReadS type_name (readsPrec 0) t
 
 -- | Parse text or number value by coercing input as Text
 parseNumOrText :: (Text -> Parser a) -> A.Value -> Parser a
