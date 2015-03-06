@@ -44,6 +44,7 @@ library
                        Yesod.Helpers.SafeCopy
                        Yesod.Helpers.Acid
                        Yesod.Helpers.About
+                       Yesod.Helpers.Utils
 
   -- other-modules:       
   default-extensions:  CPP
