@@ -21,6 +21,7 @@ import Data.Functor.Identity                (Identity)
 import Data.Text                            (Text)
 import Data.ByteString                      (ByteString)
 import Data.Char                            (isDigit)
+import Data.Int
 import Network                              (HostName, PortID(..))
 import qualified Data.Aeson                 as A
 import qualified Data.Aeson.Types           as AT
@@ -45,12 +46,20 @@ class SimpleStringRep a where
     simpleEncode :: a -> String
     simpleParser :: CharParser a
 
+instance SimpleStringRep () where
+    simpleEncode _ = ""
+    simpleParser = return ()
+
 instance SimpleStringRep Double where
     simpleEncode = show
     simpleParser = fmap (either (fromIntegral :: Integer -> Double) id)
                     PN.natFloat
 
 instance SimpleStringRep Int where
+    simpleEncode = show
+    simpleParser = PN.int
+
+instance SimpleStringRep Int64 where
     simpleEncode = show
     simpleParser = PN.int
 
