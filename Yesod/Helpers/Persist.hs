@@ -1,6 +1,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Yesod.Helpers.Persist where
 
 import Prelude
@@ -24,6 +25,8 @@ import Control.Monad.Trans.Reader           (ReaderT)
 
 import Control.Monad                        (forM)
 import Data.Text                            (Text)
+import qualified Data.Text                  as T
+import Data.Monoid                          (mconcat)
 import Data.List                            ((\\))
 import Data.Conduit                         (Sink, await)
 
@@ -356,3 +359,58 @@ sinkEntityAsMap = go Map.empty
             case mx of
                 Nothing             -> return s
                 Just (Entity k v)   -> go $ Map.insert k v s
+
+
+-- | escape char that is considered as "special" in string with specified escape char
+addEscape :: [Char] -> Char -> String -> String
+addEscape   _           _   []      = []
+addEscape   specials    esc (x:xs)  =
+    let next = x : addEscape specials esc xs
+    in if x == esc || x `elem` specials
+        then esc : next
+        else next
+
+removeEscape :: [Char] -> Char -> String -> String
+removeEscape    _        _   []          = []
+removeEscape    _        _   [x]         = [x]
+removeEscape    specials esc (x1:x2:xs)  =
+    if x1 == esc
+        then if x2 == esc || x2 `elem` specials
+                then x2 : f xs
+                else x2 : f xs  -- as tradition
+        else x1 : f (x2:xs)
+    where
+        f = removeEscape specials esc
+
+-- | Sepcial chars used in 'LIKE' pattern in SQL
+-- XXX: This does not work for all DBMS
+--      MS SQL Server has more special chars than others.
+unsafeSpecialsForSqlLike :: [Char]
+unsafeSpecialsForSqlLike = "%_"
+
+
+unsafeEscapeForSqlLike :: String -> String
+unsafeEscapeForSqlLike =
+    -- XXX: 看 persistent 的代码，目前无法加上 ESCAPE 'x' 语句，
+    -- 另一方面，不是所有DBMS都有缺省的转义字符（见Sqlite, Oracle, MS SQL Server）
+    -- 还好，PostgreSQL MySQL 都有相同的缺省转义字符 '\'
+    addEscape unsafeSpecialsForSqlLike '\\'
+
+unsafeEscapeForSqlLikeT :: Text -> Text
+unsafeEscapeForSqlLikeT = T.pack . unsafeEscapeForSqlLike . T.unpack
+
+unsafeRemoveEscapeForSqlLike :: String -> String
+unsafeRemoveEscapeForSqlLike = removeEscape unsafeSpecialsForSqlLike '\\'
+
+unsafeRemoveEscapeForSqlLikeT :: Text -> Text
+unsafeRemoveEscapeForSqlLikeT = T.pack . unsafeRemoveEscapeForSqlLike . T.unpack
+
+contains :: EntityField v Text -> Text -> Filter v
+contains = contains2 id
+
+contains2 :: (PersistField a) =>
+    (Text -> a)
+    -> EntityField v a -> Text -> Filter v
+contains2 conv field val = Filter field
+                        (Left $ conv $ mconcat ["%", unsafeEscapeForSqlLikeT val, "%"])
+                        (BackendSpecificFilter " LIKE ")
