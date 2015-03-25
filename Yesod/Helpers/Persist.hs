@@ -8,6 +8,7 @@ import Prelude
 import Yesod
 
 import Data.Maybe                           (catMaybes)
+import Control.DeepSeq                      (NFData(..), deepseq)
 
 #if MIN_VERSION_persistent(2, 0, 0)
 import Database.Persist.Sql                 (SqlBackend)
@@ -36,6 +37,13 @@ import qualified Control.Monad.State.Strict as S
 import Data.Map.Strict                      (Map)
 import qualified Data.Map.Strict            as Map
 
+
+rnfEntity ::
+    ( NFData a
+    , NFData (KeyBackend (PersistEntityBackend a) a)
+    ) =>
+    Entity a -> ()
+rnfEntity (Entity k v) = k `deepseq` v `deepseq` ()
 
 type PersistQueryUniqueMonad backend n m =
 #if MIN_VERSION_persistent(2, 0, 0)

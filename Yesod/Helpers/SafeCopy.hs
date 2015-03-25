@@ -21,6 +21,7 @@ import Data.Time                            ( UTCTime, NominalDiffTime
                                             )
 import Data.Default                         (Default, def)
 import Data.Word                            (Word8)
+import Control.DeepSeq                      (NFData(..))
 
 import Yesod.Helpers.Parsec
 
@@ -30,6 +31,9 @@ newtype SafeCopyId val = SafeCopyId { unSafeCopyId :: Key val }
 deriving instance (Eq (Key val)) => Eq (SafeCopyId val)
 deriving instance (Ord (Key val)) => Ord (SafeCopyId val)
 deriving instance (Show (Key val)) => Show (SafeCopyId val)
+
+instance (NFData (Key val)) => NFData (SafeCopyId val) where
+    rnf (SafeCopyId x) = rnf x
 
 instance PersistEntity val => SafeCopy (SafeCopyId val) where
     putCopy (SafeCopyId k) = contain $ putCopySafeCopyInside k
@@ -95,6 +99,9 @@ data TimeTagged a = TimeTagged {
                         , _unTimeTag :: !a
                     }
                     deriving (Typeable)
+
+instance NFData a => NFData (TimeTagged a) where
+    rnf (TimeTagged t x) = rnf t `seq` rnf x
 
 instance Functor TimeTagged where
     fmap f (TimeTagged t x) = TimeTagged t (f x)

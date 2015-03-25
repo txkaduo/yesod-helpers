@@ -88,6 +88,8 @@ library
                      , zip-archive
                      , resourcet
                      , process
+                     , deepseq
+                     , deepseq-generics
                      , simple-archive-conduit
 
   if flag(parsec3)

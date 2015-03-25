@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DeriveGeneric #-}
 module Yesod.Helpers.FuzzyDay where
 
 import Prelude
@@ -14,6 +15,9 @@ import Data.Scientific                      (floatingOrInteger)
 import Data.Time                            (toGregorian, fromGregorian, Day, diffDays)
 import Data.Maybe                           (fromMaybe)
 import Data.Monoid                          (mconcat)
+import Control.DeepSeq                      (NFData(..))
+import Control.DeepSeq.Generics             (genericRnf)
+import GHC.Generics                         (Generic)
 import Yesod.Helpers.Parsec
 import Yesod.Helpers.Aeson                  (parseTextByParsec)
 import Yesod.Helpers.SafeCopy
@@ -23,7 +27,9 @@ import Text.Parsec
 data FuzzyDay = FuzzyDayY Int
                 | FuzzyDayYM Int Int
                 | FuzzyDayYMD Int Int Int
-                deriving (Show, Read, Eq)
+                deriving (Show, Read, Eq, Generic)
+
+instance NFData FuzzyDay where rnf = genericRnf
 
 $(derivePersistFieldS "FuzzyDay")
 $(deriveJsonS "FuzzyDay")

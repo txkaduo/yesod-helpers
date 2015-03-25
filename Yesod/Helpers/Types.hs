@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DeriveGeneric #-}
 module Yesod.Helpers.Types where
 
 import Prelude
@@ -12,6 +13,9 @@ import Data.SafeCopy                        (SafeCopy, putCopy, getCopy)
 import Data.Text                            (Text)
 import Database.Persist                     (PersistField(..), SqlType(SqlString))
 import Database.Persist.Sql                 (PersistFieldSql(..))
+import Control.DeepSeq                      (NFData(..))
+import Control.DeepSeq.Generics             (genericRnf)
+import GHC.Generics                         (Generic)
 import qualified System.FilePath.Glob       as G
 import Text.Parsec
 import Yesod.Helpers.Parsec
@@ -30,7 +34,9 @@ import Data.SafeCopy                        ( deriveSafeCopy, base )
 
 
 data Gender = Male | Female
-            deriving (Show, Read, Eq, Ord, Enum, Bounded)
+            deriving (Show, Read, Eq, Ord, Enum, Bounded, Generic)
+
+instance NFData Gender where rnf = genericRnf
 
 $(derivePersistFieldS "Gender")
 $(deriveJsonS "Gender")
