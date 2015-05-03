@@ -40,7 +40,11 @@ import qualified Data.Map.Strict            as Map
 
 rnfEntity ::
     ( NFData a
+#if MIN_VERSION_persistent(2, 0, 0)
+    , NFData (Key a)
+#else
     , NFData (KeyBackend (PersistEntityBackend a) a)
+#endif
     ) =>
     Entity a -> ()
 rnfEntity (Entity k v) = k `deepseq` v `deepseq` ()
