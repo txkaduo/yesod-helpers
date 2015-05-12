@@ -22,6 +22,7 @@ import Data.Text                            (Text)
 import Data.ByteString                      (ByteString)
 import Data.Char                            (isDigit)
 import Data.Int
+import Data.Word
 import Network                              (HostName, PortID(..))
 import qualified Data.Aeson                 as A
 import qualified Data.Aeson.Types           as AT
@@ -62,6 +63,10 @@ instance SimpleStringRep Int where
 instance SimpleStringRep Int64 where
     simpleEncode = show
     simpleParser = PN.int
+
+instance SimpleStringRep Word32 where
+    simpleEncode = show
+    simpleParser = PN.nat
 
 instance SimpleStringRep Integer where
     simpleEncode = show
