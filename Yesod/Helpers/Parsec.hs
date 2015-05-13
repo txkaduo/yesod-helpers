@@ -217,6 +217,9 @@ parseIntWithGrouping sep = do
     where
         allowed_char c = isDigit c || c == '-' || c == sep
 
+
+type ConnectPath = (HostName, PortID)
+
 -- | mainly for config file: parse a string value into
 -- a file path or a network host and port
 -- example:
@@ -225,23 +228,28 @@ parseIntWithGrouping sep = do
 -- :/path/to/file       -- localhost and unix socket
 -- hostname:80          -- hostname and port number
 -- hostname:www         -- hostname and service name
-parseFileOrNetworkPath :: CharParser (Either FilePath (HostName, PortID))
-parseFileOrNetworkPath = try (fmap Right p_network) <|> fmap Left p_file
+parseFileOrConnectPath :: CharParser (Either FilePath ConnectPath)
+parseFileOrConnectPath = try (fmap Right parseConnectPath) <|> fmap Left p_file
     where
-        p_network = do
-            hostname <- manyTill hostname_char (char ':')
-            if null hostname
-                then do
-#if !defined(mingw32_HOST_OS) && !defined(cygwin32_HOST_OS) && !defined(_WIN32)
-                    fmap (("localhost",) . UnixSocket) $ many1 anyChar
-#else
-                    fail $ "UnixSocket is not available on this platform"
-#endif
-                else do
-                    fmap (hostname,) parsePortID
-
         p_file = many1 anyChar
 
+{-# DEPRECATED parseFileOrNetworkPath "use parseFileOrConnectPath" #-}
+parseFileOrNetworkPath :: CharParser (Either FilePath ConnectPath)
+parseFileOrNetworkPath = parseFileOrNetworkPath
+
+parseConnectPath :: CharParser ConnectPath
+parseConnectPath = do
+    hostname <- manyTill hostname_char (char ':')
+    if null hostname
+        then do
+#if !defined(mingw32_HOST_OS) && !defined(cygwin32_HOST_OS) && !defined(_WIN32)
+            fmap (("localhost",) . UnixSocket) $ many1 anyChar
+#else
+            fail $ "UnixSocket is not available on this platform"
+#endif
+        else do
+            fmap (hostname,) parsePortID
+    where
         hostname_char = noneOf ":/"
 
 parsePortID :: CharParser PortID

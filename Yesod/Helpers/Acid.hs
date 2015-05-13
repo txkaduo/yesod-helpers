@@ -36,7 +36,7 @@ import Data.Streaming.Network               (HostPreference, bindPortTCP)
 import Data.Time                            (getCurrentTime, UTCTime)
 
 import Yesod.Helpers.Aeson                  (parseTextByParsec)
-import Yesod.Helpers.Parsec                 (parseFileOrNetworkPath)
+import Yesod.Helpers.Parsec
 
 acidCached ::
     ( MonadIO m
@@ -147,7 +147,7 @@ openRemoteStateTL ms hostname port = do
 
 -- | configuration for acid-state
 data AcidStateConfig = AcidStateConfig {
-                        acidConfigConnect       :: Either FilePath (HostName, PortID)
+                        acidConfigConnect       :: Either FilePath ConnectPath
                                     -- ^ open local or connect to remote acid
                         , acidConfigServeHost   :: HostPreference
                                     -- ^ serve acid state at host
@@ -161,7 +161,7 @@ instance FromJSON AcidStateConfig where
     parseJSON =
         withObject "AcidStateConfig" $ \obj -> do
             AcidStateConfig
-                <$> ( obj .: "connect" >>= parseTextByParsec parseFileOrNetworkPath )
+                <$> ( obj .: "connect" >>= parseTextByParsec parseFileOrConnectPath )
                 <*> ( fmap fromString $ obj .:? "serve-host" .!= "*4" )
                 <*> ( obj .:? "serve-port" )
 
@@ -208,9 +208,16 @@ acidOpenByConfig ::
     -> m (Maybe (AcidState st))
 acidOpenByConfig s config ms = do
     case acidConfigConnect config of
-        Right (host, port)  -> openRemoteStateTL ms host port
-        Left fp             -> liftIO $ fmap Just $ openLocalStateFrom fp s
+        Right cp    -> acidOpenConnectPath ms cp
+        Left fp     -> liftIO $ fmap Just $ openLocalStateFrom fp s
 
+
+acidOpenConnectPath ::
+    (SafeCopy st, IsAcidic st, Typeable st, MonadLogger m, MonadIO m) =>
+    Int
+    -> ConnectPath
+    -> m (Maybe (AcidState st))
+acidOpenConnectPath ms (host, port) = openRemoteStateTL ms host port
 
 checkInitAcid ::
     ( MonadIO m
