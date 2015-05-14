@@ -5,11 +5,12 @@ module Yesod.Helpers.Types where
 
 import Prelude
 
+import Control.Applicative                  ((<$>))
 import Data.Time                            (TimeZone, timeZoneOffsetString, parseTime)
 import System.Locale                        (defaultTimeLocale)
 import Control.Monad                        (mzero, void)
 import Data.List                            (intersperse)
-import Data.SafeCopy                        (SafeCopy, putCopy, getCopy)
+import Data.SafeCopy
 import Data.Text                            (Text)
 import Database.Persist                     (PersistField(..), SqlType(SqlString))
 import Database.Persist.Sql                 (PersistFieldSql(..))
@@ -67,6 +68,10 @@ instance PersistField UrlText where
 
 instance PersistFieldSql UrlText where
     sqlType _ = SqlString
+
+instance SafeCopy UrlText where
+    getCopy             = contain $ UrlText <$> safeGet
+    putCopy (UrlText x) = contain $ safePut x
 
 
 newtype XTimeZone = XTimeZone { unXTimeZone :: TimeZone }
