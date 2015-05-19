@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies #-}
 module Yesod.Helpers.Persist where
 
 import Prelude
@@ -36,6 +37,11 @@ import qualified Control.Monad.State.Strict as S
 
 import Data.Map.Strict                      (Map)
 import qualified Data.Map.Strict            as Map
+
+
+class DBActionRunner a where
+    type DBAction a :: (* -> *) -> * -> *
+    runDBWith :: (MonadBaseControl IO m, MonadIO m) => a -> DBAction a m r -> m r
 
 
 rnfEntity ::

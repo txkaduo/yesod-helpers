@@ -5,12 +5,12 @@ import Prelude
 
 import Data.Map.Strict                      (Map)
 import qualified Data.Map.Strict            as Map
-import Control.Monad.Logger                 (LogSource, LogLevel)
 import Control.Monad                        (forM)
 import Control.Applicative                  ((<|>))
 import Data.Traversable                     (traverse)
 import Data.String                          (fromString)
 import Data.Maybe                           (fromMaybe)
+import Control.Monad.Logger
 
 import Data.Aeson
 import qualified Data.Aeson.Types           as AT
@@ -49,3 +49,6 @@ parseLogSourceLevelMap val = do
         new_v <- nullToNothing v >>= traverse (parseTextByRead "LogLevel")
         return (new_k, new_v)
 
+
+class LoggingTRunner a where
+    runLoggingTWith :: a -> LoggingT m r -> m r
