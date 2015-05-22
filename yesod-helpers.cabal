@@ -80,6 +80,8 @@ library
                      , yesod-core
                      , conduit
                      , conduit-extra
+                     , conduit-combinators      >= 1.0.0
+                     , directory
                      , Glob
                      , safecopy
                      , cereal
@@ -96,6 +98,8 @@ library
                      , resourcet
                      , process
                      , deepseq
+                     , filepath
+                     , unix
                      , deepseq-generics
                      , simple-archive-conduit
 

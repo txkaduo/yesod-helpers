@@ -1,4 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleInstances #-}
 module Yesod.Helpers.Utils  where
 
 import Prelude
@@ -11,18 +13,30 @@ import qualified Data.Vector                as V
 import Data.Vector                          (Vector)
 import qualified Data.Text                  as T
 import Data.Default                         (Default(..))
-import Control.Monad
+import Control.Monad hiding (forM)
 import Control.Applicative
 import Data.IORef
 import Data.Monoid
-import Data.Traversable                     (traverse)
+import Data.Traversable                     (traverse, forM)
 import Data.String                          (fromString)
-import Data.List                            (sortBy)
-import Data.Ord                             (comparing)
+import Data.List                            (stripPrefix)
 import Data.Maybe
 import Network.Wai.Logger                   (DateCacheGetter)
 import Yesod.Core.Types                     (Logger(..))
 import Language.Haskell.TH.Syntax           (loc_package, loc_module, loc_filename, loc_start)
+import System.FilePath                      (splitFileName, takeFileName)
+import System.Directory                     (renameFile)
+import System.IO                            (hPutStrLn, stderr)
+import System.IO.Error                      (catchIOError)
+import Data.Int                             (Int64)
+import qualified Text.Parsec.Number         as PN
+import Text.Parsec                          (parse, eof)
+import qualified Text.Parsec
+import Data.Conduit
+import Data.Conduit.Combinators             (sourceDirectory)
+import System.Posix.Files                   (getFileStatus, fileSize)
+import System.Posix.Types                   (COff(..))
+import Control.Monad.Trans.Resource         (runResourceT)
 import Control.Monad.Logger
 import System.Log.FastLogger
 
@@ -90,42 +104,128 @@ data LogDest = LogDestFile BufSize FilePath
             | LogDestStderr BufSize
             deriving (Eq, Ord, Show)
 
-instance Default LogDest where
-    def = LogDestStderr defaultBufSize
-
-instance FromJSON LogDest where
-    parseJSON = withObject "LogDest" parseLogDestObj
-
-parseLogDestObj :: Object -> AT.Parser LogDest
-parseLogDestObj o = do
-    typ <- o .: "type"
-    buf_size <- o .:? "buf-size" .!= defaultBufSize
-    case typ of
-        "file" -> LogDestFile buf_size <$> o .: "path"
-        "stdout" -> return $ LogDestStdout buf_size
-        "stderr" -> return $ LogDestStderr buf_size
-        _       -> fail $ "unknown log destination: " ++ typ
-
 newLoggerSetByDest :: LogDest -> IO LoggerSet
 newLoggerSetByDest (LogDestStdout buf_size)     = newStdoutLoggerSet buf_size
 newLoggerSetByDest (LogDestStderr buf_size)     = newStderrLoggerSet buf_size
 newLoggerSetByDest (LogDestFile buf_size fp)    = newFileLoggerSet buf_size fp
 
 
+type LogArchiveAction = IO ()
+
+type ShouldLogPred = LogSource -> LogLevel -> IO Bool
+
+class LogStore a where
+    lxPushLogStr  :: a -> LogStr -> IO ()
+    lxGetLoggerSet :: a -> LoggerSet
+
+data SomeLogStore = forall h. LogStore h => SomeLogStore h
+
+class ShouldLogPredicator a where
+    lxShouldLog     :: a -> ShouldLogPred
+
+data SomeShouldLogPredicator = forall a. ShouldLogPredicator a => SomeShouldLogPredicator a
+
+shouldLogByLevel ::
+    LogLevel        -- ^ minimum level
+    -> LogLevel     -- ^ level to be tested
+    -> Bool
+shouldLogByLevel (LevelOther lmin) (LevelOther lv) = lmin == lv
+shouldLogByLevel x y = x <= y
+
+shoudLogBySrcLevelMap ::
+    HashMap LogSource LogLevel
+    -> LogSource
+    -> LogLevel
+    -> Bool
+shoudLogBySrcLevelMap hm src level =
+    case HM.lookup src hm <|> HM.lookup "*" hm of
+        Nothing         -> False
+        Just req_level  -> shouldLogByLevel req_level level
+
+instance ShouldLogPredicator (HashMap LogSource LogLevel) where
+    lxShouldLog hm src level = return $ shoudLogBySrcLevelMap hm src level
+
+instance LogStore LoggerSet where
+    lxPushLogStr = pushLogStr
+    lxGetLoggerSet = id
+
+
+data LogFileAtMaxSize = LogFileAtMaxSize
+                            Int64           -- ^ max size
+                            FilePath        -- ^ log file path
+                            (IORef Int64)   -- ^ est. file size, increase when push log
+                            LoggerSet
+
+instance LogStore LogFileAtMaxSize where
+    lxPushLogStr (LogFileAtMaxSize max_sz fp size_cnt ls) log_str = do
+        lxPushLogStr ls log_str
+        new_sz <- atomicModifyIORef' size_cnt $
+                        \x -> let y = x + fromIntegral (logStrLength log_str) in (y, y)
+        let renew = when (new_sz >= max_sz) $ do
+                        COff fsize <- fileSize <$> getFileStatus fp
+                        when ( fsize > max_sz ) $ do
+                            cutLogFileThenArchive fp
+                            writeIORef size_cnt 0
+                            renewLoggerSet ls
+        renew `catchIOError` (\e -> do
+            hPutStrLn stderr $ "got exception when renewing log file: " ++ show e)
+
+    lxGetLoggerSet (LogFileAtMaxSize _max_sz _fp _size_cnt ls) = ls
+
+
+newLogFileAtMaxSize :: Int64 -> BufSize -> FilePath -> IO LogFileAtMaxSize
+newLogFileAtMaxSize max_size buf_size fp = do
+    logger_set <- newFileLoggerSet buf_size fp
+    COff fsize <- fileSize <$> getFileStatus fp
+    est_file_sz <- newIORef fsize
+    return $ LogFileAtMaxSize max_size fp est_file_sz logger_set
+
+
+parseSomeLogStoreObj :: Object -> AT.Parser (IO SomeLogStore)
+parseSomeLogStoreObj o = do
+    typ <- o .: "type"
+    buf_size <- o .:? "buf-size" .!= defaultBufSize
+    case typ of
+        "file" -> do
+            fp <- o .: "path"
+            m_sz <- o .:? "cut-at-size"
+            case m_sz of
+                Nothing -> do
+                    return $ do
+                        liftM SomeLogStore $ newFileLoggerSet buf_size fp
+
+                Just sz -> do
+                    return $ do
+                        liftM SomeLogStore $ newLogFileAtMaxSize sz buf_size fp
+
+        "stdout" -> return $ do
+            liftM SomeLogStore $ newStdoutLoggerSet buf_size
+
+        "stderr" -> return $ do
+            liftM SomeLogStore $ newStderrLoggerSet buf_size
+
+        _       -> fail $ "unknown handler type: " ++ typ
+
+
+parseSomeShouldLogPredObj :: Object -> AT.Parser (IO SomeShouldLogPredicator)
+parseSomeShouldLogPredObj obj = do
+    src_level_map <- obj .: "src-level" >>= parse_map
+
+    return $ return $ SomeShouldLogPredicator src_level_map
+
+    where
+        parse_map = withObject "source-to-level-map" $ \o -> do
+                        liftM HM.fromList $
+                            forM (HM.toList o) $ \(k, v) -> do
+                                lv <- withText "LogLevel" (return . logLevelFromText) v
+                                return (T.strip k, lv)
+
+
 -- | use this in AppSettings of scaffold site
 data LoggerConfig = LoggerConfig
-                        (Vector
-                            ( LogDest
-                            , HashMap LogSource LogLevel
-                                -- ^ in this map
-                                -- LogSource "*" means "match all"
-                                -- LogSource "_" means "fallback"
-                                -- see logFuncByLoggerV
-                            )
-                        )
-                        (Maybe (LogDest, HashMap LogSource LogLevel))
+                        (Vector (IO SomeLogStore, IO SomeShouldLogPredicator))
+                        (Maybe (IO SomeLogStore, IO SomeShouldLogPredicator))
                             -- ^ default value to use when no others handles the logs
-                    deriving (Show)
 
 instance Default LoggerConfig where
     def = LoggerConfig V.empty Nothing
@@ -137,49 +237,28 @@ instance FromJSON LoggerConfig where
             <*> (obj .:? "default" >>= traverse parse_obj)
         where
             parse_obj = \o -> do
-                (,) <$> o .: "destination"
-                    <*> (o .: "src-level" >>= parse_map)
-
-            parse_map = withObject "source-to-level-map" $ \o -> do
-                            liftM HM.fromList $
-                                forM (HM.toList o) $ \(k, v) -> do
-                                    lv <- withText "LogLevel" (return . logLevelFromText) v
-                                    return (T.strip k, lv)
+                (,) <$> parseSomeLogStoreObj o
+                    <*> parseSomeShouldLogPredObj o
 
 
-shouldLogByLevel ::
-    LogLevel        -- ^ minimum level
-    -> LogLevel     -- ^ level to be tested
-    -> Bool
-shouldLogByLevel (LevelOther lmin) (LevelOther lv) = lmin == lv
-shouldLogByLevel x y = x <= y
+-- | real value for handling all logs
+data LogHandlerV = LogHandlerV
+                        DateCacheGetter
+                        (Vector (SomeLogStore, SomeShouldLogPredicator))
+                        (Maybe (SomeLogStore, SomeShouldLogPredicator))
 
+newLogHandlerV :: DateCacheGetter -> LoggerConfig -> IO LogHandlerV
+newLogHandlerV getdate (LoggerConfig v m_def) = do
+    v2 <- V.forM v $ uncurry (liftM2 (,))
+    m_def2 <- traverse (uncurry (liftM2 (,))) m_def
+    return $ LogHandlerV getdate v2 m_def2
 
-data LoggerV = LoggerV
-                DateCacheGetter
-                (Vector (LoggerSet, HashMap LogSource LogLevel))
-                (Maybe (LoggerSet, HashMap LogSource LogLevel))
-                    -- ^ fallback when no match
-
-newLoggerV :: DateCacheGetter -> LoggerConfig -> IO LoggerV
-newLoggerV getdate (LoggerConfig v m_def) = do
-    lv <- V.forM v $ \(dest, sm) -> do
-        logger_set <- newLoggerSetByDest dest
-        return (logger_set, sm)
-
-    fallback <- case m_def of
-                    Nothing -> return Nothing
-                    Just (dest, sm) -> do
-                        logger_set <- newLoggerSetByDest dest
-                        return $ Just (logger_set, sm)
-
-    return $ LoggerV getdate lv fallback
 
 -- | use this with runLoggingT
-logFuncByLoggerV ::
-    LoggerV
+logFuncByHandlerV ::
+    LogHandlerV
     -> (Loc -> LogSource -> LogLevel -> LogStr -> IO ())
-logFuncByLoggerV (LoggerV getdate v def_logger_set) loc src level msg = do
+logFuncByHandlerV (LogHandlerV getdate v m_def) loc src level msg = do
     log_str_ioref <- newIORef Nothing
 
     let get_log_str = do
@@ -191,62 +270,88 @@ logFuncByLoggerV (LoggerV getdate v def_logger_set) loc src level msg = do
                     return log_str
                 Just x -> return x
 
-    not_done <- liftM (V.null . V.filter isJust) $ V.forM v $ \(logger_set, hm) -> do
-        case HM.lookup src hm <|> HM.lookup "*" hm of
-            Nothing -> return Nothing
-            Just req_level -> do
-                if shouldLogByLevel req_level level
-                    then do
-                        get_log_str >>= pushLogStr logger_set
-                        return $ Just ()
-                    else return Nothing
+    not_done <- liftM (V.null . V.filter isJust) $ V.forM v $
+        \(SomeLogStore store, SomeShouldLogPredicator p) -> do
+            should_log <- lxShouldLog p src level
+            if should_log
+                then get_log_str >>= lxPushLogStr store >> return (Just ())
+                else return Nothing
 
     when not_done $ do
-        case def_logger_set of
-            Nothing -> return ()
-            Just (logger_set, hm) -> do
-                let req_level = HM.lookup src hm
-                when (fromMaybe False $ fmap (flip shouldLogByLevel level) $ req_level) $ do
-                    get_log_str >>= pushLogStr logger_set
+        void $ forM m_def $ \(SomeLogStore store, SomeShouldLogPredicator p) -> do
+            should_log <- lxShouldLog p src level
+            if should_log
+                then get_log_str >>= lxPushLogStr store >> return (Just ())
+                else return Nothing
 
-logFuncFallbackLoggerV ::
-    LoggerV
+logFuncFallbackByHandlerV ::
+    LogHandlerV
     -> (Loc -> LogSource -> LogLevel -> LogStr -> IO ())
-logFuncFallbackLoggerV (LoggerV getdate _v def_logger_set) loc src level msg = do
-    case def_logger_set of
-        Nothing -> return ()
-        Just (logger_set, hm) -> do
-            let req_level = HM.lookup src hm
-            when (fromMaybe False $ fmap (flip shouldLogByLevel level) $ req_level) $ do
-                formatLogMessage getdate loc src level msg >>= pushLogStr logger_set
+logFuncFallbackByHandlerV (LogHandlerV getdate _v m_def) loc src level msg = do
+    void $ forM m_def $ \(SomeLogStore store, SomeShouldLogPredicator p) -> do
+        should_log <- lxShouldLog p src level
+        when ( should_log ) $ do
+            formatLogMessage getdate loc src level msg
+                >>= lxPushLogStr store
 
 -- | in scaffold site, makeApplication function:
 -- we need a LoggerSet to make log middleware.
 -- Hence we need to choose a LoggerSet in the available.
-chooseLoggerBySrcLoggerV :: LoggerV -> LogSource -> Maybe Logger
-chooseLoggerBySrcLoggerV (LoggerV getdate v _def_logger_set) src =
-    Logger <$> (fmap snd $ listToMaybe $ sortBy (comparing fst) $ catMaybes level_and_ls)
-            <*> pure getdate
+chooseYesodLoggerBySrcLV :: LogHandlerV -> LogSource -> IO (Maybe Logger)
+chooseYesodLoggerBySrcLV (LogHandlerV getdate v _def_logger_set) src = do
+    stores <-
+        forM ([LevelDebug, LevelInfo, LevelWarn, LevelError, LevelOther ""]) $ \level -> do
+            liftM catMaybes $ forM (V.toList v) $
+                \(store, SomeShouldLogPredicator p) -> do
+                    should_log <- lxShouldLog p src level
+                    return $ if should_log
+                        then Just store
+                        else Nothing
+
+    forM (listToMaybe $ join stores) $ \(SomeLogStore store) -> do
+        return $ Logger (lxGetLoggerSet store) getdate
+
+
+defaultYesodLoggerHandlerV :: LogHandlerV -> Maybe Logger
+defaultYesodLoggerHandlerV (LogHandlerV getdate _v m_def) =
+    flip fmap m_def $ \(SomeLogStore store, _) ->
+        Logger (lxGetLoggerSet store) getdate
+
+defaultShouldLogLV :: LogHandlerV -> LogSource -> LogLevel -> IO Bool
+defaultShouldLogLV (LogHandlerV _getdate _v m_def) src level =
+    liftM (fromMaybe False) $
+        forM m_def $ \(_, SomeShouldLogPredicator p) ->
+            lxShouldLog p src level
+
+
+instance LoggingTRunner LogHandlerV where
+    runLoggingTWith v = flip runLoggingT (logFuncByHandlerV v)
+
+
+cutLogFileThenArchive :: FilePath -> IO ()
+cutLogFileThenArchive log_path = do
+    suf_n <- runResourceT $ sourceDirectory dir_name $$ find_next_n (0 :: Int)
+    let suf = '.' : show (suf_n + 1 :: Int)
+    renameFile log_path (log_path ++ suf)
     where
-        level_and_ls = flip map (V.toList v) $ \(logger_set, hm) -> do
-                        req_level <- HM.lookup src hm
-                        return (req_level, logger_set)
+        (dir_name, log_file_name) = splitFileName log_path
 
-defaultLoggerInLoggerV :: LoggerV -> Maybe Logger
-defaultLoggerInLoggerV (LoggerV getdate _v def_logger_set) =
-    fmap (\x -> Logger (fst x) getdate) def_logger_set
+        find_next_n last_n = do
+            mx <- await
+            case mx of
+                Nothing -> find_next_n last_n
+                Just fp -> do
+                    case stripPrefix (log_file_name ++ ".") (takeFileName fp) of
+                        Nothing -> find_next_n last_n
+                        Just suf -> do
+                            case parse parse_suffix "" suf of
+                                Left _  -> find_next_n last_n
+                                Right x -> find_next_n $ max x last_n
 
-defaultShouldLogInLoggerV :: LoggerV -> LogSource -> LogLevel -> Bool
-defaultShouldLogInLoggerV (LoggerV _getdate _v def_logger_set) src level =
-    case def_logger_set of
-        Nothing -> False
-        Just (_logger_set, hm) ->
-            let req_level = HM.lookup src hm
-            in fromMaybe False $ fmap (flip shouldLogByLevel level) $ req_level
-
-
-instance LoggingTRunner LoggerV where
-    runLoggingTWith v = flip runLoggingT (logFuncByLoggerV v)
+        parse_suffix = do
+            x <- PN.nat
+            _ <- eof <|> (Text.Parsec.char '.' >> return ())
+            return x
 
 
 -- | XXX: copied from source of yesod-core
