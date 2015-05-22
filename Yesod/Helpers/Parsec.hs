@@ -20,7 +20,8 @@ import Data.Monoid                          (mconcat)
 import Data.Functor.Identity                (Identity)
 import Data.Text                            (Text)
 import Data.ByteString                      (ByteString)
-import Data.Char                            (isDigit)
+import Data.Char                            (isDigit, toUpper)
+import Data.Maybe
 import Data.Int
 import Data.Word
 import Network                              (HostName, PortID(..))
@@ -216,6 +217,22 @@ parseIntWithGrouping sep = do
         Right x     -> return $ fromIntegral x
     where
         allowed_char c = isDigit c || c == '-' || c == sep
+
+
+parseByteSizeWithUnit :: Integral a => CharParser a
+parseByteSizeWithUnit = do
+    sz <- PN.nat
+    sz2 <- fmap (fromMaybe 1) $ optionMaybe p_unit
+    return $ sz * sz2
+    where
+        p_unit = do
+            uc <- oneOf "kKmMgGtT"
+            case toUpper uc of
+                'K' -> return 1024
+                'M' -> return $ 1024 * 1024
+                'G' -> return $ 1024 * 1024 * 1024
+                'T' -> return $ 1024 * 1024 * 1024 * 1024
+                _   -> fail $ "unknown unit char" ++ [uc]
 
 
 type ConnectPath = (HostName, PortID)
