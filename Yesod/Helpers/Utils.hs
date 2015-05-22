@@ -43,7 +43,10 @@ import System.Log.FastLogger
 import Data.Aeson
 import qualified Data.Aeson.Types           as AT
 
-import Yesod.Helpers.Aeson                  (parseTextByRead, nullToNothing, parseSomeObjects)
+import Yesod.Helpers.Aeson                  ( parseTextByRead, nullToNothing, parseSomeObjects
+                                            , parseTextByParsec
+                                            )
+import Yesod.Helpers.Parsec                 ( parseByteSizeWithUnit )
 
 
 class LoggingTRunner a where
@@ -184,11 +187,13 @@ newLogFileAtMaxSize max_size buf_size fp = do
 parseSomeLogStoreObj :: Object -> AT.Parser (IO SomeLogStore)
 parseSomeLogStoreObj o = do
     typ <- o .: "type"
-    buf_size <- o .:? "buf-size" .!= defaultBufSize
+    buf_size <- (o .:? "buf-size"
+                    >>= traverse (parseTextByParsec parseByteSizeWithUnit)
+                ) .!= defaultBufSize
     case typ of
         "file" -> do
             fp <- o .: "path"
-            m_sz <- o .:? "cut-at-size"
+            m_sz <- o .:? "cut-at-size" >>= traverse (parseTextByParsec parseByteSizeWithUnit)
             case m_sz of
                 Nothing -> do
                     return $ do
