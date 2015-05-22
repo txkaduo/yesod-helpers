@@ -208,6 +208,16 @@ parseArrayS ::
     -> Value -> SubFieldParser [a]
 parseArrayS type_name f = liftWithS withArray type_name $ parseListS f . V.toList
 
+parseSomeObjects ::
+    String
+    -> (Object -> Parser a)
+    -> Value
+    -> Parser [a]
+parseSomeObjects type_name  f (A.Array arr)     = mapM (withObject type_name f) $ V.toList arr
+parseSomeObjects _          f (A.Object obj)    = fmap return $ f obj
+parseSomeObjects type_name  _ v                 = typeMismatch type_name v
+
+
 parseList ::
     String                   -- ^ the type name when reporting error
     -> (Value -> Parser a)         -- ^ function to apply on each of array

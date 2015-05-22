@@ -55,6 +55,7 @@ library
 
   build-depends:       base >=4.7 && <4.8
                      , wai
+                     , wai-logger
                      , yesod
                      , yesod-form
                      , persistent
@@ -88,6 +89,8 @@ library
                      , data-default
                      , streaming-commons
                      , containers
+                     , unordered-containers
+                     , fast-logger
                      , scientific
                      , zip-archive
                      , resourcet
