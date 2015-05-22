@@ -359,7 +359,7 @@ cutLogFileThenArchive log_path = do
         find_next_n last_n = do
             mx <- await
             case mx of
-                Nothing -> find_next_n last_n
+                Nothing -> return last_n
                 Just fp -> do
                     case stripPrefix (log_file_name ++ ".") (takeFileName fp) of
                         Nothing -> find_next_n last_n
