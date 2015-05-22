@@ -160,28 +160,43 @@ data LogFileAtMaxSize = LogFileAtMaxSize
                             LoggerSet
 
 instance LogStore LogFileAtMaxSize where
-    lxPushLogStr (LogFileAtMaxSize max_sz fp size_cnt ls) log_str = do
+    lxPushLogStr lf@(LogFileAtMaxSize max_sz _fp size_cnt ls) log_str = do
         lxPushLogStr ls log_str
         new_sz <- atomicModifyIORef' size_cnt $
                         \x -> let y = x + fromIntegral (logStrLength log_str) in (y, y)
-        let renew = when (new_sz >= max_sz) $ do
-                        COff fsize <- fileSize <$> getFileStatus fp
-                        when ( fsize > max_sz ) $ do
-                            cutLogFileThenArchive fp
-                            writeIORef size_cnt 0
-                            renewLoggerSet ls
-        renew `catchIOError` (\e -> do
-            hPutStrLn stderr $ "got exception when renewing log file: " ++ show e)
+
+        when (new_sz >= max_sz) $ do
+            renewLogFileAtMaxSize lf
 
     lxGetLoggerSet (LogFileAtMaxSize _max_sz _fp _size_cnt ls) = ls
 
 
+renewLogFileAtMaxSize :: LogFileAtMaxSize -> IO ()
+renewLogFileAtMaxSize (LogFileAtMaxSize max_sz fp size_cnt ls) = do
+    let renew = do
+                COff fsize <- fileSize <$> getFileStatus fp
+                when ( fsize > max_sz ) $ do
+                    cutLogFileThenArchive fp
+                    writeIORef size_cnt 0
+                    renewLoggerSet ls
+
+    renew `catchIOError` (\e -> do
+        hPutStrLn stderr $ "got exception when renewing log file: " ++ show e)
+
+
+-- | create LogFileAtMaxSize
 newLogFileAtMaxSize :: Int64 -> BufSize -> FilePath -> IO LogFileAtMaxSize
 newLogFileAtMaxSize max_size buf_size fp = do
     logger_set <- newFileLoggerSet buf_size fp
     COff fsize <- fileSize <$> getFileStatus fp
+
     est_file_sz <- newIORef fsize
-    return $ LogFileAtMaxSize max_size fp est_file_sz logger_set
+    let lf = LogFileAtMaxSize max_size fp est_file_sz logger_set
+
+    when (fsize >= max_size) $ do
+        renewLogFileAtMaxSize lf
+
+    return lf
 
 
 parseSomeLogStoreObj :: Object -> AT.Parser (IO SomeLogStore)
