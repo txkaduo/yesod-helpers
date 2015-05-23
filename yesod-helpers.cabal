@@ -48,6 +48,7 @@ library
                        Yesod.Helpers.SafeCopy
                        Yesod.Helpers.Acid
                        Yesod.Helpers.About
+                       Yesod.Helpers.Logger
                        Yesod.Helpers.Utils
 
   -- other-modules:       
