@@ -1,14 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleInstances #-}
-module Yesod.Helpers.Utils
-    ( module Yesod.Helpers.Utils
-    , module Yesod.Helpers.Logger
-    ) where
+module Yesod.Helpers.Utils where
 
 import Prelude
 import Data.Char
-import Yesod.Helpers.Logger
 
 toHalfWidthEnglishAlpha :: Char -> Char
 toHalfWidthEnglishAlpha ch
