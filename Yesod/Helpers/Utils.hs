@@ -5,6 +5,8 @@ module Yesod.Helpers.Utils where
 
 import Prelude
 import Data.Char
+import qualified Data.Text                  as T
+import Data.Text                            (Text)
 
 toHalfWidthEnglishAlpha :: Char -> Char
 toHalfWidthEnglishAlpha ch
@@ -20,3 +22,9 @@ toHalfWidthDigit ch
 
 toHalfWidthEnglishAlphaDigit :: Char -> Char
 toHalfWidthEnglishAlphaDigit = toHalfWidthEnglishAlpha . toHalfWidthDigit
+
+
+emptyTextToNothing :: Text -> Maybe Text
+emptyTextToNothing t = if T.null t
+                        then Nothing
+                        else Just t

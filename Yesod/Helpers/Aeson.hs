@@ -29,11 +29,21 @@ import Data.Scientific                  (floatingOrInteger)
 import Text.ParserCombinators.ReadP     (ReadP, readP_to_S)
 
 import Yesod.Helpers.Parsec             (splitByParsec)
+import Yesod.Helpers.Utils              (emptyTextToNothing)
 
 nullToNothing :: FromJSON a => Maybe Value -> Parser (Maybe a)
 nullToNothing Nothing     = return Nothing
 nullToNothing (Just Null) = return Nothing
 nullToNothing (Just v)    = parseJSON v
+
+
+-- | convert the value inside json that can be suitable to be considered as null, to Nothing
+nullTextToNothing :: Maybe Value -> Maybe Value
+nullTextToNothing Nothing               = Nothing
+nullTextToNothing (Just Null)           = Nothing
+nullTextToNothing (Just (A.String t))   = fmap A.String $ emptyTextToNothing t
+nullTextToNothing x                     = x
+
 
 (.:?*) :: (FromJSON a) => Object -> Text -> Parser (Maybe a)
 obj .:?* key = obj .:? key >>= nullToNothing
