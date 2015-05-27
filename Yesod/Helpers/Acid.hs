@@ -20,7 +20,7 @@ import Data.Typeable                        (Typeable)
 import Control.Monad.IO.Class               (MonadIO, liftIO)
 import Control.Concurrent                   (forkIO)
 import Control.Applicative                  ((<$>), (<*>))
-import Control.Monad                        (void, forever, when)
+import Control.Monad
 import Control.Monad.Logger                 (MonadLogger, logError)
 import Control.Exception                    (try)
 import Control.Concurrent                   (threadDelay)
@@ -34,8 +34,9 @@ import Data.Aeson                           (withObject, FromJSON, parseJSON
                                             )
 import Data.Streaming.Network               (HostPreference, bindPortTCP)
 import Data.Time                            (getCurrentTime, UTCTime)
+import Data.Traversable                     (traverse)
 
-import Yesod.Helpers.Aeson                  (parseTextByParsec)
+import Yesod.Helpers.Aeson
 import Yesod.Helpers.Parsec
 
 acidCached ::
@@ -163,7 +164,9 @@ instance FromJSON AcidStateConfig where
             AcidStateConfig
                 <$> ( obj .: "connect" >>= parseTextByParsec parseFileOrConnectPath )
                 <*> ( fmap fromString $ obj .:? "serve-host" .!= "*4" )
-                <*> ( obj .:? "serve-port" )
+                <*> ( obj .:? "serve-port"
+                        >>= return . nullTextToNothing
+                        >>= traverse (parseIntWithTextparsec simpleParser))
 
 
 -- | if acid state configurated to use local file system
