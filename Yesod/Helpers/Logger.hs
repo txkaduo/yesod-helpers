@@ -22,7 +22,7 @@ import Data.String                          (fromString)
 import Data.List                            (stripPrefix)
 import Data.Maybe
 import Network.Wai.Logger                   (DateCacheGetter)
-import Yesod.Core.Types                     (Logger(..))
+import Yesod.Core.Types
 import Language.Haskell.TH.Syntax           (loc_package, loc_module, loc_filename, loc_start)
 import System.FilePath                      (splitFileName, takeFileName)
 import System.Directory                     (renameFile)
@@ -38,6 +38,7 @@ import System.Posix.Files                   (getFileStatus, fileSize)
 import System.Posix.Types                   (COff(..))
 import Control.Monad.Trans.Resource         (runResourceT)
 import Control.Monad.Logger
+import Control.Monad.Reader                 (ask)
 import System.Log.FastLogger
 
 import Data.Aeson
@@ -346,6 +347,27 @@ defaultShouldLogLV (LogHandlerV _getdate _v m_def) src level =
 
 instance LoggingTRunner LogHandlerV where
     runLoggingTWith v = flip runLoggingT (logFuncByHandlerV v)
+
+
+withLogFuncInHandlerT ::
+    (Loc -> LogSource -> LogLevel -> LogStr -> IO ())
+    -> HandlerT site m a
+    -> HandlerT site m a
+withLogFuncInHandlerT log_func (HandlerT f) = HandlerT $ \hd -> do
+    let rhe  = handlerEnv hd
+    let rhe' = rhe { rheLog = log_func }
+        hd'  = hd { handlerEnv = rhe' }
+    f hd'
+
+-- | usually, in 'HandlerT site m', log will go to the logger returned by
+-- 'makeLogger'. With this function, log will be handled by runLoggingTWith
+withSiteLogFuncInHandlerT :: (LoggingTRunner site, Monad m) =>
+    HandlerT site m a
+    -> HandlerT site m a
+withSiteLogFuncInHandlerT h = do
+    foundation <- ask
+    runLoggingTWith foundation $ LoggingT $ \log_func ->
+        withLogFuncInHandlerT log_func h
 
 
 cutLogFileThenArchive :: FilePath -> IO ()
