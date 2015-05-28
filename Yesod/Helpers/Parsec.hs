@@ -9,6 +9,7 @@ import Prelude
 import Yesod
 import Data.String                          (IsString, fromString)
 import Control.Monad                        (void)
+import Control.Applicative                  ((<*))
 
 import Text.Parsec
 import Text.Parsec.Text                     ()
@@ -38,7 +39,6 @@ import qualified Data.ByteString            as B
 type GenCharParser u m a = forall s. Stream s m Char => ParsecT s u m a
 
 type CharParser a = GenCharParser () Identity a
-
 
 -- | a data type that can be encoded into string, and decoded from string.
 -- Use this class instead of Show/Read, when you need to control
@@ -282,6 +282,11 @@ manySepEndBy :: CharParser b -> CharParser a -> CharParser [a]
 manySepEndBy p_sep p = do
     -- if p eats some char of 'p_sep' the following line failed
     skipMany p_sep >> p `sepEndBy` (void $ many1 p_sep)
+
+strictParseSimpleEncoded ::
+    (SimpleStringRep a, Stream s Identity Char) =>
+    s -> Either ParseError a
+strictParseSimpleEncoded t = parse (simpleParser <* eof) "" t
 
 ----------------------------------------------------------------------
 

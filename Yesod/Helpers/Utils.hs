@@ -28,3 +28,7 @@ emptyTextToNothing :: Text -> Maybe Text
 emptyTextToNothing t = if T.null t
                         then Nothing
                         else Just t
+
+mapLeft :: (a -> b) -> Either a c -> Either b c
+mapLeft _ (Right x) = Right x
+mapLeft f (Left x)  = Left (f x)
