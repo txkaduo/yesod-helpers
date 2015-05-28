@@ -316,7 +316,7 @@ parsePVByParser p pv =
     case fromPersistValue pv of
         Left err    -> Left err
         Right s     ->
-            case parse p "" s of
+            case parse (p <* eof) "" s of
                 Left err -> Left $ T.pack $
                                 "cannot parsed as persist value: " ++ show err
                 Right x -> Right x
