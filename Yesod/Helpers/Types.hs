@@ -1,13 +1,24 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Yesod.Helpers.Types where
 
 import Prelude
 
+#if !MIN_VERSION_base(4,8,0)
 import Control.Applicative                  ((<$>))
-import Data.Time                            (TimeZone, timeZoneOffsetString, parseTime)
+#endif
+
+import Data.Time                            (TimeZone, timeZoneOffsetString)
+#if MIN_VERSION_time(1,5,0)
+import Data.Time.Format                     (defaultTimeLocale)
+import Data.Time                            (parseTimeM)
+#else
 import System.Locale                        (defaultTimeLocale)
+import Data.Time                            (parseTime)
+#endif
+
 import Control.Monad                        (mzero, void)
 import Data.List                            (intersperse)
 import Data.SafeCopy
@@ -81,7 +92,12 @@ instance SimpleStringRep XTimeZone where
     simpleEncode = timeZoneOffsetString . unXTimeZone
     simpleParser = do
         manyTill anyChar (eof <|> void space) >>=
-            maybe mzero (return . XTimeZone) . (parseTime defaultTimeLocale "%z")
+            maybe mzero (return . XTimeZone) .
+#if MIN_VERSION_time(1,5,0)
+                (parseTimeM False defaultTimeLocale "%z")
+#else
+                (parseTime defaultTimeLocale "%z")
+#endif
 
 $(derivePersistFieldS "XTimeZone")
 $(deriveJsonS "XTimeZone")

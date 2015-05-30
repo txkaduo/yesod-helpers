@@ -3,6 +3,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE CPP #-}
 module Yesod.Helpers.Persist where
 
 import Prelude
@@ -28,7 +29,10 @@ import Control.Monad.Trans.Reader           (ReaderT)
 import Control.Monad                        (forM)
 import Data.Text                            (Text)
 import qualified Data.Text                  as T
+#if MIN_VERSION_base(4,8,0)
+#else
 import Data.Monoid                          (mconcat)
+#endif
 import Data.List                            ((\\))
 import Data.Conduit                         (Sink, await)
 

@@ -13,11 +13,17 @@ import qualified Data.Vector                as V
 import Data.Vector                          (Vector)
 import qualified Data.Text                  as T
 import Data.Default                         (Default(..))
-import Control.Monad hiding (forM)
 import Control.Applicative
 import Data.IORef
+
+#if MIN_VERSION_base(4,8,0)
+import Control.Monad
+#else
+import Control.Monad hiding (forM)
 import Data.Monoid
 import Data.Traversable                     (traverse, forM)
+#endif
+
 import Data.String                          (fromString)
 import Data.List                            (stripPrefix)
 import Data.Maybe
