@@ -18,8 +18,12 @@ import Data.Text                            (Text)
 import Data.List                            (findIndex, sortBy)
 import Data.Ord                             (comparing)
 import Data.Maybe                           (listToMaybe, catMaybes)
+#if MIN_VERSION_base(4,8,0)
+import Data.Monoid                          ((<>))
+#else
 import Control.Applicative                  (Applicative(..))
 import Data.Monoid                          ((<>), Monoid)
+#endif
 import Data.String                          (IsString)
 import Network.HTTP.Types.Status            (mkStatus)
 

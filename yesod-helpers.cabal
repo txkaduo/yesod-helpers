@@ -31,6 +31,10 @@ Flag old-transformers
     Description:   Use pre-0.4 version of transformers
     Default:       False
 
+Flag old-time
+    Description:   Use old time package
+    Default:       False
+
 library
   exposed-modules:     Yesod.Helpers.Form
                        Yesod.Helpers.Handler
@@ -54,21 +58,19 @@ library
   -- other-modules:       
   default-extensions:  CPP
 
-  build-depends:       base >=4.7 && <4.8
+  build-depends:       base >=4.7
                      , wai
                      , wai-logger
                      , yesod
                      , yesod-form
                      , persistent
                      , text
-                     , time
                      , bytestring
                      , blaze-markup
                      , attoparsec
                      , parsec3-numbers
                      , aeson
                      , shakespeare
-                     , old-locale
                      , http-types
                      , exceptions
                      , template-haskell
@@ -114,6 +116,11 @@ library
                      , transformers-compat
   else
      build-depends:    transformers >= 0.4.0
+
+  if flag(old-time)
+     build-depends:    time < 1.5, old-locale
+  else
+     build-depends:    time >= 1.5
 
   -- hs-source-dirs:      
   default-language:    Haskell2010

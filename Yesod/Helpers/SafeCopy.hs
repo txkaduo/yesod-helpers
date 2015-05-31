@@ -13,7 +13,10 @@ import Language.Haskell.TH
 import Control.Monad.State hiding (get, put)
 import Control.Monad.Reader
 
+#if MIN_VERSION_base(4,8,0)
+#else
 import Control.Applicative                  ((<$>), (<*>))
+#endif
 import Data.Serialize                       (Get, Put, get, put)
 import Text.Parsec                          (parse)
 import Data.Time                            ( UTCTime, NominalDiffTime

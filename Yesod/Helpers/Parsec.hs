@@ -9,7 +9,9 @@ import Prelude
 import Yesod
 import Data.String                          (IsString, fromString)
 import Control.Monad                        (void)
+#if !MIN_VERSION_base(4,8,0)
 import Control.Applicative                  ((<*))
+#endif
 
 import Text.Parsec
 import Text.Parsec.Text                     ()
@@ -17,7 +19,10 @@ import Language.Haskell.TH
 
 import Database.Persist.Sql                 (sqlType, PersistFieldSql)
 import Text.Parsec.String                   (Parser)
+#if MIN_VERSION_base(4,8,0)
+#else
 import Data.Monoid                          (mconcat)
+#endif
 import Data.Functor.Identity                (Identity)
 import Data.Text                            (Text)
 import Data.ByteString                      (ByteString)

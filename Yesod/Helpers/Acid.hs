@@ -19,7 +19,9 @@ import Data.SafeCopy                        (SafeCopy)
 import Data.Typeable                        (Typeable)
 import Control.Monad.IO.Class               (MonadIO, liftIO)
 import Control.Concurrent                   (forkIO)
+#if !MIN_VERSION_base(4,8,0)
 import Control.Applicative                  ((<$>), (<*>))
+#endif
 import Control.Monad
 import Control.Monad.Logger                 (MonadLogger, logError)
 import Control.Exception                    (try)
@@ -34,7 +36,9 @@ import Data.Aeson                           (withObject, FromJSON, parseJSON
                                             )
 import Data.Streaming.Network               (HostPreference, bindPortTCP)
 import Data.Time                            (getCurrentTime, UTCTime)
+#if !MIN_VERSION_base(4,8,0)
 import Data.Traversable                     (traverse)
+#endif
 
 import Yesod.Helpers.Aeson
 import Yesod.Helpers.Parsec
