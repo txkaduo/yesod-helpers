@@ -175,11 +175,15 @@ instance LogStore LogFileAtMaxSize where
 renewLogFileAtMaxSize :: LogFileAtMaxSize -> IO ()
 renewLogFileAtMaxSize (LogFileAtMaxSize max_sz fp size_cnt ls) = do
     let renew = do
+                flushLogStr ls
                 COff fsize <- fileSize <$> getFileStatus fp
-                when ( fsize > max_sz ) $ do
-                    cutLogFileThenArchive fp
-                    writeIORef size_cnt 0
-                    renewLoggerSet ls
+                if ( fsize > max_sz )
+                    then do
+                        cutLogFileThenArchive fp
+                        writeIORef size_cnt 0
+                        renewLoggerSet ls
+                    else
+                        writeIORef size_cnt fsize
 
     renew `catchIOError` (\e -> do
         hPutStrLn stderr $ "got exception when renewing log file: " ++ show e)
