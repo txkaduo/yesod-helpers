@@ -14,11 +14,13 @@ import Prelude
 import System.Exit
 import Text.Parsec
 import Control.Applicative
+import Control.Monad
 import Database.Persist
 import Database.Persist.TH
 import Database.Persist.Sql
 import Data.ByteString.Base16               as B16
 import qualified Data.ByteString.Char8      as C8
+import Data.Time
 
 import Network                              (PortID(..))
 
@@ -26,6 +28,7 @@ import Yesod.Helpers.Types
 import Yesod.Helpers.Parsec
 import Yesod.Helpers.FuzzyDay
 import Yesod.Helpers.Form
+import Yesod.Helpers.Utils
 
 import Data.SafeCopy
 import Data.Serialize
@@ -192,6 +195,35 @@ test_humanParseFuzzyDay = do
     let f2 = testAnyCharParser humanParseFuzzyDayRange
     f2 "2009.08 - 2012.03" (FuzzyDayYM 2009 8, FuzzyDayYM 2012 3)
 
+
+humanParseUTCTimeIt :: TimeZone -> String -> [String] -> IO ()
+humanParseUTCTimeIt tz std_string strs = do
+    utc_t0 <- case humanParseUTCTime tz std_string of
+        Nothing -> do
+            putStrLn $ "cannot parse time string: " ++ std_string
+            exitFailure
+        Just x -> return x
+
+    forM_ strs $ \s -> do
+        case humanParseUTCTime tz s of
+            Nothing -> do
+                putStrLn $ "cannot parse time string: " ++ s
+                exitFailure
+            Just utc_t -> do
+                when (utc_t0 /= utc_t) $ do
+                    putStrLn $ "time parsed to: " ++ show utc_t ++
+                                "\ndoes not equal to expected: " ++ show utc_t0
+                    exitFailure
+
+test_humanParseUTCTime :: IO ()
+test_humanParseUTCTime = do
+    let tz = hoursToTimeZone 8
+    humanParseUTCTimeIt tz "2015-01-02 12:53:46+0800"
+        [ "2015-01-02 12:53:46"
+        , "2015-01-02 13:53:46+0900"
+        , "2015年01月02日12时53分46秒"
+        ]
+
 main :: IO ()
 main = do
     testVerConstraint
@@ -201,3 +233,4 @@ main = do
     testSafeCopy
     testParseGroups
     test_humanParseFuzzyDay
+    test_humanParseUTCTime
