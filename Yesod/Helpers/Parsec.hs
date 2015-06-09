@@ -257,7 +257,7 @@ parseFileOrConnectPath = try (fmap Right parseConnectPath) <|> fmap Left p_file
 
 {-# DEPRECATED parseFileOrNetworkPath "use parseFileOrConnectPath" #-}
 parseFileOrNetworkPath :: CharParser (Either FilePath ConnectPath)
-parseFileOrNetworkPath = parseFileOrNetworkPath
+parseFileOrNetworkPath = parseFileOrConnectPath
 
 parseConnectPath :: CharParser ConnectPath
 parseConnectPath = do
