@@ -131,6 +131,18 @@ traverseFormResult _ (FormFailure e)    = pure $ FormFailure e
 traverseFormResult _ FormMissing        = pure FormMissing
 
 
+-- | useful for newtype type
+simpleWrappedField :: forall a b m. Monad m =>
+    (a -> b)
+    -> (b -> a)
+    -> Field m a
+    -> Field m b
+simpleWrappedField conv conv_back = checkMMap conv' conv_back
+    where
+        conv' :: a -> m (Either Text b)
+        conv' = return . Right . conv
+
+
 simpleEncodedField ::
     (SimpleStringRep a, Monad m
     , RenderMessage (HandlerSite m) msg
@@ -178,6 +190,30 @@ entityField invalid_msg not_found_msg =
         f t = runExceptT $ do
             k <- maybe (throwE invalid_msg) return $ fromPathPiece t
             (lift $ runDB $ get k) >>= maybe (throwE not_found_msg) (return . Entity k)
+
+entityKeyField ::
+    ( RenderMessage site msg
+    , RenderMessage site FormMessage
+#if MIN_VERSION_persistent(2, 0, 0)
+    , PersistEntityBackend val ~ YesodPersistBackend site
+    , PersistStore (YesodPersistBackend site)
+#else
+    , PersistMonadBackend (YesodDB site) ~ PersistEntityBackend val
+    , PersistStore (YesodDB site)
+#endif
+    , PersistEntity val
+    , YesodPersist site
+    , PathPiece (Key val)
+    ) =>
+    msg
+    -> msg
+    -> Field (HandlerT site IO) (Key val)
+entityKeyField invalid_msg not_found_msg =
+    checkMMap f toPathPiece strippedTextField
+    where
+        f t = runExceptT $ do
+            k <- maybe (throwE invalid_msg) return $ fromPathPiece t
+            (lift $ runDB $ get k) >>= maybe (throwE not_found_msg) (const $ return k)
 
 
 entityUniqueKeyField ::
