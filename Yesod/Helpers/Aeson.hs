@@ -8,7 +8,9 @@ import qualified Data.Vector            as V
 import qualified Data.Aeson             as A
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Base64 as B64
+import qualified Data.ByteString.Base64.URL as B64U
 import qualified Data.ByteString        as B
+import qualified Data.ByteString.Char8  as C8
 import qualified Text.Parsec            as PC
 import qualified Control.Monad.Trans.State as S
 import Control.Monad.Trans              (lift)
@@ -204,6 +206,21 @@ parseBase64ByteString type_name s = do
                                 ++ type_name ++ "': " ++ err
         Right good  -> return good
 
+parseUrlBase64ByteString :: String -> Text -> Parser ByteString
+parseUrlBase64ByteString type_name s = do
+    case B64U.decode $ encodeUtf8 s of
+        Left err    -> fail $ "cannot parse url-base64-string as type '"
+                                ++ type_name ++ "': " ++ err
+        Right good  -> return good
+
+newtype Base64EncodedByteString = Base64EncodedByteString { unBase64EncodedByteString :: ByteString }
+                                deriving (Eq, Ord)
+instance FromJSON Base64EncodedByteString where
+    parseJSON v = fmap Base64EncodedByteString $
+                    parseJSON v >>= parseBase64ByteString "Base64EncodedByteString"
+
+instance ToJSON Base64EncodedByteString where
+    toJSON = toJSON . C8.unpack . B64.encode . unBase64EncodedByteString
 
 -- | expecting a Array, parse each value in it
 parseArray ::
