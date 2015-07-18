@@ -33,6 +33,16 @@ checkInListYaml ::
     -> Text         -- ^ the name looking for
     -> m Bool
 checkInListYaml fp c key name = do
+    checkInListYaml' fp c key (== name)
+
+checkInListYaml' ::
+    (Show config, MonadIO m, MonadLogger m) =>
+    FilePath
+    -> config       -- ^ config section: Develpment/Production/...
+    -> Text         -- ^ the key
+    -> (Text -> Bool)   -- ^ the name looking for
+    -> m Bool
+checkInListYaml' fp c key chk_name = do
     result <- liftIO $ decodeFileEither fp
     case result of
         Left ex -> do
@@ -47,7 +57,7 @@ checkInListYaml fp c key name = do
                                             ++ " contains invalid content: "
                                             ++ show err
                                 return False
-                        Right names -> return $ isJust $ find (match name) names
+                        Right names -> return $ isJust $ find match names
     where
         look_for_names = withObject "section-mapping" $ \obj -> do
             obj .:? (T.pack $ show c)
@@ -57,6 +67,6 @@ checkInListYaml fp c key name = do
                                     maybe (return []) (parseWordList' "words")
                     )
 
-        match y x = if x == "__any__"
-                        then True
-                        else y == x
+        match x = if x == "__any__"
+                    then True
+                    else chk_name x
