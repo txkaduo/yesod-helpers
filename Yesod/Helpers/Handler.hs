@@ -8,6 +8,7 @@ import Yesod
 import Yesod.Core.Types                     (HandlerT(..), handlerRequest)
 import qualified Control.Monad.Trans.Reader as R
 import qualified Data.Text                  as T
+import Control.Monad.Trans.Maybe
 
 import Network.Wai                          (requestHeaders)
 import Data.Time                            (UTCTime)
@@ -21,7 +22,7 @@ import Data.Maybe                           (listToMaybe, catMaybes)
 #if MIN_VERSION_base(4,8,0)
 import Data.Monoid                          ((<>))
 #else
-import Control.Applicative                  (Applicative(..))
+import Control.Applicative                  (Applicative(..), (<|>))
 import Data.Monoid                          ((<>), Monoid)
 #endif
 import Data.String                          (IsString)
@@ -253,3 +254,13 @@ paramErrorFromEither _  (Right x)   = ParamSuccess x
 validateParam :: Text -> (a -> Either Text b) -> ParamResult a -> ParamResult b
 validateParam pn f pr = do
     pr >>= paramErrorFromEither pn . f
+
+
+-- | 用于保持某些 get/post 变量，以便在 redirect 和 提交表单时可以传送給下一个服务器地址
+retainHttpParams :: MonadHandler m => [Text] -> m [(Text, Text)]
+retainHttpParams param_names = do
+    fmap catMaybes $ mapM f param_names
+    where
+        f n = runMaybeT $ do
+                val <- MaybeT (lookupPostParam n) <|> MaybeT (lookupGetParam n)
+                return (n, val)
