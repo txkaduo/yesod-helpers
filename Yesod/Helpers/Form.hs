@@ -25,6 +25,8 @@ import qualified Data.ByteString.Lazy       as LB
 import qualified Data.ByteString            as B
 import qualified Data.ByteString.Char8      as C8
 import qualified Data.ByteString.Base16     as B16
+import qualified Data.ByteString.Base64     as B64
+import qualified Data.ByteString.Base64.URL as B64U
 import qualified Data.Aeson.Types           as A
 import qualified Codec.Archive.Zip          as Zip
 import qualified Control.Monad.Trans.State.Strict as SS
@@ -341,6 +343,32 @@ base16Field msg = checkMMap conv conv_back strippedTextField
                     then return $ Right $ okbs
                     else return $ Left msg
             where (okbs, leftbs) = B16.decode (TE.encodeUtf8 t)
+
+base64Field ::
+    ( Monad m, RenderMessage (HandlerSite m) FormMessage
+    , RenderMessage (HandlerSite m) msg
+    ) =>
+    msg
+    -> Field m B.ByteString
+base64Field msg = checkMMap conv conv_back strippedTextField
+    where
+        conv_back = T.pack . C8.unpack . B64.encode
+        conv t = case B64.decode (TE.encodeUtf8 t) of
+                    Left _err -> return $ Left msg
+                    Right bs  -> return $ Right bs
+
+base64UrlField ::
+    ( Monad m, RenderMessage (HandlerSite m) FormMessage
+    , RenderMessage (HandlerSite m) msg
+    ) =>
+    msg
+    -> Field m B.ByteString
+base64UrlField msg = checkMMap conv conv_back strippedTextField
+    where
+        conv_back = T.pack . C8.unpack . B64U.encode
+        conv t = case B64U.decode (TE.encodeUtf8 t) of
+                    Left _err -> return $ Left msg
+                    Right bs  -> return $ Right bs
 
 -- | strip the value (as Text from client) before parsing.
 stripUpFront :: Field m a -> Field m a
