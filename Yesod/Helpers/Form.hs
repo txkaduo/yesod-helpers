@@ -39,7 +39,7 @@ import Control.Exception                    (Exception)
 import Control.Monad.RWS.Lazy               (RWST)
 import Text.Blaze                           (Markup)
 import Data.Conduit                         (($$), Conduit, yield, await, ($=), ($$+-), ($$+), (=$), transPipe)
-import Control.Monad.Trans.Resource         (runResourceT, transResourceT)
+import Control.Monad.Trans.Resource         (runResourceT, transResourceT, ResourceT)
 import Control.Monad.Trans.Maybe            (runMaybeT)
 import Control.Monad                        (mzero, when)
 import Data.Conduit.Binary                  (sourceLbs, sinkLbs)
@@ -746,6 +746,55 @@ attoparsecFileField parse_err p file_field = do
                                         )
 
 
+-- | used in archivedFilesField
+parseFileInfoAsArchive :: forall e (m :: * -> *).
+                          (MonadBase IO m, MonadThrow m, MonadIO m) =>
+                          ([Char] -> e)
+                          -> FileInfo
+                          -> ResourceT (ExceptT e m) [AS.FileEntry]
+parseFileInfoAsArchive archive_err fi = do
+    (rsrc1, m_arc) <- (transPipe (transResourceT liftIO) $ fileSourceRaw fi)
+                        $= AS.autoDecompressByCompressors AS.allKnownDetectiveCompressors
+                        $$+ AS.autoDetectArchive AS.allKnownDetectiveArchives
+    case m_arc of
+        Nothing -> do
+            -- not an archive, treat it as a single file
+            bs <- rsrc1 $$+- sinkLbs
+            let file_name = T.unpack $ fileName fi
+            return $ return $ AS.FileEntry file_name bs
+
+        Just ax -> do
+            rsrc1
+                $$+- (transPipe
+                        (transResourceT $ withExceptT archive_err)
+                        $ AS.extractFilesByDetectiveArchive ax)
+                =$ CL.consume
+
+
+fileInfoToFileEntry :: MonadIO m => FileInfo -> m AS.FileEntry
+fileInfoToFileEntry fi = do
+    content <- liftIO $ runResourceT $
+                    fileSourceRaw fi $$ sinkLbs
+    return $ AS.FileEntry (T.unpack $ fileName fi) content
+
+
+archivedFilesField ::
+    ( RenderMessage (HandlerSite m) FormMessage
+    , RenderMessage (HandlerSite m) msg
+    , MonadResource m, MonadCatch m
+    , MonadBaseControl IO m
+    ) =>
+    (String -> msg)
+    -> Field m FileInfo
+    -> Field m (FileInfo, [AS.FileEntry])
+archivedFilesField archive_err file_field = do
+    checkMMap parse_sunk fst file_field
+    where
+        parse_sunk fi = runExceptT $ do
+            fe_list <- runResourceT $ parseFileInfoAsArchive archive_err fi
+            return (fi, fe_list)
+
+
 -- | accept an uploaded file and parse it with an Attoparsec Parser
 -- If uploaded file is a zip file, parse files in it one by one.
 archivedAttoparsecFilesField ::
@@ -767,23 +816,7 @@ archivedAttoparsecFilesField archive_err parse_err p file_field = do
     checkMMap parse_sunk fst file_field
     where
         parse_sunk fi = runExceptT $ do
-            fe_list <- runResourceT $ do
-                    (rsrc1, m_arc) <- (transPipe (transResourceT liftIO) $ fileSourceRaw fi)
-                                        $= AS.autoDecompressByCompressors AS.allKnownDetectiveCompressors
-                                        $$+ AS.autoDetectArchive AS.allKnownDetectiveArchives
-                    case m_arc of
-                        Nothing -> do
-                            -- not an archive, treat it as a single file
-                            bs <- rsrc1 $$+- sinkLbs
-                            let file_name = T.unpack $ fileName fi
-                            return $ return $ AS.FileEntry file_name bs
-
-                        Just ax -> do
-                            rsrc1
-                                $$+- (transPipe
-                                        (transResourceT $ withExceptT archive_err)
-                                        $ AS.extractFilesByDetectiveArchive ax)
-                                =$ CL.consume
+            fe_list <- runResourceT $ parseFileInfoAsArchive archive_err fi
             fmap (fi,) $ liftM catMaybes $ forM fe_list $
                 \(AS.FileEntry file_name file_bs) -> runMaybeT $ do
                     when (LB.length file_bs <= 0) $ mzero
