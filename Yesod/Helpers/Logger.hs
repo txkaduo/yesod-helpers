@@ -161,9 +161,9 @@ instance LogStore LoggerSet where
 
 
 data LogFileAtMaxSize = LogFileAtMaxSize
-                            Int64           -- ^ max size
-                            FilePath        -- ^ log file path
-                            (IORef Int64)   -- ^ est. file size, increase when push log
+                            Int64           -- max size
+                            FilePath        -- log file path
+                            (IORef Int64)   -- dest. file size, increase when push log
                             LoggerSet
 
 instance LogStore LogFileAtMaxSize where

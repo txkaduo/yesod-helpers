@@ -92,10 +92,10 @@ markLoggedOut mu = do
 data LoggedInHandler u site m a =
             LoggedInHandler
                 (forall msg. RenderMessage site msg => msg -> HandlerT site m a)
-                    -- ^ a function to do "redirect"
+                    -- a function to do "redirect"
                     -- when login is required
                 (Entity u -> HandlerT site m a)
-                    -- ^ the real handler function
+                    -- the real handler function
 
 runLoggedInHandler ::
     ( LoginUser u
