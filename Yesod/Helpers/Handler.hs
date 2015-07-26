@@ -21,6 +21,7 @@ import Data.Ord                             (comparing)
 import Data.Maybe                           (listToMaybe, catMaybes)
 #if MIN_VERSION_base(4,8,0)
 import Data.Monoid                          ((<>))
+import Control.Applicative                  ((<|>))
 #else
 import Control.Applicative                  (Applicative(..), (<|>))
 import Data.Monoid                          ((<>), Monoid)
