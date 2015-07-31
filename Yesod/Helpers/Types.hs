@@ -5,6 +5,10 @@
 module Yesod.Helpers.Types where
 
 import Prelude
+import qualified Data.ByteString.Base64.URL as B64U
+import qualified Data.ByteString.Char8      as C8
+-- import qualified Data.Text                  as T
+import qualified Data.Text.Encoding         as TE
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative                  ((<$>))
@@ -22,12 +26,15 @@ import Data.Time                            (parseTime)
 import Control.Monad                        (mzero, void)
 import Data.List                            (intersperse)
 import Data.SafeCopy
+import Data.String                          (fromString)
 import Data.Text                            (Text)
 import Database.Persist                     (PersistField(..), SqlType(SqlString))
 import Database.Persist.Sql                 (PersistFieldSql(..))
 import Control.DeepSeq                      (NFData(..))
 import Control.DeepSeq.Generics             (genericRnf)
 import GHC.Generics                         (Generic)
+import Yesod.Core                           (PathPiece(..))
+import Data.ByteString                      (ByteString)
 import qualified System.FilePath.Glob       as G
 import Text.Parsec
 import Yesod.Helpers.Parsec
@@ -230,3 +237,17 @@ validateSimpleVersion (VerLogicAnd c1 c2) ver =
     validateSimpleVersion c1 ver && validateSimpleVersion c2 ver
 validateSimpleVersion (VerLogicOr c1 c2) ver =
     validateSimpleVersion c1 ver || validateSimpleVersion c2 ver
+
+
+-- | 为把一个 bytestring 放到 yesod url 里
+newtype B64UByteStringPathPiece = B64UByteStringPathPiece { unB64UByteStringPathPiece :: ByteString }
+                                deriving (Eq, Ord, Show, Read)
+
+instance PathPiece B64UByteStringPathPiece where
+    toPathPiece (B64UByteStringPathPiece bs) =
+        fromString $ C8.unpack $ B64U.encode bs
+
+    fromPathPiece t = do
+        case B64U.decode (TE.encodeUtf8 t) of
+            Left _ -> mzero
+            Right bs -> return $ B64UByteStringPathPiece bs
