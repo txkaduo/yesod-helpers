@@ -15,6 +15,7 @@ import Data.Maybe                           (fromMaybe)
 import Control.Monad                        (join)
 import Data.Text                            (pack, Text)
 import qualified Data.Text                  as T
+import Network.HTTP.Types                   (unauthorized401)
 
 
 import Yesod.Helpers.Handler                (lookupReqAccept, matchMimeType)
@@ -94,6 +95,22 @@ redirectOrJson msg route = do
     where
         json tmsg = sendResponse $ jsonErrorOutput tmsg
         rdr = redirect route
+
+
+-- | if client accept json (ajax call), give a http 401 status code, and a Location header
+-- otherwise, just a normal http redirect 301
+redirectOrJson401 ::
+     (MonadHandler m, RedirectUrl (HandlerSite m) url) =>
+    url -> m a
+redirectOrJson401 route = do
+    is_ajax <- acceptsJson
+    if is_ajax
+       then do
+           url <- toTextUrl route
+           addHeader "Location" url
+           sendResponseStatus unauthorized401 ()
+        else
+            redirect route
 
 -- | 把一个 Key 用JSON字串表示
 jsonEncodeKey ::
