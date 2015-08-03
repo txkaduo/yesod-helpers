@@ -90,6 +90,7 @@ instance PersistFieldSql UrlText where
 instance SafeCopy UrlText where
     getCopy             = contain $ UrlText <$> safeGet
     putCopy (UrlText x) = contain $ safePut x
+    errorTypeName _     = "UrlText"
 
 
 newtype XTimeZone = XTimeZone { unXTimeZone :: TimeZone }
