@@ -35,6 +35,7 @@ import Control.DeepSeq.Generics             (genericRnf)
 import GHC.Generics                         (Generic)
 import Yesod.Core                           (PathPiece(..))
 import Data.ByteString                      (ByteString)
+import Data.Aeson                           (FromJSON(..), ToJSON(..))
 import qualified System.FilePath.Glob       as G
 import Text.Parsec
 import Yesod.Helpers.Parsec
@@ -252,3 +253,11 @@ instance PathPiece B64UByteStringPathPiece where
         case B64U.decode (TE.encodeUtf8 t) of
             Left _ -> mzero
             Right bs -> return $ B64UByteStringPathPiece bs
+
+instance FromJSON B64UByteStringPathPiece where
+    parseJSON v = do
+        fmap fromPathPiece (parseJSON v)
+            >>= maybe mzero return
+
+instance ToJSON B64UByteStringPathPiece where
+    toJSON = toJSON . toPathPiece
