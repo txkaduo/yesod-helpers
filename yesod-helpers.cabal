@@ -53,6 +53,7 @@ library
                        Yesod.Helpers.Acid
                        Yesod.Helpers.About
                        Yesod.Helpers.Logger
+                       Yesod.Helpers.BgThread
                        Yesod.Helpers.Utils
 
   -- other-modules:       
@@ -104,6 +105,8 @@ library
                      , filepath
                      , unix
                      , deepseq-generics
+                     , stm
+                     , async
                      , simple-archive-conduit
 
   if flag(parsec3)
