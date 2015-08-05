@@ -93,6 +93,10 @@ instance SafeCopy UrlText where
     putCopy (UrlText x) = contain $ safePut x
     errorTypeName _     = "UrlText"
 
+instance FromJSON UrlText where parseJSON = fmap UrlText . parseJSON
+
+instance ToJSON UrlText where toJSON = toJSON . unUrlText
+
 
 newtype XTimeZone = XTimeZone { unXTimeZone :: TimeZone }
                     deriving (Show, Read, Eq, Ord)
