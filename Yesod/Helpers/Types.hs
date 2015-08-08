@@ -115,14 +115,17 @@ instance SimpleStringRep XTimeZone where
 $(derivePersistFieldS "XTimeZone")
 $(deriveJsonS "XTimeZone")
 
+instance NFData XTimeZone where rnf (XTimeZone x) = rnf x
+
 instance SafeCopy XTimeZone where
     getCopy = getCopySimpleEncoded
     putCopy = putCopySimpleEncoded
 
 
 data SimpleVersion = SimpleVersion { unSimpleVersion :: [Int] }
-                deriving (Show, Read, Eq, Ord)
+                deriving (Show, Read, Eq, Ord, Generic)
 
+instance NFData SimpleVersion
 $(derivePersistFieldS "SimpleVersion")
 $(deriveJsonS "SimpleVersion")
 
@@ -142,7 +145,15 @@ data VerConstraint = VerWithOrder Ordering SimpleVersion
                     | VerWithGlobN G.Pattern
                     | VerLogicAnd VerConstraint VerConstraint
                     | VerLogicOr VerConstraint VerConstraint
-                    deriving (Show, Eq)
+                    deriving (Show, Eq, Generic)
+
+instance NFData VerConstraint where
+    rnf (VerWithOrder o sv)     = o `seq` rnf sv
+    rnf (VerWithOrderN o sv)    = o `seq` rnf sv
+    rnf (VerWithGlob gp)        = seq gp ()
+    rnf (VerWithGlobN gp)       = seq gp ()
+    rnf (VerLogicAnd x y)       = rnf x `seq` rnf y
+    rnf (VerLogicOr x y)        = rnf x `seq` rnf y
 
 $(derivePersistFieldS "VerConstraint")
 $(deriveJsonS "VerConstraint")
