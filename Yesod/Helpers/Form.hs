@@ -220,6 +220,31 @@ entityKeyField invalid_msg not_found_msg =
             (lift $ runDB $ get k) >>= maybe (throwE not_found_msg) (const $ return k)
 
 
+entityKeyHiddenField ::
+    ( RenderMessage site msg
+    , RenderMessage site FormMessage
+#if MIN_VERSION_persistent(2, 0, 0)
+    , PersistEntityBackend val ~ YesodPersistBackend site
+    , PersistStore (YesodPersistBackend site)
+#else
+    , PersistMonadBackend (YesodDB site) ~ PersistEntityBackend val
+    , PersistStore (YesodDB site)
+#endif
+    , PersistEntity val
+    , YesodPersist site
+    , PathPiece (Key val)
+    ) =>
+    msg
+    -> msg
+    -> Field (HandlerT site IO) (Key val)
+entityKeyHiddenField invalid_msg not_found_msg =
+    checkMMap f toPathPiece hiddenField
+    where
+        f t = runExceptT $ do
+            k <- maybe (throwE invalid_msg) return $ fromPathPiece t
+            (lift $ runDB $ get k) >>= maybe (throwE not_found_msg) (const $ return k)
+
+
 entityUniqueKeyField ::
     ( RenderMessage site msg
     , RenderMessage site FormMessage
