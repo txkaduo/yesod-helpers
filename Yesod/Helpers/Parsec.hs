@@ -8,7 +8,7 @@ module Yesod.Helpers.Parsec where
 import Prelude
 import Yesod
 import Data.String                          (IsString, fromString)
-import Control.Monad                        (void)
+import Control.Monad                        (void, join)
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative                  ((<*))
 #endif
@@ -30,6 +30,7 @@ import Data.Char                            (isDigit, toUpper)
 import Data.Maybe
 import Data.Int
 import Data.Word
+import Yesod.Core                           (PathPiece(..))
 import Network                              (HostName, PortID(..))
 import qualified Data.Aeson                 as A
 import qualified Data.Aeson.Types           as AT
@@ -44,6 +45,11 @@ import qualified Data.ByteString            as B
 type GenCharParser u m a = forall s. Stream s m Char => ParsecT s u m a
 
 type CharParser a = GenCharParser () Identity a
+
+parseWithCharParserMaybe :: CharParser a -> String -> Maybe a
+parseWithCharParserMaybe p t = case parse p "" t of
+                                Left _ -> Nothing
+                                Right x -> Just x
 
 -- | a data type that can be encoded into string, and decoded from string.
 -- Use this class instead of Show/Read, when you need to control
@@ -144,6 +150,22 @@ deriveJsonS s = do
         , fromJsonInstanceD (ConT $ mkName s)
             [ FunD 'parseJSON
                 [ Clause [] (NormalB parse_json) []
+                ]
+            ]
+        ]
+
+derivePathPieceS :: String -> Q [Dec]
+derivePathPieceS s = do
+    to_pathpiece <- [| toPathPiece . simpleEncode |]
+    from_pathpiece <- [| join . fmap (parseWithCharParserMaybe simpleParser) . fromPathPiece |]
+    parse_json <- [| simpleParseJson s  |]
+    return
+        [ pathPieceInstanceD (ConT $ mkName s)
+            [ FunD 'toPathPiece
+                [ Clause [] (NormalB to_pathpiece) []
+                ]
+            , FunD 'fromPathPiece
+                [ Clause [] (NormalB from_pathpiece) []
                 ]
             ]
         ]
@@ -314,6 +336,10 @@ toJsonInstanceD typ =
 fromJsonInstanceD :: Type -> [Dec] -> Dec
 fromJsonInstanceD typ =
     InstanceD [] (ConT ''FromJSON `AppT` typ)
+
+pathPieceInstanceD :: Type -> [Dec] -> Dec
+pathPieceInstanceD typ =
+    InstanceD [] (ConT ''PathPiece `AppT` typ)
 
 
 parsePVByParser :: Parser a -> PersistValue -> Either Text a
