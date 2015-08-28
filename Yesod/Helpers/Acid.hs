@@ -14,6 +14,7 @@ module Yesod.Helpers.Acid
 import Prelude
 import Data.Acid
 import Data.Acid.Remote
+import Data.Acid.Memory                     (openMemoryState)
 import Data.SafeCopy                        (SafeCopy)
 
 import Data.Typeable                        (Typeable)
@@ -216,6 +217,7 @@ acidOpenByConfig ::
 acidOpenByConfig s config ms = do
     case acidConfigConnect config of
         Right cp    -> acidOpenConnectPath ms cp
+        Left "memory" -> liftIO $ fmap Just $ openMemoryState s
         Left fp     -> liftIO $ fmap Just $ openLocalStateFrom fp s
 
 
