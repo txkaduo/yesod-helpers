@@ -9,6 +9,7 @@ import Yesod.Core.Types                     (HandlerT(..), handlerRequest)
 import qualified Control.Monad.Trans.Reader as R
 import qualified Data.Text                  as T
 import Control.Monad.Trans.Maybe
+import Control.Monad                        (join)
 
 import Network.Wai                          (requestHeaders)
 import Data.Time                            (UTCTime)
@@ -19,15 +20,12 @@ import Data.Text                            (Text)
 import Data.List                            (findIndex, sortBy)
 import Data.Ord                             (comparing)
 import Data.Maybe                           (listToMaybe, catMaybes)
-#if MIN_VERSION_base(4,8,0)
-import Data.Monoid                          ((<>))
-import Control.Applicative                  ((<|>))
-#else
-import Control.Applicative                  (Applicative(..), (<|>))
-import Data.Monoid                          ((<>), Monoid)
-#endif
+import Control.Applicative
+import Data.Monoid
 import Data.String                          (IsString)
 import Network.HTTP.Types.Status            (mkStatus)
+
+import Yesod.Helpers.Utils                  (emptyTextToNothing)
 
 
 setLastModified :: UTCTime -> HandlerT site IO ()
@@ -265,3 +263,19 @@ retainHttpParams param_names = do
         f n = runMaybeT $ do
                 val <- MaybeT (lookupPostParam n) <|> MaybeT (lookupGetParam n)
                 return (n, val)
+
+
+reqPathPieceParamPostGet :: (PathPiece a, MonadHandler m) =>
+                            Text
+                            -> m a
+reqPathPieceParamPostGet pname =
+    optPathPieceParamPostGet pname >>= maybe (invalidArgs [pname]) return
+
+optPathPieceParamPostGet :: (PathPiece a, MonadHandler m) =>
+                            Text
+                            -> m (Maybe a)
+optPathPieceParamPostGet pname =
+    (fmap (join . fmap fromPathPiece) $ runMaybeT $
+                (MaybeT $ join . fmap emptyTextToNothing <$> lookupPostParam pname)
+                <|> (MaybeT $ join . fmap emptyTextToNothing <$> lookupGetParam pname))
+
