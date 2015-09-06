@@ -46,7 +46,7 @@ import Data.Conduit.Binary                  (sourceLbs, sinkLbs)
 
 import Data.List                            (isSuffixOf)
 import Data.Text                            (Text)
-import Data.Maybe                           (catMaybes)
+import Data.Maybe                           (catMaybes, fromMaybe)
 import Text.Blaze.Renderer.Utf8             (renderMarkup)
 import Text.Blaze.Internal                  (MarkupM(Empty))
 import Control.Monad                        (liftM, forM)
@@ -76,6 +76,19 @@ labelNameToFs label name = FieldSettings
                     Nothing             -- id
                     (Just name)
                     []
+
+
+-- | add 'form-control' CSS class to form input field
+fsAddFormControlClass :: FieldSettings site -> FieldSettings site
+fsAddFormControlClass fs = fs { fsAttrs = new_attrs }
+    where
+        classes = fromMaybe "" $ lookup "class" $ fsAttrs fs
+        new_classes = T.unwords ("form-control" : T.words classes)
+        new_attrs = flip map (fsAttrs fs) $ \(n, v) ->
+                        let new_v = if n == "class"
+                                       then new_classes
+                                       else v
+                        in (n, new_v)
 
 
 minimialLayoutBody :: Yesod site => WidgetT site IO () -> HandlerT site IO Html
