@@ -18,6 +18,9 @@ import Data.Time                            (parseTimeM)
 import System.Locale                        (defaultTimeLocale)
 import Data.Time                            (parseTime)
 #endif
+import Control.Monad.IO.Class               (MonadIO, liftIO)
+import Control.Monad
+import System.Random                        (randomIO)
 
 toHalfWidthEnglishAlpha :: Char -> Char
 toHalfWidthEnglishAlpha ch
@@ -71,3 +74,16 @@ humanParseUTCTime tz s =
         parse_day fmt = do
             d <- parse_t fmt
             return $ localTimeToUTC tz $ LocalTime d midnight
+
+
+randomPick :: MonadIO m => [a] -> m a
+randomPick choices = do
+    idx' <- liftIO randomIO
+    let idx = abs idx' `rem` chlen
+    return $ choices !! idx
+    where
+        chlen = length choices
+
+
+randomString :: MonadIO m => Int -> [Char] -> m [Char]
+randomString len chars = replicateM len (randomPick chars)
