@@ -30,7 +30,6 @@ import Data.Char                            (isDigit, toUpper)
 import Data.Maybe
 import Data.Int
 import Data.Word
-import Yesod.Core                           (PathPiece(..))
 import Network                              (HostName, PortID(..))
 import qualified Data.Aeson                 as A
 import qualified Data.Aeson.Types           as AT
@@ -158,7 +157,6 @@ derivePathPieceS :: String -> Q [Dec]
 derivePathPieceS s = do
     to_pathpiece <- [| toPathPiece . simpleEncode |]
     from_pathpiece <- [| join . fmap (parseWithCharParserMaybe simpleParser) . fromPathPiece |]
-    parse_json <- [| simpleParseJson s  |]
     return
         [ pathPieceInstanceD (ConT $ mkName s)
             [ FunD 'toPathPiece
