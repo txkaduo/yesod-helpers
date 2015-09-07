@@ -41,12 +41,13 @@ import Text.Blaze                           (Markup)
 import Data.Conduit                         (($$), Conduit, yield, await, ($=), ($$+-), ($$+), (=$), transPipe)
 import Control.Monad.Trans.Resource         (runResourceT, transResourceT, ResourceT)
 import Control.Monad.Trans.Maybe            (runMaybeT)
-import Control.Monad                        (mzero, when)
+import Control.Monad                        (mzero, when, unless)
 import Data.Conduit.Binary                  (sourceLbs, sinkLbs)
 
 import Data.List                            (isSuffixOf)
 import Data.Text                            (Text)
-import Data.Maybe                           (catMaybes, fromMaybe)
+import Data.Char                            (isDigit)
+import Data.Maybe                           (catMaybes, fromMaybe, listToMaybe)
 import Text.Blaze.Renderer.Utf8             (renderMarkup)
 import Text.Blaze.Internal                  (MarkupM(Empty))
 import Control.Monad                        (liftM, forM)
@@ -927,3 +928,30 @@ zippedAttoparsecFilesField unzip_err parse_err p file_field = do
                                     return $ Left $ parse_err file_name $ show e
                                 )
 
+
+chineseMobileField :: (RenderMessage (HandlerSite m) msg
+                    , RenderMessage (HandlerSite m) FormMessage
+                    , Monad m
+                    ) =>
+                    msg
+                    -> Field m Text
+chineseMobileField err_msg = checkM chk_mobile strippedTextField
+    where
+        chk_mobile_raw t = do
+            let t' = T.filter (/= '-') t
+            unless (T.all isDigit t' && T.length t' == 11 && T.isPrefixOf "1" t') mzero
+            return t'
+
+        -- handle +86
+        chk_mobile_plus t = do
+            T.stripPrefix "+" t >>= chk_mobile_cn
+
+        chk_mobile_cn t = do
+            T.stripPrefix "86" t >>= chk_mobile_raw
+
+        chk_mobile_maybe t = catMaybes  [ chk_mobile_cn t
+                                        , chk_mobile_plus t
+                                        , chk_mobile_raw t
+                                        ]
+
+        chk_mobile t = return $ maybe (Left err_msg) Right $ listToMaybe $ chk_mobile_maybe t
