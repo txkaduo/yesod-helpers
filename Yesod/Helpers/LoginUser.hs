@@ -149,13 +149,13 @@ redirectToLoginRoute ::
     Route site -> message -> HandlerT site m a
 redirectToLoginRoute login_route msg = do
     url_render_p <- getUrlRenderParams
-    url_render <- getUrlRender
     m_current_r <- getCurrentRoute
     mr <- getMessageRender
+    req <- getRequest
     redirect $ url_render_p login_route $
         ("login_msg", mr msg) : case m_current_r of
                                     Nothing -> []
-                                    Just r -> [ ("from_url", url_render r) ]
+                                    Just r -> [ ("from_url", url_render_p r (reqGetParams req)) ]
 
 data LoginParams = LoginParams {
                     loginParamFromUrl   :: Maybe Text
