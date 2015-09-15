@@ -133,6 +133,17 @@ type PersistStoreMonad backend n m =
     )
 #endif
 
+-- | try to insert a new record, replace existing one if unique constaint conflicts.
+insertOrReplace :: ( PersistQueryUniqueMonad backend n m
+                    , IsPersistMonadOf backend n m val
+                    ) =>
+                    val
+                    -> m (Key val)
+insertOrReplace v = insertBy v
+                        >>= either
+                                (\(Entity k _) -> replace k v >> return k)
+                                return
+
 -- | select current records, replace them with the supplied new list.
 -- Try hard to retain old records that are the same as new ones.
 insertOrUpdateWithList ::
@@ -155,10 +166,7 @@ insertOrUpdateWithList fts new_ones = do
                                 then Nothing
                                 else Just v
     new_keys <- forM to_be_inserted $ \v -> do
-                    insertBy v
-                        >>= either
-                                (\(Entity k _) -> replace k v >> return k)
-                                return
+                    insertOrReplace v
     return $ (new_keys, to_be_deleted)
 
 
