@@ -30,7 +30,7 @@ import Data.Maybe
 import Network.Wai.Logger                   (DateCacheGetter)
 import Yesod.Core.Types
 import Language.Haskell.TH.Syntax           (loc_package, loc_module, loc_filename, loc_start)
-import System.FilePath                      (splitFileName, takeFileName)
+import System.FilePath                      ((</>), splitFileName, takeFileName)
 import System.Directory                     (renameFile)
 import System.IO                            (hPutStrLn, stderr)
 import System.IO.Error                      (catchIOError)
@@ -210,15 +210,15 @@ newLogFileAtMaxSize max_size buf_size fp = do
     return lf
 
 
-parseSomeLogStoreObj :: Object -> AT.Parser (IO SomeLogStore)
-parseSomeLogStoreObj o = do
+parseSomeLogStoreObj :: Maybe FilePath -> Object -> AT.Parser (IO SomeLogStore)
+parseSomeLogStoreObj m_bp o = do
     typ <- o .: "type"
     buf_size <- (o .:? "buf-size"
                     >>= traverse (parseTextByParsec parseByteSizeWithUnit)
                 ) .!= defaultBufSize
     case typ of
         "file" -> do
-            fp <- o .: "path"
+            fp <- fmap (maybe id (</>) m_bp) $ o .: "path"
             m_sz <- o .:? "cut-at-size" >>= traverse (parseTextByParsec parseByteSizeWithUnit)
             case m_sz of
                 Nothing -> do
@@ -263,12 +263,13 @@ instance Default LoggerConfig where
 
 instance FromJSON LoggerConfig where
     parseJSON = withObject "LoggerConfig" $ \obj -> do
+        m_base_path <- obj .:? "base-path"
         LoggerConfig
-            <$> (fmap V.fromList $ obj .: "others" >>= parseSomeObjects "LoggerConfig others" parse_obj)
-            <*> (obj .:? "default" >>= traverse parse_obj)
+            <$> (fmap V.fromList $ obj .: "others" >>= parseSomeObjects "LoggerConfig others" (parse_obj m_base_path))
+            <*> (obj .:? "default" >>= traverse (parse_obj m_base_path))
         where
-            parse_obj = \o -> do
-                (,) <$> parseSomeLogStoreObj o
+            parse_obj m_bp = \o -> do
+                (,) <$> parseSomeLogStoreObj m_bp o
                     <*> parseSomeShouldLogPredObj o
 
 
