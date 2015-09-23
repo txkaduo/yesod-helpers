@@ -14,6 +14,7 @@ import qualified Data.Text.Encoding         as TE
 import Control.Applicative                  ((<$>))
 #endif
 
+import Language.Haskell.TH.Lift             (deriveLift)
 import Data.Time                            (TimeZone, timeZoneOffsetString)
 #if MIN_VERSION_time(1,5,0)
 import Data.Time.Format                     (defaultTimeLocale)
@@ -80,6 +81,7 @@ instance SimpleStringRep Gender where
 -- | A URL in Text.
 newtype UrlText = UrlText { unUrlText :: Text}
                 deriving (Show, Eq, Ord)
+$(deriveLift ''UrlText)
 
 instance PersistField UrlText where
     toPersistValue = toPersistValue . unUrlText

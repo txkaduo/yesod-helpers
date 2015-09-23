@@ -108,6 +108,7 @@ library
                      , stm
                      , async
                      , random
+                     , th-lift
                      , simple-archive-conduit
 
   if flag(parsec3)
