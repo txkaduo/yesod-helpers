@@ -1,6 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
-module Yesod.Helpers.Yaml where
+module Yesod.Helpers.Yaml (
+    module Yesod.Helpers.Yaml
+    , DefaultEnv(..)
+    ) where
 
 import Prelude
 import Data.Yaml
@@ -10,6 +13,7 @@ import Data.Aeson                           (withObject)
 import qualified Data.Text                  as T
 import Data.Maybe                           (isJust)
 import Data.List                            (find)
+import Yesod.Default.Config                 (DefaultEnv(..))
 
 import Yesod.Helpers.Aeson
 
@@ -34,6 +38,7 @@ checkInListYaml ::
     -> m Bool
 checkInListYaml fp c key name = do
     checkInListYaml' fp c key (== name)
+
 
 checkInListYaml' ::
     (Show config, MonadIO m, MonadLogger m) =>
