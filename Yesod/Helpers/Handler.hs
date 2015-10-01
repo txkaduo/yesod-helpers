@@ -39,10 +39,10 @@ isXHR = do
 
 
 -- | form function type synonym
-type MkForm site m a = Markup -> MForm (HandlerT site m) (FormResult a, WidgetT site m ())
+type MkForm site m a = Markup -> MForm (HandlerT site m) (FormResult a, WidgetT site IO ())
 
 
-type FormHandlerT site m a = R.ReaderT (WidgetT site m (), Enctype) (HandlerT site m) a
+type FormHandlerT site m a = R.ReaderT (WidgetT site IO (), Enctype) (HandlerT site m) a
 -- ^
 -- Typical Usage:
 --
@@ -76,10 +76,12 @@ generateFormPostHandler form_func fh = do
     R.runReaderT fh (formWidget, formEnctype)
 
 generateFormPostHandlerJH ::
-    ( Yesod site, RenderMessage site FormMessage ) =>
-    MkForm site IO r
-    -> ([Text] -> FormHandlerT site IO Html)
-    -> HandlerT site IO TypedContent
+    ( Yesod site, RenderMessage site FormMessage
+    , MonadIO m, MonadThrow m, MonadBaseControl IO m
+    ) =>
+    MkForm site m r
+    -> ([Text] -> FormHandlerT site m Html)
+    -> HandlerT site m TypedContent
 generateFormPostHandlerJH form_func show_page = do
     generateFormPostHandler form_func $ do
         jsonOrHtmlOutputFormX show_page []
@@ -96,33 +98,37 @@ runFormPostHandler form_func fh = do
     R.runReaderT (fh result) (formWidget, formEnctype)
 
 runFormPostHandlerJH ::
-    (RenderMessage site FormMessage, RenderMessage site msg, Yesod site) =>
-    MkForm site IO r                 -- ^ form function
-    -> ([Text] -> FormHandlerT site IO Html)
+    (RenderMessage site FormMessage, RenderMessage site msg, Yesod site
+    , MonadIO m, MonadBaseControl IO m, MonadThrow m
+    ) =>
+    MkForm site m r                 -- ^ form function
+    -> ([Text] -> FormHandlerT site m Html)
                                     -- ^ show html page function
-    -> (r -> HandlerT site IO (Either [msg] TypedContent))
+    -> (r -> HandlerT site m (Either [msg] TypedContent))
                                     -- ^ function to handler success form result
-    -> HandlerT site IO TypedContent
+    -> HandlerT site m TypedContent
 runFormPostHandlerJH form_func show_page h_ok = do
     runFormPostHandler form_func $
         jsonOrHtmlOutputFormHandleResult show_page h_ok
 
 
-jsonOrHtmlOutputFormX :: Yesod site =>
-    ([Text] -> FormHandlerT site IO Html)
+jsonOrHtmlOutputFormX :: (Yesod site, MonadIO m, MonadThrow m, MonadBaseControl IO m) =>
+    ([Text] -> FormHandlerT site m Html)
     -> [Text]
-    -> FormHandlerT site IO TypedContent
+    -> FormHandlerT site m TypedContent
 jsonOrHtmlOutputFormX show_form errs = do
     (formWidget, formEnctype) <- R.ask
     let show_form' = R.runReaderT (show_form errs) (formWidget, formEnctype)
     lift $ jsonOrHtmlOutputForm' show_form' formWidget [ "form_errors" .= errs ]
 
 jsonOrHtmlOutputFormHandleResult ::
-    (Yesod site, RenderMessage site msg) =>
-    ([Text] -> FormHandlerT site IO Html)
-    -> (r -> HandlerT site IO (Either [msg] TypedContent))
+    (Yesod site, RenderMessage site msg
+    , MonadIO m, MonadThrow m, MonadBaseControl IO m
+    ) =>
+    ([Text] -> FormHandlerT site m Html)
+    -> (r -> HandlerT site m (Either [msg] TypedContent))
     -> FormResult r
-    -> FormHandlerT site IO TypedContent
+    -> FormHandlerT site m TypedContent
 jsonOrHtmlOutputFormHandleResult show_page f result = do
     let showf errs = jsonOrHtmlOutputFormX show_page errs
         showf' msgs = lift getMessageRender >>= showf . flip map msgs

@@ -92,9 +92,10 @@ fsAddFormControlClass fs = fs { fsAttrs = new_attrs }
                         in (n, new_v)
 
 
-minimialLayoutBody :: Yesod site => WidgetT site IO () -> HandlerT site IO Html
+minimialLayoutBody :: (Yesod site, MonadIO m, MonadThrow m, MonadBaseControl IO m) =>
+                    WidgetT site IO () -> HandlerT site m Html
 minimialLayoutBody widget = do
-    pc <- widgetToPageContent widget
+    pc <- liftHandlerT $ widgetToPageContent widget
 #if MIN_VERSION_yesod_core(1, 2, 20)
     withUrlRenderer
 #else
@@ -103,12 +104,17 @@ minimialLayoutBody widget = do
         $ [hamlet|^{pageBody pc}|]
 
 -- | 把 form 的 html 代码用 json 打包返回
-jsonOutputForm :: Yesod site => WidgetT site IO () -> HandlerT site IO Value
+jsonOutputForm :: (Yesod site, MonadIO m, MonadThrow m, MonadBaseControl IO m) =>
+    WidgetT site IO () -> HandlerT site m Value
 jsonOutputForm = jsonOutputFormMsg (Nothing :: Maybe Text)
 
 -- | 同上，只是增加了 message 字段
-jsonOutputFormMsg :: (Yesod site, RenderMessage site message) =>
-    Maybe message -> WidgetT site IO () -> HandlerT site IO Value
+jsonOutputFormMsg :: (Yesod site, RenderMessage site message
+                    , MonadIO m, MonadThrow m, MonadBaseControl IO m
+                    ) =>
+                    Maybe message
+                    -> WidgetT site IO ()
+                    -> HandlerT site m Value
 jsonOutputFormMsg m_msg formWidget = do
     body <- liftM (TE.decodeUtf8 . LB.toStrict . renderMarkup)
                             (minimialLayoutBody formWidget)
@@ -118,22 +124,22 @@ jsonOutputFormMsg m_msg formWidget = do
                     , fmap (\msg -> "message" .= mr msg) m_msg
                     ]
 
-type ShowFormPage site = WidgetT site IO () -> Enctype -> HandlerT site IO Html
+type ShowFormPage site m = WidgetT site IO () -> Enctype -> HandlerT site m Html
 
-jsonOrHtmlOutputForm :: Yesod site =>
-    ShowFormPage site
+jsonOrHtmlOutputForm :: (Yesod site, MonadIO m, MonadThrow m, MonadBaseControl IO m) =>
+    ShowFormPage site m
     -> WidgetT site IO ()
     -> Enctype
     -> [A.Pair]
-    -> HandlerT site IO TypedContent
+    -> HandlerT site m TypedContent
 jsonOrHtmlOutputForm show_form formWidget formEnctype other_data = do
     jsonOrHtmlOutputForm' (show_form formWidget formEnctype) formWidget other_data
 
-jsonOrHtmlOutputForm' :: Yesod site =>
-    HandlerT site IO Html
+jsonOrHtmlOutputForm' :: (Yesod site, MonadIO m, MonadThrow m, MonadBaseControl IO m) =>
+    HandlerT site m Html
     -> WidgetT site IO ()
     -> [A.Pair]
-    -> HandlerT site IO TypedContent
+    -> HandlerT site m TypedContent
 jsonOrHtmlOutputForm' show_form formWidget other_data = do
     selectRep $ do
         provideRep $ do
