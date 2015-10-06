@@ -8,10 +8,13 @@ import Yesod
 import Yesod.Core.Types                     (HandlerT(..), handlerRequest)
 import qualified Control.Monad.Trans.Reader as R
 import qualified Data.Text                  as T
+import qualified Data.Text.Encoding         as TE
+import qualified Yesod.Core.Unsafe          as Unsafe
+import qualified Data.Map.Strict            as Map
 import Control.Monad.Trans.Maybe
 import Control.Monad                        (join)
 
-import Network.Wai                          (requestHeaders)
+import Network.Wai                          (requestHeaders, rawQueryString)
 import Data.Time                            (UTCTime)
 import Text.Blaze                           (Markup)
 import Control.Monad.Catch                  (MonadThrow)
@@ -37,6 +40,24 @@ isXHR = do
     let req_with = lookup "X-Request-With" $ requestHeaders req
     return $ maybe False (== "XMLHTTPRequest") req_with
 
+
+getCurrentUrl :: MonadHandler m => m Text
+getCurrentUrl = do
+    req <- waiRequest
+    current_route <- getCurrentRoute >>= maybe (error "getCurrentRoute failed") return
+    url_render <- getUrlRender
+    return $ url_render current_route <> TE.decodeUtf8 (rawQueryString req)
+
+getCurrentUrlExtraQS :: MonadHandler m => Text -> m Text
+getCurrentUrlExtraQS qs = do
+    req <- waiRequest
+    current_route <- getCurrentRoute >>= maybe (error "getCurrentRoute failed") return
+    url_render <- getUrlRender
+    return $ url_render current_route <> add_qs (TE.decodeUtf8 (rawQueryString req))
+    where
+        add_qs x = if T.null x
+                    then qs
+                    else x <> "&" <> qs
 
 -- | form function type synonym
 type MkForm site m a = Markup -> MForm (HandlerT site m) (FormResult a, WidgetT site IO ())
@@ -285,3 +306,16 @@ optPathPieceParamPostGet pname =
                 (MaybeT $ join . fmap emptyTextToNothing <$> lookupPostParam pname)
                 <|> (MaybeT $ join . fmap emptyTextToNothing <$> lookupGetParam pname))
 
+getUrlRenderParamsIO :: Yesod site => site -> IO (Route site -> [(Text, Text)] -> Text)
+getUrlRenderParamsIO foundation = do
+        Unsafe.runFakeHandler Map.empty
+                    (error "logger required in getUrlRenderParamsIO")
+                    foundation getUrlRenderParams
+        >>= either (error "getUrlRenderParams shoud never fail") return
+
+getUrlRenderIO :: Yesod site => site -> IO (Route site -> Text)
+getUrlRenderIO foundation = do
+        Unsafe.runFakeHandler Map.empty
+                    (error "logger required in getUrlRenderIO")
+                    foundation getUrlRender
+        >>= either (error "getUrlRender shoud never fail") return
