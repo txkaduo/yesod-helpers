@@ -180,6 +180,10 @@ acidStateConfigLocal conf = case acidConfigConnect conf of
                                 Left _  -> True
                                 Right _ -> False
 
+acidStateConfigMemory :: AcidStateConfig -> Bool
+acidStateConfigMemory conf = case acidConfigConnect conf of
+                                Left "memory"   -> True
+                                _               -> False
 
 acidServeOn :: (SafeCopy st) =>
     (CommChannel -> IO Bool)
