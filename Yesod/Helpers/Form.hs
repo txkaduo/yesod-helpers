@@ -309,10 +309,15 @@ simpleEncodedOptionList ::
     (SimpleStringRep a, Enum a, Bounded a) =>
     (a -> Text)     -- ^ to render value to display
     -> OptionList a
-simpleEncodedOptionList render = mkOptionList $ map f [minBound .. maxBound]
+simpleEncodedOptionList render = simpleEncodedOptionList' render [minBound .. maxBound]
+
+simpleEncodedOptionList' :: (SimpleStringRep a)
+                        => (a -> Text)     -- ^ to render value to display
+                        -> [a]
+                        -> OptionList a
+simpleEncodedOptionList' render lst = mkOptionList $ map f lst
     where
         f x = Option (render x) x (T.pack $ simpleEncode x)
-
 
 -- | parse the content in textarea, into a list of values
 encodedListTextareaField ::
