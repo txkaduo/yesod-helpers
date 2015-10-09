@@ -56,6 +56,8 @@ import Yesod.Helpers.Aeson                  ( parseTextByRead, nullToNothing, pa
 import Yesod.Helpers.Parsec                 ( parseByteSizeWithUnit )
 
 
+type LoggingFunc = Loc -> LogSource -> LogLevel -> LogStr -> IO ()
+
 class LoggingTRunner a where
     runLoggingTWith :: a -> LoggingT m r -> m r
 
@@ -289,7 +291,7 @@ newLogHandlerV getdate (LoggerConfig v m_def) = do
 -- | use this with runLoggingT
 logFuncByHandlerV ::
     LogHandlerV
-    -> (Loc -> LogSource -> LogLevel -> LogStr -> IO ())
+    -> LoggingFunc
 logFuncByHandlerV (LogHandlerV getdate v m_def) loc src level msg = do
     log_str_ioref <- newIORef Nothing
 
@@ -318,7 +320,7 @@ logFuncByHandlerV (LogHandlerV getdate v m_def) loc src level msg = do
 
 logFuncFallbackByHandlerV ::
     LogHandlerV
-    -> (Loc -> LogSource -> LogLevel -> LogStr -> IO ())
+    -> LoggingFunc
 logFuncFallbackByHandlerV (LogHandlerV getdate _v m_def) loc src level msg = do
     void $ forM m_def $ \(SomeLogStore store, SomeShouldLogPredicator p) -> do
         should_log <- lxShouldLog p src level
@@ -361,7 +363,7 @@ instance LoggingTRunner LogHandlerV where
 
 
 withLogFuncInHandlerT ::
-    (Loc -> LogSource -> LogLevel -> LogStr -> IO ())
+    LoggingFunc
     -> HandlerT site m a
     -> HandlerT site m a
 withLogFuncInHandlerT log_func (HandlerT f) = HandlerT $ \hd -> do
