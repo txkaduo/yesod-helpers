@@ -286,17 +286,17 @@ instance ToJSON B64UByteStringPathPiece where
 -- that can be
 -- * either a DB key
 -- * or a text, which can be uniquely identify the DB record
-data KeyOrIdent a = KI_Key a
-                    | KI_Ident Text
+data KeyOrIdent k i = KI_Key k
+                    | KI_Ident i
 
-deriving instance Show a => Show (KeyOrIdent a)
-deriving instance Read a => Read (KeyOrIdent a)
-deriving instance Eq a => Eq (KeyOrIdent a)
-deriving instance Ord a => Ord (KeyOrIdent a)
+deriving instance (Show k, Show i) => Show (KeyOrIdent k i)
+deriving instance (Read k, Read i) => Read (KeyOrIdent k i)
+deriving instance (Eq k, Eq i) => Eq (KeyOrIdent k i)
+deriving instance (Ord k, Ord i) => Ord (KeyOrIdent k i)
 
-instance PathPiece a => PathPiece (KeyOrIdent a) where
-    toPathPiece (KI_Key k)         = toPathPiece k
-    toPathPiece (KI_Ident name) = toPathPiece name
+instance (PathPiece k, PathPiece i) => PathPiece (KeyOrIdent k i) where
+    toPathPiece (KI_Key k)      = toPathPiece k
+    toPathPiece (KI_Ident i)    = toPathPiece i
 
     fromPathPiece t =
         asum
