@@ -2,6 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE StandaloneDeriving #-}
 module Yesod.Helpers.Types where
 
 import Prelude
@@ -25,6 +26,7 @@ import Data.Time                            (parseTime)
 #endif
 
 import Control.Monad                        (mzero, void)
+import Data.Foldable                        (asum)
 import Data.List                            (intersperse)
 import Data.SafeCopy
 import Data.String                          (fromString)
@@ -278,3 +280,26 @@ instance FromJSON B64UByteStringPathPiece where
 
 instance ToJSON B64UByteStringPathPiece where
     toJSON = toJSON . toPathPiece
+
+
+-- | used in URL, represent a url piece
+-- that can be
+-- * either a DB key
+-- * or a text, which can be uniquely identify the DB record
+data KeyOrIdent a = KI_Key a
+                    | KI_Ident Text
+
+deriving instance Show a => Show (KeyOrIdent a)
+deriving instance Read a => Read (KeyOrIdent a)
+deriving instance Eq a => Eq (KeyOrIdent a)
+deriving instance Ord a => Ord (KeyOrIdent a)
+
+instance PathPiece a => PathPiece (KeyOrIdent a) where
+    toPathPiece (KI_Key k)         = toPathPiece k
+    toPathPiece (KI_Ident name) = toPathPiece name
+
+    fromPathPiece t =
+        asum
+            [ fmap KI_Key (fromPathPiece t)
+            , fmap KI_Ident (fromPathPiece t)
+            ]
