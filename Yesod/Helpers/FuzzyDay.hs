@@ -36,6 +36,7 @@ instance NFData FuzzyDay where rnf = genericRnf
 
 $(derivePersistFieldS "FuzzyDay")
 $(deriveJsonS "FuzzyDay")
+$(derivePathPieceS "FuzzyDay")
 
 $(deriveSafeCopySimpleEncoded ''FuzzyDay)
 
