@@ -45,7 +45,7 @@ type GenCharParser u m a = forall s. Stream s m Char => ParsecT s u m a
 
 type CharParser a = GenCharParser () Identity a
 
-parseWithCharParserMaybe :: CharParser a -> String -> Maybe a
+parseWithCharParserMaybe :: Stream s Identity t => Parsec s () a -> s -> Maybe a
 parseWithCharParserMaybe p t = case parse p "" t of
                                 Left _ -> Nothing
                                 Right x -> Just x
@@ -156,7 +156,7 @@ deriveJsonS s = do
 derivePathPieceS :: String -> Q [Dec]
 derivePathPieceS s = do
     to_pathpiece <- [| toPathPiece . simpleEncode |]
-    from_pathpiece <- [| join . fmap (parseWithCharParserMaybe simpleParser) . fromPathPiece |]
+    from_pathpiece <- [| join . fmap (parseWithCharParserMaybe simpleParser) . (fromPathPiece :: Text -> Maybe Text) |]
     return
         [ pathPieceInstanceD (ConT $ mkName s)
             [ FunD 'toPathPiece
