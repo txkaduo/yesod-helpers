@@ -15,8 +15,9 @@ import qualified Data.Aeson                 as A
 import qualified Text.Parsec.Number         as PN
 import Data.Aeson.Types                     (Parser, typeMismatch)
 import Data.Scientific                      (floatingOrInteger)
-import Data.Time                            (toGregorian, fromGregorian, Day, diffDays)
+import Data.Time
 import Data.Maybe                           (fromMaybe)
+import Control.Arrow                        ((***))
 import Control.DeepSeq                      (NFData(..))
 import Control.DeepSeq.Generics             (genericRnf)
 import GHC.Generics                         (Generic)
@@ -152,6 +153,23 @@ fromFuzzyDay fd = fromGregorian (fromIntegral y) m d
                         FuzzyDayY a -> (a, 6, 31)
                         FuzzyDayYM a b -> (a, b, 15)
                         FuzzyDayYMD a b c -> (a, b, c)
+
+fuzzyDayTimeRange :: TimeZone
+                    -> FuzzyDay
+                    -> (UTCTime, UTCTime)   -- ^ [begin, end)
+fuzzyDayTimeRange tz fd = (to_utc *** to_utc) $
+    case fd of
+        FuzzyDayY y     -> (to_day y 1 1, to_day (y + 1) 1 1)
+        FuzzyDayYM y m  ->  let (y', m') = next_month y m
+                            in (to_day y m 1, to_day y' m' 1)
+        FuzzyDayYMD y m d -> let day1 = to_day y m d
+                             in (day1, addDays 1 day1)
+    where
+        to_utc = localTimeToUTC tz . (\x -> LocalTime x midnight)
+        to_day y m d = fromGregorian (fromIntegral y) m d
+        next_month y m = if m >= 12
+                            then (y + 1, 1)
+                            else (y, m + 1)
 
 data FuzzyAge = FuzzyAgeY Int
                 | FuzzyAgeYM Int Int
