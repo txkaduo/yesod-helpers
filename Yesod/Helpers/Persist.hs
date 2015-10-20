@@ -167,7 +167,7 @@ insertOrUpdateWithList fts new_ones = do
                                 else Just v
     new_keys <- forM to_be_inserted $ \v -> do
                     insertOrReplace v
-    return $ (new_keys, to_be_deleted)
+    return $ (new_keys, to_be_deleted \\ new_keys)
 
 
 -- | like insertOrUpdateWithList, but also delete untouched keys.
