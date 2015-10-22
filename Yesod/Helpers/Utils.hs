@@ -21,6 +21,8 @@ import Data.Time                            (parseTime)
 import Control.Monad.IO.Class               (MonadIO, liftIO)
 import Control.Monad
 import System.Random                        (randomIO)
+import Control.Concurrent                   (Chan, writeChan, MVar, takeMVar, newEmptyMVar)
+
 
 toHalfWidthEnglishAlpha :: Char -> Char
 toHalfWidthEnglishAlpha ch
@@ -87,3 +89,16 @@ randomPick choices = do
 
 randomString :: MonadIO m => Int -> [Char] -> m [Char]
 randomString len chars = replicateM len (randomPick chars)
+
+
+-- | Make an empty MVar, supply it to the constructor, construct a message for the Chan,
+-- wait for a reply in the MVar.
+writeChanWaitMVar :: (MonadIO m)
+                    => Chan c           -- ^ the message channel
+                    -> (MVar a -> c)    -- ^ the channel message maker
+                    -> m a
+writeChanWaitMVar ch mk_cmd = do
+    mvar <- liftIO newEmptyMVar
+    let cmd = mk_cmd mvar
+    liftIO $ writeChan ch cmd
+    liftIO $ takeMVar mvar
