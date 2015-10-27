@@ -39,6 +39,7 @@ library
   exposed-modules:     Yesod.Helpers.Form
                        Yesod.Helpers.Handler
                        Yesod.Helpers.Json
+                       Yesod.Helpers.JSend
                        Yesod.Helpers.Types
                        Yesod.Helpers.LoginUser
                        Yesod.Helpers.Auth
