@@ -13,12 +13,12 @@ import qualified Yesod.Core.Unsafe          as Unsafe
 import qualified Data.Map.Strict            as Map
 import Control.Monad.Trans.Maybe
 import Control.Monad                        (join)
+import Control.Arrow                        (second)
 
 import Network.Wai                          (requestHeaders, rawQueryString)
 import Data.Time                            (UTCTime)
 import Text.Blaze                           (Markup)
 import Control.Monad.Catch                  (MonadThrow)
-import Yesod.Helpers.Form                   (jsonOrHtmlOutputForm')
 import Data.Text                            (Text)
 import Data.List                            (findIndex, sortBy)
 import Data.Ord                             (comparing)
@@ -28,6 +28,9 @@ import Data.Monoid
 import Data.String                          (IsString)
 import Network.HTTP.Types.Status            (mkStatus)
 
+import Yesod.Helpers.Form2
+import Yesod.Helpers.JSend
+import Yesod.Helpers.Form                   (jsonOrHtmlOutputForm', jsonOutputForm)
 import Yesod.Helpers.Utils                  (emptyTextToNothing)
 
 
@@ -62,8 +65,11 @@ getCurrentUrlExtraQS qs = do
 -- | form function type synonym
 type MkForm site m a = Markup -> MForm (HandlerT site m) (FormResult a, WidgetT site IO ())
 
+type MkEMForm site m a = Markup -> EMForm (HandlerT site m) (FormResult a, WidgetT site IO ())
 
 type FormHandlerT site m a = R.ReaderT (WidgetT site IO (), Enctype) (HandlerT site m) a
+type EFormHandlerT site m a = R.ReaderT ((WidgetT site IO (), Enctype), ErrorFields) (HandlerT site m) a
+
 -- ^
 -- Typical Usage:
 --
@@ -93,8 +99,17 @@ generateFormPostHandler ::
     -> FormHandlerT site m a
     -> HandlerT site m a
 generateFormPostHandler form_func fh = do
-    (formWidget, formEnctype) <- generateFormPost form_func
-    R.runReaderT fh (formWidget, formEnctype)
+    generateFormPost form_func >>= R.runReaderT fh
+
+generateEMFormPostHandler ::
+    ( Monad m, MonadThrow m, MonadBaseControl IO m, MonadIO m
+    , RenderMessage site FormMessage
+    ) =>
+    MkEMForm site m r
+    -> EFormHandlerT site m a
+    -> HandlerT site m a
+generateEMFormPostHandler form_func fh = do
+    generateEMFormPost form_func >>= R.runReaderT fh
 
 generateFormPostHandlerJH ::
     ( Yesod site, RenderMessage site FormMessage
@@ -106,6 +121,17 @@ generateFormPostHandlerJH ::
 generateFormPostHandlerJH form_func show_page = do
     generateFormPostHandler form_func $ do
         jsonOrHtmlOutputFormX show_page []
+
+generateEMFormPostHandlerJH ::
+    ( Yesod site, RenderMessage site FormMessage
+    , MonadIO m, MonadThrow m, MonadBaseControl IO m
+    ) =>
+    MkEMForm site m r
+    -> (EFormHandlerT site m Html)
+    -> HandlerT site m TypedContent
+generateEMFormPostHandlerJH form_func show_page = do
+    generateEMFormPostHandler form_func $ do
+        jsonOrHtmlOutputFormEX show_page
 
 runFormPostHandler ::
     ( Monad m, MonadThrow m, MonadBaseControl IO m, MonadIO m
@@ -141,6 +167,37 @@ jsonOrHtmlOutputFormX show_form errs = do
     (formWidget, formEnctype) <- R.ask
     let show_form' = R.runReaderT (show_form errs) (formWidget, formEnctype)
     lift $ jsonOrHtmlOutputForm' show_form' formWidget [ "form_errors" .= errs ]
+
+
+-- | response with html content or json content
+-- the JSON format is in "JSend" format, like this:
+-- { "status": "success"
+-- , "data": { "form":
+--               { "body": /* form html code */
+--               , "errors": { "field1", "error message1" }
+--               }
+--           }
+-- }
+jsonOrHtmlOutputFormEX :: (Yesod site, MonadIO m, MonadThrow m, MonadBaseControl IO m)
+                        => EFormHandlerT site m Html
+                            -- ^ provide HTML content
+                        -> EFormHandlerT site m TypedContent
+jsonOrHtmlOutputFormEX show_form = do
+    r@((formWidget, _formEnctype), err_fields) <- R.ask
+    lift $ do
+        selectRep $ do
+            provideRep $ R.runReaderT show_form r
+            provideRep $ do
+                form_body <- jsonOutputForm formWidget
+                return $ toJSON $
+                    if null err_fields
+                        then JSendSuccess $
+                                object  [ "body"    .= form_body
+                                        ]
+                        else JSendFail $
+                                object  [ "body"    .= form_body
+                                        , "errors"  .= object ( map (second toJSON) err_fields )
+                                        ]
 
 jsonOrHtmlOutputFormHandleResult ::
     (Yesod site, RenderMessage site msg

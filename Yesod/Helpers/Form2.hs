@@ -1,0 +1,317 @@
+{-|
+ Form functions that report errors about each form field.
+ Most code are copied and modified from yesod-form.
+-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE GADTs #-}
+module Yesod.Helpers.Form2
+    ( ErrorFields, EMForm, SEMForm
+    , runEMFormPost
+    , runEMFormPostNoToken
+    , runEMFormGet
+    , generateEMFormPost
+    , generateEMFormGet'
+    , generateEMFormGet
+    , emreq, emopt
+    , semreq, semopt
+    , addEMFieldError
+    , addEMOverallError
+    , renderBootstrapES
+    , renderBootstrapES'
+    ) where
+
+import Prelude
+import Yesod
+import qualified Data.Map                   as Map
+import qualified Data.Text.Encoding         as TE
+import qualified Control.Monad.Trans.State.Strict as SS
+
+import Data.Text                            (Text)
+import Control.Monad.Trans.RWS              (RWST, ask, tell, evalRWST)
+import Control.Monad.Trans.Writer           (runWriterT, WriterT(..))
+import Control.Monad                        (join, liftM)
+import Control.Arrow                        (first)
+import qualified Control.Monad.Trans.Writer as W
+import Data.Byteable                        (constEqBytes)
+import Network.Wai                          (requestMethod)
+import Text.Blaze                           (Markup)
+import Data.Maybe
+
+-- import Yesod.Form
+#if MIN_VERSION_yesod_form(1, 3, 8)
+import Yesod.Form.Bootstrap3                ( renderBootstrap3
+                                            , BootstrapFormLayout(BootstrapBasicForm)
+                                            )
+#endif
+
+
+type ErrorFields = [(Text, Text)]
+type EMForm m a = WriterT
+                        ErrorFields
+                        (RWST (Maybe (Env, FileEnv), HandlerSite m, [Lang]) Enctype Ints m)
+                        a
+
+-- | the following long type synonym actually says:
+-- type SEMForm site m a = SS.StateT [FieldView site] (EMForm m) a
+-- but haskell does not allow partially applied synonym in the above line,
+-- we have the expand the synonym manually.
+--
+-- Usage: With the following helpers (smreq, smopt), all FieldView's are remembered.
+-- So usually we don't need to name all FieldView's one by one,
+-- which simplify code a little.
+type SEMForm m a = SS.StateT [FieldView (HandlerSite m)]
+                    (WriterT
+                        ErrorFields
+                        (RWST (Maybe (Env, FileEnv), HandlerSite m, [Lang]) Enctype Ints m)
+                    )
+                    a
+
+
+-- | This function is used to both initially render a form and to later extract
+-- results from it. Note that, due to CSRF protection and a few other issues,
+-- forms submitted via GET and POST are slightly different. As such, be sure to
+-- call the relevant function based on how the form will be submitted, /not/
+-- the current request method.
+--
+-- For example, a common case is displaying a form on a GET request and having
+-- the form submit to a POST page. In such a case, both the GET and POST
+-- handlers should use 'runFormPost'.
+runEMFormPost :: (RenderMessage (HandlerSite m) FormMessage, MonadResource m, MonadHandler m)
+            => (Html -> EMForm m (FormResult a, xml))
+            -> m (((FormResult a, xml), Enctype), ErrorFields)
+runEMFormPost form = do
+    env <- postEnv
+    postHelper form env
+
+runEMFormPostNoToken :: MonadHandler m
+                   => (Html -> EMForm m a)
+                   -> m ((a, Enctype), ErrorFields)
+runEMFormPostNoToken form = do
+    langs <- languages
+    m <- getYesod
+    env <- postEnv
+    runEMFormGeneric (form mempty) m langs env
+
+runEMFormGet :: MonadHandler m
+           => (Html -> EMForm m a)
+           -> m ((a, Enctype), ErrorFields)
+runEMFormGet form = do
+    gets <- liftM reqGetParams getRequest
+    let env =
+            case lookup getKey gets of
+                Nothing -> Nothing
+                Just _ -> Just (Map.unionsWith (++) $ map (\(x, y) -> Map.singleton x [y]) gets, Map.empty)
+    getHelper form env
+
+-- | Similar to 'runFormPost', except it always ignores the currently available
+-- environment. This is necessary in cases like a wizard UI, where a single
+-- page will both receive and incoming form and produce a new, blank form. For
+-- general usage, you can stick with @runFormPost@.
+generateEMFormPost
+    :: (RenderMessage (HandlerSite m) FormMessage, MonadHandler m)
+    => (Html -> EMForm m (FormResult a, xml))
+    -> m ((xml, Enctype), ErrorFields)
+generateEMFormPost form = first (first snd) `liftM` postHelper form Nothing
+
+generateEMFormGet'
+    :: (RenderMessage (HandlerSite m) FormMessage, MonadHandler m)
+    => (Html -> EMForm m (FormResult a, xml))
+    -> m ((xml, Enctype), ErrorFields)
+generateEMFormGet' form = first (first snd) `liftM` getHelper form Nothing
+
+generateEMFormGet :: MonadHandler m
+                => (Html -> EMForm m a)
+                -> m (a, Enctype)
+generateEMFormGet form = liftM fst $ getHelper form Nothing
+
+runEMFormGeneric :: Monad m
+               => EMForm m a
+               -> HandlerSite m
+               -> [Text]
+               -> Maybe (Env, FileEnv)
+               -> m ((a, Enctype), ErrorFields)
+runEMFormGeneric form site langs env = do
+    ((res, err_fields), enctype) <- evalRWST (runWriterT form) (env, site, langs) (IntSingle 0)
+    return ((res, enctype), err_fields)
+
+postEnv :: (MonadHandler m, MonadResource m)
+        => m (Maybe (Env, FileEnv))
+postEnv = do
+    req <- getRequest
+    if requestMethod (reqWaiRequest req) == "GET"
+        then return Nothing
+        else do
+            (p, f) <- runRequestBody
+            let p' = Map.unionsWith (++) $ map (\(x, y) -> Map.singleton x [y]) p
+            return $ Just (p', Map.unionsWith (++) $ map (\(k, v) -> Map.singleton k [v]) f)
+
+postHelper  :: (MonadHandler m, RenderMessage (HandlerSite m) FormMessage)
+            => (Html -> EMForm m (FormResult a, xml))
+            -> Maybe (Env, FileEnv)
+            -> m (((FormResult a, xml), Enctype), ErrorFields)
+postHelper form env = do
+    req <- getRequest
+    let tokenKey = "_token"
+    let token =
+            case reqToken req of
+                Nothing -> mempty
+                Just n -> [shamlet|<input type=hidden name=#{tokenKey} value=#{n}>|]
+    m <- getYesod
+    langs <- languages
+    (((res, xml), enctype), err_fields) <- runEMFormGeneric (form token) m langs env
+    let res' =
+            case (res, env) of
+                (_, Nothing) -> FormMissing
+                (FormSuccess{}, Just (params, _))
+                    | not (Map.lookup tokenKey params === reqToken req) ->
+                        FormFailure [renderMessage m langs MsgCsrfWarning]
+                _ -> res
+            where (Just [t1]) === (Just t2) = TE.encodeUtf8 t1 `constEqBytes` TE.encodeUtf8 t2
+                  Nothing     === Nothing   = True   -- It's important to use constTimeEq
+                  _           === _         = False  -- in order to avoid timing attacks.
+    return (((res', xml), enctype), err_fields)
+
+
+-- | Converts a form field into monadic form. This field requires a value
+-- and will return 'FormFailure' if left empty.
+emreq :: (RenderMessage site FormMessage, HandlerSite m ~ site, MonadHandler m)
+     => Field m a           -- ^ form field
+     -> FieldSettings site  -- ^ settings for this field
+     -> Maybe a             -- ^ optional default value
+     -> EMForm m (FormResult a, FieldView site)
+emreq field fs mdef = mhelper field fs mdef (\m l -> FormFailure [renderMessage m l MsgValueRequired]) FormSuccess True
+
+-- | Converts a form field into monadic form. This field is optional, i.e.
+-- if filled in, it returns 'Just a', if left empty, it returns 'Nothing'.
+-- Arguments are the same as for 'mreq' (apart from type of default value).
+emopt :: (site ~ HandlerSite m, MonadHandler m)
+     => Field m a
+     -> FieldSettings site
+     -> Maybe (Maybe a)
+     -> EMForm m (FormResult (Maybe a), FieldView site)
+emopt field fs mdef = mhelper field fs (join mdef) (const $ const $ FormSuccess Nothing) (FormSuccess . Just) False
+
+addEMFieldError :: (MonadHandler m, RenderMessage (HandlerSite m) msg)
+                => Text
+                -> msg
+                -> EMForm m ()
+addEMFieldError name msg = do
+    mr <- lift getMessageRender
+    W.tell [(name, mr msg)]
+
+addEMOverallError :: (MonadHandler m, RenderMessage (HandlerSite m) msg)
+                    => msg
+                    -> EMForm m ()
+addEMOverallError msg = addEMFieldError "__all__" msg
+
+semreq ::
+    (RenderMessage site FormMessage, HandlerSite m ~ site, MonadHandler m) =>
+    Field m a
+    -> FieldSettings site
+    -> Maybe a
+    -> SEMForm m (FormResult a)
+semreq field settings initv = do
+    (res, view) <- lift $ emreq field settings initv
+    SS.modify ( view : )
+    return res
+
+semopt ::
+    (RenderMessage site FormMessage, HandlerSite m ~ site, MonadHandler m) =>
+    Field m a
+    -> FieldSettings site
+    -> Maybe (Maybe a)
+    -> SEMForm m (FormResult (Maybe a))
+semopt field settings initv = do
+    (res, view) <- lift $ emopt field settings initv
+    SS.modify ( view : )
+    return res
+
+renderBootstrapES :: Monad m =>
+                    Markup
+                    -> FormResult a
+                    -> SEMForm m (FormResult a, WidgetT (HandlerSite m) IO ())
+renderBootstrapES extra result = do
+    views <- liftM reverse $ SS.get
+    let aform = formToAForm $ return (result, views)
+    lift $ lift $
+#if MIN_VERSION_yesod_form(1, 3, 8)
+        -- renderBootstrap is deprecated, but the new recommended function
+        -- is for bootstrap v3.
+        -- We assume that bootstrap v3 is used here.
+        renderBootstrap3 BootstrapBasicForm
+#else
+        renderBootstrap
+#endif
+            aform extra
+
+-- | combines renderBootstrapS and runSEMForm, smToForm
+renderBootstrapES' :: Monad m =>
+    Markup
+    -> SEMForm m (FormResult a)
+    -> EMForm m (FormResult a, WidgetT (HandlerSite m) IO ())
+renderBootstrapES' extra result = do
+    runSEMForm $ result >>= renderBootstrapES extra
+
+runSEMForm :: Monad m => SEMForm m a -> EMForm m a
+runSEMForm = flip SS.evalStateT []
+
+mhelper :: (site ~ HandlerSite m, MonadHandler m)
+        => Field m a
+        -> FieldSettings site
+        -> Maybe a
+        -> (site -> [Text] -> FormResult b) -- ^ on missing
+        -> (a -> FormResult b) -- ^ on success
+        -> Bool -- ^ is it required?
+        -> EMForm m (FormResult b, FieldView site)
+
+mhelper Field {..} FieldSettings {..} mdef onMissing onFound isReq = do
+    lift $ tell fieldEnctype
+    mp <- lift $ askParams
+    name <- lift $ maybe newFormIdent return fsName
+    theId <- lift $ lift $ maybe newIdent return fsId
+    (_, site, langs) <- lift $ ask
+    let mr2 = renderMessage site langs
+    (res, val) <-
+        case mp of
+            Nothing -> return (FormMissing, maybe (Left "") Right mdef)
+            Just p -> do
+                mfs <- lift askFiles
+                let mvals = fromMaybe [] $ Map.lookup name p
+                    files = fromMaybe [] $ mfs >>= Map.lookup name
+                emx <- lift $ lift $ fieldParse mvals files
+                case emx of
+                    Left (SomeMessage e) -> do
+                        let err_msg = renderMessage site langs e
+                        W.tell [(name, err_msg)]
+                        return $ (FormFailure [err_msg], maybe (Left "") Left (listToMaybe mvals))
+                    Right mx ->
+                        return $ case mx of
+                            Nothing -> (onMissing site langs, Left "")
+                            Just x -> (onFound x, Right x)
+    return (res, FieldView
+        { fvLabel = toHtml $ mr2 fsLabel
+        , fvTooltip = fmap toHtml $ fmap mr2 fsTooltip
+        , fvId = theId
+        , fvInput = fieldView theId name fsAttrs val isReq
+        , fvErrors =
+            case res of
+                FormFailure [e] -> Just $ toHtml e
+                _ -> Nothing
+        , fvRequired = isReq
+        })
+
+getKey :: Text
+getKey = "_hasdata"
+
+getHelper :: MonadHandler m
+          => (Html -> EMForm m a)
+          -> Maybe (Env, FileEnv)
+          -> m ((a, Enctype), ErrorFields)
+getHelper form env = do
+    let fragment = [shamlet|<input type=hidden name=#{getKey}>|]
+    langs <- languages
+    m <- getYesod
+    runEMFormGeneric (form fragment) m langs env

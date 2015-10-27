@@ -37,6 +37,7 @@ Flag old-time
 
 library
   exposed-modules:     Yesod.Helpers.Form
+                       Yesod.Helpers.Form2
                        Yesod.Helpers.Handler
                        Yesod.Helpers.Json
                        Yesod.Helpers.JSend
@@ -113,6 +114,7 @@ library
                      , random
                      , th-lift
                      , simple-archive-conduit
+                     , byteable
 
   if flag(parsec3)
       build-depends:   parsec3
