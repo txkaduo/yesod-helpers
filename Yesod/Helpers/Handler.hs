@@ -13,7 +13,6 @@ import qualified Yesod.Core.Unsafe          as Unsafe
 import qualified Data.Map.Strict            as Map
 import Control.Monad.Trans.Maybe
 import Control.Monad                        (join)
-import Control.Arrow                        (second)
 
 import Network.Wai                          (requestHeaders, rawQueryString)
 import Data.Time                            (UTCTime)
@@ -68,7 +67,7 @@ type MkForm site m a = Markup -> MForm (HandlerT site m) (FormResult a, WidgetT 
 type MkEMForm site m a = Markup -> EMForm (HandlerT site m) (FormResult a, WidgetT site IO ())
 
 type FormHandlerT site m a = R.ReaderT (WidgetT site IO (), Enctype) (HandlerT site m) a
-type EFormHandlerT site m a = R.ReaderT ((WidgetT site IO (), Enctype), ErrorFields) (HandlerT site m) a
+type EFormHandlerT site m a = R.ReaderT ((WidgetT site IO (), Enctype), FieldErrors) (HandlerT site m) a
 
 -- ^
 -- Typical Usage:
@@ -183,20 +182,20 @@ jsonOrHtmlOutputFormEX :: (Yesod site, MonadIO m, MonadThrow m, MonadBaseControl
                             -- ^ provide HTML content
                         -> EFormHandlerT site m TypedContent
 jsonOrHtmlOutputFormEX show_form = do
-    r@((formWidget, _formEnctype), err_fields) <- R.ask
+    r@((formWidget, _formEnctype), field_errs) <- R.ask
     lift $ do
         selectRep $ do
             provideRep $ R.runReaderT show_form r
             provideRep $ do
                 form_body <- jsonOutputForm formWidget
                 return $ toJSON $
-                    if null err_fields
+                    if nullFieldErrors field_errs
                         then JSendSuccess $
                                 object  [ "body"    .= form_body
                                         ]
                         else JSendFail $
                                 object  [ "body"    .= form_body
-                                        , "errors"  .= object ( map (second toJSON) err_fields )
+                                        , "errors"  .= field_errs
                                         ]
 
 jsonOrHtmlOutputFormHandleResult ::
@@ -376,3 +375,11 @@ getUrlRenderIO foundation = do
                     (error "logger required in getUrlRenderIO")
                     foundation getUrlRender
         >>= either (error "getUrlRender shoud never fail") return
+
+
+widgetToBodyHtml :: (Yesod site)
+                => WidgetT site IO ()
+                -> HandlerT site IO Html
+widgetToBodyHtml widget = do
+    widgetToPageContent widget
+        >>= withUrlRenderer . pageBody
