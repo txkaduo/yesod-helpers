@@ -377,9 +377,9 @@ getUrlRenderIO foundation = do
         >>= either (error "getUrlRender shoud never fail") return
 
 
-widgetToBodyHtml :: (Yesod site)
+widgetToBodyHtml :: (Yesod site, MonadIO m, MonadThrow m, MonadBaseControl IO m)
                 => WidgetT site IO ()
-                -> HandlerT site IO Html
-widgetToBodyHtml widget = do
+                -> HandlerT site m Html
+widgetToBodyHtml widget = liftHandlerT $ do
     widgetToPageContent widget
         >>= withUrlRenderer . pageBody
