@@ -284,6 +284,27 @@ renderBootstrapES' extra result = do
 runSEMForm :: Monad m => SEMForm m a -> EMForm m a
 runSEMForm = flip SS.evalStateT []
 
+
+-- | our standard way to encode a form and its errors into a JSON value.
+jsendFormData :: Maybe Html
+                    -- ^ html code of the form body
+                    -- sometimes client don't need the html code (just the errors are needed)
+                    -- to save bandwidth, html code is optional
+                -> FieldErrors
+                -> JSendMsg
+jsendFormData m_form_html field_errs =
+    if nullFieldErrors field_errs
+        then JSendSuccess dat
+        else JSendFail dat
+    where
+        dat = object [ "form" .= object
+                            (catMaybes $
+                                [ fmap (("body" .=) . renderHtml) m_form_html
+                                , Just $ "errors" .= field_errs
+                                ]
+                                )
+                ]
+
 mhelper :: (site ~ HandlerSite m, MonadHandler m)
         => Field m a
         -> FieldSettings site

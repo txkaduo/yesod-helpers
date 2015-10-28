@@ -71,6 +71,7 @@ library
                      , text
                      , bytestring
                      , blaze-markup
+                     , blaze-html
                      , attoparsec
                      , parsec3-numbers
                      , aeson
