@@ -9,7 +9,11 @@ import Yesod.Core.Types                     (HandlerT(..), handlerRequest)
 import qualified Control.Monad.Trans.Reader as R
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as TE
-import qualified Yesod.Core.Unsafe          as Unsafe
+#if MIN_VERSION_yesod_core(1,4,0)
+import Yesod.Core.Unsafe                    (runFakeHandler)
+#else
+import Yesod.Core                           (runFakeHandler)
+#endif
 import qualified Data.Map.Strict            as Map
 import Control.Monad.Trans.Maybe
 import Control.Monad                        (join)
@@ -308,14 +312,14 @@ optPathPieceParamPostGet pname =
 
 getUrlRenderParamsIO :: Yesod site => site -> IO (Route site -> [(Text, Text)] -> Text)
 getUrlRenderParamsIO foundation = do
-        Unsafe.runFakeHandler Map.empty
+        runFakeHandler Map.empty
                     (error "logger required in getUrlRenderParamsIO")
                     foundation getUrlRenderParams
         >>= either (error "getUrlRenderParams shoud never fail") return
 
 getUrlRenderIO :: Yesod site => site -> IO (Route site -> Text)
 getUrlRenderIO foundation = do
-        Unsafe.runFakeHandler Map.empty
+        runFakeHandler Map.empty
                     (error "logger required in getUrlRenderIO")
                     foundation getUrlRender
         >>= either (error "getUrlRender shoud never fail") return
