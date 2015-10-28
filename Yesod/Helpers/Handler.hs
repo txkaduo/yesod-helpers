@@ -28,8 +28,7 @@ import Data.String                          (IsString)
 import Network.HTTP.Types.Status            (mkStatus)
 
 import Yesod.Helpers.Form2
-import Yesod.Helpers.JSend
-import Yesod.Helpers.Form                   (jsonOrHtmlOutputForm', jsonOutputForm)
+import Yesod.Helpers.Form                   (jsonOrHtmlOutputForm')
 import Yesod.Helpers.Utils                  (emptyTextToNothing)
 
 
@@ -187,16 +186,8 @@ jsonOrHtmlOutputFormEX show_form = do
         selectRep $ do
             provideRep $ R.runReaderT show_form r
             provideRep $ do
-                form_body <- jsonOutputForm formWidget
-                return $ toJSON $
-                    if nullFieldErrors field_errs
-                        then JSendSuccess $
-                                object  [ "body"    .= form_body
-                                        ]
-                        else JSendFail $
-                                object  [ "body"    .= form_body
-                                        , "errors"  .= field_errs
-                                        ]
+                form_body <- widgetToBodyHtml formWidget
+                return $ jsendFormData (Just form_body) field_errs
 
 jsonOrHtmlOutputFormHandleResult ::
     (Yesod site, RenderMessage site msg
