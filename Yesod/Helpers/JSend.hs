@@ -28,3 +28,8 @@ instance ToJSON JSendMsg where
                                                 , fmap ("data" .= ) m_dat
                                                 , fmap ("code" .= ) m_code
                                                 ]
+instance ToContent JSendMsg where
+    toContent = toContent . toJSON
+
+instance ToTypedContent JSendMsg where
+    toTypedContent = toTypedContent . toTypedContent
