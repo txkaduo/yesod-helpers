@@ -33,3 +33,6 @@ instance ToContent JSendMsg where
 
 instance ToTypedContent JSendMsg where
     toTypedContent = toTypedContent . toTypedContent
+
+instance HasContentType JSendMsg where
+    getContentType _ = getContentType (Nothing :: Maybe Value)
