@@ -8,7 +8,8 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE GADTs #-}
 module Yesod.Helpers.Form2
-    ( ErrorFields, EMForm, SEMForm
+    ( FieldErrors, oneFieldError, nullFieldErrors, fieldErrorsToList
+    , EMForm, SEMForm
     , runEMFormPost
     , runEMFormPostNoToken
     , runEMFormGet
@@ -21,14 +22,19 @@ module Yesod.Helpers.Form2
     , addEMOverallError
     , renderBootstrapES
     , renderBootstrapES'
+    , jsendFormData
     ) where
 
 import Prelude
 import Yesod
 import qualified Data.Map                   as Map
+import qualified Data.Set                   as Set
+import qualified Data.HashMap.Strict        as HM
 import qualified Data.Text.Encoding         as TE
 import qualified Control.Monad.Trans.State.Strict as SS
 
+import Data.Set                             (Set)
+import Data.HashMap.Strict                  (HashMap)
 import Data.Text                            (Text)
 import Control.Monad.Trans.RWS              (RWST, ask, tell, evalRWST)
 import Control.Monad.Trans.Writer           (runWriterT, WriterT(..))
@@ -38,7 +44,10 @@ import qualified Control.Monad.Trans.Writer as W
 import Data.Byteable                        (constEqBytes)
 import Network.Wai                          (requestMethod)
 import Text.Blaze                           (Markup)
+import Text.Blaze.Html.Renderer.Text        (renderHtml)
 import Data.Maybe
+
+import Yesod.Helpers.JSend
 
 -- import Yesod.Form
 #if MIN_VERSION_yesod_form(1, 3, 8)
@@ -48,9 +57,26 @@ import Yesod.Form.Bootstrap3                ( renderBootstrap3
 #endif
 
 
-type ErrorFields = [(Text, Text)]
+newtype FieldErrors = FieldErrors { unFieldErrors :: HashMap Text (Set Text) }
+
+oneFieldError :: Text -> Text -> FieldErrors
+oneFieldError name msg = FieldErrors $ HM.singleton name (Set.singleton msg)
+
+nullFieldErrors :: FieldErrors -> Bool
+nullFieldErrors = HM.null . unFieldErrors
+
+fieldErrorsToList :: FieldErrors -> [(Text, [Text])]
+fieldErrorsToList = HM.toList . HM.map Set.toList . unFieldErrors
+
+instance Monoid FieldErrors where
+    mempty  = FieldErrors mempty
+    mappend (FieldErrors x1) (FieldErrors x2) = FieldErrors $ HM.unionWith mappend x1 x2
+
+instance ToJSON FieldErrors where
+    toJSON = Object . HM.map (toJSON . Set.toList) . unFieldErrors
+
 type EMForm m a = WriterT
-                        ErrorFields
+                        FieldErrors
                         (RWST (Maybe (Env, FileEnv), HandlerSite m, [Lang]) Enctype Ints m)
                         a
 
@@ -64,7 +90,7 @@ type EMForm m a = WriterT
 -- which simplify code a little.
 type SEMForm m a = SS.StateT [FieldView (HandlerSite m)]
                     (WriterT
-                        ErrorFields
+                        FieldErrors
                         (RWST (Maybe (Env, FileEnv), HandlerSite m, [Lang]) Enctype Ints m)
                     )
                     a
@@ -81,14 +107,14 @@ type SEMForm m a = SS.StateT [FieldView (HandlerSite m)]
 -- handlers should use 'runFormPost'.
 runEMFormPost :: (RenderMessage (HandlerSite m) FormMessage, MonadResource m, MonadHandler m)
             => (Html -> EMForm m (FormResult a, xml))
-            -> m (((FormResult a, xml), Enctype), ErrorFields)
+            -> m (((FormResult a, xml), Enctype), FieldErrors)
 runEMFormPost form = do
     env <- postEnv
     postHelper form env
 
 runEMFormPostNoToken :: MonadHandler m
                    => (Html -> EMForm m a)
-                   -> m ((a, Enctype), ErrorFields)
+                   -> m ((a, Enctype), FieldErrors)
 runEMFormPostNoToken form = do
     langs <- languages
     m <- getYesod
@@ -97,7 +123,7 @@ runEMFormPostNoToken form = do
 
 runEMFormGet :: MonadHandler m
            => (Html -> EMForm m a)
-           -> m ((a, Enctype), ErrorFields)
+           -> m ((a, Enctype), FieldErrors)
 runEMFormGet form = do
     gets <- liftM reqGetParams getRequest
     let env =
@@ -113,13 +139,13 @@ runEMFormGet form = do
 generateEMFormPost
     :: (RenderMessage (HandlerSite m) FormMessage, MonadHandler m)
     => (Html -> EMForm m (FormResult a, xml))
-    -> m ((xml, Enctype), ErrorFields)
+    -> m ((xml, Enctype), FieldErrors)
 generateEMFormPost form = first (first snd) `liftM` postHelper form Nothing
 
 generateEMFormGet'
     :: (RenderMessage (HandlerSite m) FormMessage, MonadHandler m)
     => (Html -> EMForm m (FormResult a, xml))
-    -> m ((xml, Enctype), ErrorFields)
+    -> m ((xml, Enctype), FieldErrors)
 generateEMFormGet' form = first (first snd) `liftM` getHelper form Nothing
 
 generateEMFormGet :: MonadHandler m
@@ -132,7 +158,7 @@ runEMFormGeneric :: Monad m
                -> HandlerSite m
                -> [Text]
                -> Maybe (Env, FileEnv)
-               -> m ((a, Enctype), ErrorFields)
+               -> m ((a, Enctype), FieldErrors)
 runEMFormGeneric form site langs env = do
     ((res, err_fields), enctype) <- evalRWST (runWriterT form) (env, site, langs) (IntSingle 0)
     return ((res, enctype), err_fields)
@@ -151,7 +177,7 @@ postEnv = do
 postHelper  :: (MonadHandler m, RenderMessage (HandlerSite m) FormMessage)
             => (Html -> EMForm m (FormResult a, xml))
             -> Maybe (Env, FileEnv)
-            -> m (((FormResult a, xml), Enctype), ErrorFields)
+            -> m (((FormResult a, xml), Enctype), FieldErrors)
 postHelper form env = do
     req <- getRequest
     let tokenKey = "_token"
@@ -200,7 +226,7 @@ addEMFieldError :: (MonadHandler m, RenderMessage (HandlerSite m) msg)
                 -> EMForm m ()
 addEMFieldError name msg = do
     mr <- lift getMessageRender
-    W.tell [(name, mr msg)]
+    W.tell $ oneFieldError name (mr msg)
 
 addEMOverallError :: (MonadHandler m, RenderMessage (HandlerSite m) msg)
                     => msg
@@ -285,7 +311,7 @@ mhelper Field {..} FieldSettings {..} mdef onMissing onFound isReq = do
                 case emx of
                     Left (SomeMessage e) -> do
                         let err_msg = renderMessage site langs e
-                        W.tell [(name, err_msg)]
+                        W.tell $ oneFieldError name err_msg
                         return $ (FormFailure [err_msg], maybe (Left "") Left (listToMaybe mvals))
                     Right mx ->
                         return $ case mx of
@@ -309,7 +335,7 @@ getKey = "_hasdata"
 getHelper :: MonadHandler m
           => (Html -> EMForm m a)
           -> Maybe (Env, FileEnv)
-          -> m ((a, Enctype), ErrorFields)
+          -> m ((a, Enctype), FieldErrors)
 getHelper form env = do
     let fragment = [shamlet|<input type=hidden name=#{getKey}>|]
     langs <- languages
