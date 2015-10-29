@@ -4,7 +4,7 @@
 module Yesod.Helpers.Handler where
 
 import Prelude
-import Yesod
+import Yesod hiding (runFakeHandler)
 import Yesod.Core.Types                     (HandlerT(..), handlerRequest)
 import qualified Control.Monad.Trans.Reader as R
 import qualified Data.Text                  as T
