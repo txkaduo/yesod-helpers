@@ -40,7 +40,9 @@ import Control.Monad.Trans.RWS              (RWST, ask, tell, evalRWST)
 import Control.Monad.Trans.Writer           (runWriterT, WriterT(..))
 import Control.Monad                        (join, liftM)
 import Control.Arrow                        (first)
+#if !MIN_VERSION_base(4,8,0)
 import Data.Monoid                          (Monoid(..))
+#endif
 import qualified Control.Monad.Trans.Writer as W
 import Data.Byteable                        (constEqBytes)
 import Network.Wai                          (requestMethod)
