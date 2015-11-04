@@ -1,3 +1,6 @@
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE FlexibleContexts #-}
 module Yesod.Helpers.Auth where
 
@@ -33,7 +36,13 @@ yesodAuthEntityDo :: (YesodAuthPersist master, MonadIO m, MonadThrow m, MonadBas
 yesodAuthEntityDo f = do
     user_id <- liftHandlerT maybeAuthId
                 >>= maybe (permissionDeniedI $ (T.pack "Login Required")) return
-    user <- liftHandlerT (getAuthEntity user_id)
+    let get_user =
+#if MIN_VERSION_yesod_core(1, 4, 0)
+                getAuthEntity
+#else
+                runDB . get
+#endif
+    user <- liftHandlerT (get_user user_id)
                 >>= maybe (permissionDeniedI $ (T.pack "AuthEntity not found")) return
     f (user_id, user)
 
@@ -42,8 +51,14 @@ yesodAuthEntityDoSub :: (YesodAuthPersist master, MonadIO m, MonadThrow m, Monad
                     ((AuthId master, AuthEntity master) -> HandlerT site (HandlerT master m) a)
                     -> HandlerT site (HandlerT master m) a
 yesodAuthEntityDoSub f = do
+    let get_user =
+#if MIN_VERSION_yesod_core(1, 4, 0)
+                getAuthEntity
+#else
+                runDB . get
+#endif
     user_id <- lift (liftHandlerT maybeAuthId)
                 >>= maybe (permissionDeniedI $ (T.pack "Login Required")) return
-    user <- lift (liftHandlerT $ getAuthEntity user_id)
+    user <- lift (liftHandlerT $ get_user user_id)
                 >>= maybe (permissionDeniedI $ (T.pack "AuthEntity not found")) return
     f (user_id, user)
