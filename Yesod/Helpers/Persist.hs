@@ -20,7 +20,7 @@ import Database.Persist.Sql                 (MonadSqlPersist, Connection)
 import Database.Persist.Sql                 (transactionUndo
                                             , connEscapeName)
 
-import Control.Monad.Trans.Except           (ExceptT, catchE, throwE)
+import Control.Monad.Except                 (ExceptT, MonadError(..))
 
 #if MIN_VERSION_persistent(2, 0, 0)
 import Control.Monad.Trans.Reader           (ReaderT)
@@ -194,7 +194,7 @@ replaceWithList fts new_ones = do
     return (new_keys, to_be_deleted)
 
 
--- | Automatically undo transaction when there is error throwE'ed
+-- | Automatically undo transaction when there is error throwError'ed
 -- in wrapped function.
 undoTransWhenE ::
 #if MIN_VERSION_persistent(2, 0, 0)
@@ -204,12 +204,20 @@ undoTransWhenE ::
 #else
     (MonadSqlPersist m) => ExceptT e m a -> ExceptT e m a
 #endif
-undoTransWhenE f = catchE f h
+undoTransWhenE f = catchError f h
     where
-        h err = lift transactionUndo >> throwE err
+        h err = lift transactionUndo >> throwError err
 
+#if MIN_VERSION_persistent(2, 0, 0)
+undoTransWhenE2 :: (MonadIO m, MonadError e m) =>
+                ReaderT SqlBackend m a
+                -> ReaderT SqlBackend m a
+undoTransWhenE2 f = catchError f h
+    where
+        h err = transactionUndo >> throwError err
+#endif
 
--- | wrapped 'get', throwE when record does not exist.
+-- | wrapped 'get', throwError when record does not exist.
 getOrE ::
     ( PersistEntity val
 #if MIN_VERSION_persistent(2, 0, 0)
@@ -223,10 +231,22 @@ getOrE ::
 #endif
     ) =>
     e -> Key val -> ExceptT e m val
-getOrE err k = lift (get k) >>= maybe (throwE err) return
+getOrE err k = lift (get k) >>= maybe (throwError err) return
 
+#if MIN_VERSION_persistent(2, 0, 0)
+getOrE2 :: ( PersistEntity val
+            , PersistEntityBackend val ~ backend
+            , PersistStore backend
+            , MonadIO m
+            , MonadError e m
+            )
+        => e
+        -> Key val
+        -> ReaderT backend m val
+getOrE2 err k = get k >>= maybe (throwError err) return
+#endif
 
--- | wrapped 'getBy', throwE when record does not exist.
+-- | wrapped 'getBy', throwError when record does not exist.
 getByOrE ::
     ( PersistEntity val
 #if MIN_VERSION_persistent(2, 0, 0)
@@ -240,7 +260,18 @@ getByOrE ::
 #endif
     ) =>
     e -> Unique val -> ExceptT e m (Entity val)
-getByOrE err k = lift (getBy k) >>= maybe (throwE err) return
+getByOrE err k = lift (getBy k) >>= maybe (throwError err) return
+
+#if MIN_VERSION_persistent(2, 0, 0)
+getByOrE2 ::
+    ( PersistEntity val
+    , PersistEntityBackend val ~ backend
+    , PersistUnique backend
+    , MonadIO m, MonadError e m
+    ) =>
+    e -> Unique val -> ReaderT backend m (Entity val)
+getByOrE2 err k = getBy k >>= maybe (throwError err) return
+#endif
 
 
 -- | update or replace a record
