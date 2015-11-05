@@ -8,7 +8,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE GADTs #-}
 module Yesod.Helpers.Form2
-    ( FieldErrors, oneFieldError, nullFieldErrors, fieldErrorsToList
+    ( FieldErrors, oneFieldError, overallFieldError, nullFieldErrors, fieldErrorsToList
     , EMForm, SEMForm
     , runEMFormPost
     , runEMFormPostNoToken
@@ -64,6 +64,9 @@ newtype FieldErrors = FieldErrors { unFieldErrors :: HashMap Text (Set Text) }
 
 oneFieldError :: Text -> Text -> FieldErrors
 oneFieldError name msg = FieldErrors $ HM.singleton name (Set.singleton msg)
+
+overallFieldError :: Text -> FieldErrors
+overallFieldError msg = FieldErrors $ HM.singleton "__all__" (Set.singleton msg)
 
 nullFieldErrors :: FieldErrors -> Bool
 nullFieldErrors = HM.null . unFieldErrors
@@ -191,17 +194,21 @@ postHelper form env = do
     m <- getYesod
     langs <- languages
     (((res, xml), enctype), err_fields) <- runEMFormGeneric (form token) m langs env
-    let res' =
+    (res', err_fields') <- do
+            let (Just [t1]) === (Just t2) = TE.encodeUtf8 t1 `constEqBytes` TE.encodeUtf8 t2
+                Nothing     === Nothing   = True   -- It's important to use constTimeEq
+                _           === _         = False  -- in order to avoid timing attacks.
             case (res, env) of
-                (_, Nothing) -> FormMissing
+                (_, Nothing) -> return (FormMissing, err_fields)
                 (FormSuccess{}, Just (params, _))
-                    | not (Map.lookup tokenKey params === reqToken req) ->
-                        FormFailure [renderMessage m langs MsgCsrfWarning]
-                _ -> res
-            where (Just [t1]) === (Just t2) = TE.encodeUtf8 t1 `constEqBytes` TE.encodeUtf8 t2
-                  Nothing     === Nothing   = True   -- It's important to use constTimeEq
-                  _           === _         = False  -- in order to avoid timing attacks.
-    return (((res', xml), enctype), err_fields)
+                    | not (Map.lookup tokenKey params === reqToken req) -> do
+                        let err_msg = renderMessage m langs MsgCsrfWarning
+                        return ( FormFailure [err_msg]
+                                , err_fields `mappend` overallFieldError err_msg
+                                )
+                _ -> return (res, err_fields)
+
+    return (((res', xml), enctype), err_fields')
 
 
 -- | Converts a form field into monadic form. This field requires a value
@@ -242,7 +249,9 @@ addEMFieldError name msg = do
 addEMOverallError :: (MonadHandler m, RenderMessage (HandlerSite m) msg)
                     => msg
                     -> EMForm m ()
-addEMOverallError msg = addEMFieldError "__all__" msg
+addEMOverallError msg = do
+    mr <- lift getMessageRender
+    W.tell $ overallFieldError (mr msg)
 
 semreq ::
     (RenderMessage site FormMessage, HandlerSite m ~ site, MonadHandler m) =>
