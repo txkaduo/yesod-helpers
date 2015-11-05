@@ -211,7 +211,13 @@ emreq :: (RenderMessage site FormMessage, HandlerSite m ~ site, MonadHandler m)
      -> FieldSettings site  -- ^ settings for this field
      -> Maybe a             -- ^ optional default value
      -> EMForm m (FormResult a, FieldView site)
-emreq field fs mdef = mhelper field fs mdef (\m l -> FormFailure [renderMessage m l MsgValueRequired]) FormSuccess True
+emreq field fs mdef = mhelper field fs mdef
+                        (\m l name -> do
+                            let err_msg = renderMessage m l MsgValueRequired
+                            W.tell $ oneFieldError name err_msg
+                            return $ FormFailure [err_msg]
+                        )
+                        FormSuccess True
 
 -- | Converts a form field into monadic form. This field is optional, i.e.
 -- if filled in, it returns 'Just a', if left empty, it returns 'Nothing'.
@@ -221,7 +227,9 @@ emopt :: (site ~ HandlerSite m, MonadHandler m)
      -> FieldSettings site
      -> Maybe (Maybe a)
      -> EMForm m (FormResult (Maybe a), FieldView site)
-emopt field fs mdef = mhelper field fs (join mdef) (const $ const $ FormSuccess Nothing) (FormSuccess . Just) False
+emopt field fs mdef = mhelper field fs
+                        (join mdef) (const $ const $ const $ return $ FormSuccess Nothing)
+                        (FormSuccess . Just) False
 
 addEMFieldError :: (MonadHandler m, RenderMessage (HandlerSite m) msg)
                 => Text
@@ -312,7 +320,7 @@ mhelper :: (site ~ HandlerSite m, MonadHandler m)
         => Field m a
         -> FieldSettings site
         -> Maybe a
-        -> (site -> [Text] -> FormResult b) -- ^ on missing
+        -> (site -> [Text] -> Text -> EMForm m (FormResult b)) -- ^ on missing
         -> (a -> FormResult b) -- ^ on success
         -> Bool -- ^ is it required?
         -> EMForm m (FormResult b, FieldView site)
@@ -338,9 +346,11 @@ mhelper Field {..} FieldSettings {..} mdef onMissing onFound isReq = do
                         W.tell $ oneFieldError name err_msg
                         return $ (FormFailure [err_msg], maybe (Left "") Left (listToMaybe mvals))
                     Right mx ->
-                        return $ case mx of
-                            Nothing -> (onMissing site langs, Left "")
-                            Just x -> (onFound x, Right x)
+                        case mx of
+                            Nothing -> do
+                                r <- onMissing site langs name
+                                return (r, Left "")
+                            Just x -> return (onFound x, Right x)
     return (res, FieldView
         { fvLabel = toHtml $ mr2 fsLabel
         , fvTooltip = fmap toHtml $ fmap mr2 fsTooltip
