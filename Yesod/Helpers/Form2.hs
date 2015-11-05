@@ -113,7 +113,7 @@ type SEMForm m a = SS.StateT [FieldView (HandlerSite m)]
 -- handlers should use 'runFormPost'.
 runEMFormPost :: (RenderMessage (HandlerSite m) FormMessage, MonadResource m, MonadHandler m)
             => (Html -> EMForm m (FormResult a, xml))
-            -> m (((FormResult a, xml), Enctype), FieldErrors)
+            -> m ((((FormResult a, xml), Enctype), Html), FieldErrors)
 runEMFormPost form = do
     env <- postEnv
     postHelper form env
@@ -145,8 +145,8 @@ runEMFormGet form = do
 generateEMFormPost
     :: (RenderMessage (HandlerSite m) FormMessage, MonadHandler m)
     => (Html -> EMForm m (FormResult a, xml))
-    -> m ((xml, Enctype), FieldErrors)
-generateEMFormPost form = first (first snd) `liftM` postHelper form Nothing
+    -> m (((xml, Enctype), Html), FieldErrors)
+generateEMFormPost form = first (first $ first snd) `liftM` postHelper form Nothing
 
 generateEMFormGet'
     :: (RenderMessage (HandlerSite m) FormMessage, MonadHandler m)
@@ -183,7 +183,7 @@ postEnv = do
 postHelper  :: (MonadHandler m, RenderMessage (HandlerSite m) FormMessage)
             => (Html -> EMForm m (FormResult a, xml))
             -> Maybe (Env, FileEnv)
-            -> m (((FormResult a, xml), Enctype), FieldErrors)
+            -> m ((((FormResult a, xml), Enctype), Html), FieldErrors)
 postHelper form env = do
     req <- getRequest
     let tokenKey = "_token"
@@ -208,7 +208,7 @@ postHelper form env = do
                                 )
                 _ -> return (res, err_fields)
 
-    return (((res', xml), enctype), err_fields')
+    return ((((res', xml), enctype), token), err_fields')
 
 
 -- | Converts a form field into monadic form. This field requires a value
