@@ -67,6 +67,11 @@ instance SimpleStringRep Double where
     simpleParser = fmap (either (fromIntegral :: Integer -> Double) id)
                     PN.natFloat
 
+instance SimpleStringRep Float where
+    simpleEncode = show
+    simpleParser = fmap (either (fromIntegral :: Integer -> Float) id)
+                    PN.natFloat
+
 instance SimpleStringRep Int where
     simpleEncode = show
     simpleParser = PN.int
