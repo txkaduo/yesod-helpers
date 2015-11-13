@@ -50,6 +50,10 @@ parseWithCharParserMaybe p t = case parse p "" t of
                                 Left _ -> Nothing
                                 Right x -> Just x
 
+parseMaybeSimpleEncoded :: (SimpleStringRep a, Stream s Identity Char)
+                        => s -> Maybe a
+parseMaybeSimpleEncoded = parseWithCharParserMaybe (simpleParser <* eof)
+
 -- | a data type that can be encoded into string, and decoded from string.
 -- Use this class instead of Show/Read, when you need to control
 -- the details of serialization format in DB or config file (like Aeson),
