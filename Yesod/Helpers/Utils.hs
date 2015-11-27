@@ -1,10 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Yesod.Helpers.Utils where
 
 import Prelude
 import Control.Applicative
+import Data.Monoid
 import Data.Char
 import qualified Data.Text                  as T
 import Data.Text                            (Text)
@@ -20,8 +23,13 @@ import Data.Time                            (parseTime)
 #endif
 import Control.Monad.IO.Class               (MonadIO, liftIO)
 import Control.Monad
+import Control.Monad.Logger
 import System.Random                        (randomIO)
 import Control.Concurrent                   (Chan, writeChan, MVar, takeMVar, newEmptyMVar)
+import Control.Exception.Enclosed           (catchAny)
+import Control.Monad.Trans.Control          (MonadBaseControl)
+import Control.Monad.Catch                  (MonadCatch)
+import System.Timeout                       (timeout)
 
 
 toHalfWidthEnglishAlpha :: Char -> Char
@@ -102,3 +110,20 @@ writeChanWaitMVar ch mk_cmd = do
     let cmd = mk_cmd mvar
     liftIO $ writeChan ch cmd
     liftIO $ takeMVar mvar
+
+
+-- | Run monadic computation forever, log and retry when exceptions occurs.
+foreverLogExc :: (MonadIO m, MonadLogger m, MonadCatch m, MonadBaseControl IO m)
+                => IO Bool     -- ^ This function should be a blocking op,
+                            -- return True if the infinite loop should be aborted.
+                -> Int      -- ^ ms
+                -> m ()
+                -> m ()
+foreverLogExc block_check_exit interval f = go
+    where
+        go = do
+            f `catchAny` h
+            liftIO (timeout interval block_check_exit)
+                >>= maybe go (const $ return ())
+        h e = do
+            $(logError) $ "Got exception in loop: " <> T.pack (show e)

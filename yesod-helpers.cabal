@@ -116,6 +116,9 @@ library
                      , th-lift
                      , simple-archive-conduit
                      , byteable
+                     , monad-control
+                     , enclosed-exceptions
+                     -- ^ not needed if using classy-prelude
 
   if flag(parsec3)
       build-depends:   parsec3
