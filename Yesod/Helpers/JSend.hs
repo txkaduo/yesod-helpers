@@ -32,7 +32,7 @@ instance ToContent JSendMsg where
     toContent = toContent . toJSON
 
 instance ToTypedContent JSendMsg where
-    toTypedContent = toTypedContent . toTypedContent
+    toTypedContent = toTypedContent . toJSON
 
 instance HasContentType JSendMsg where
     getContentType _ = getContentType (Nothing :: Maybe Value)
