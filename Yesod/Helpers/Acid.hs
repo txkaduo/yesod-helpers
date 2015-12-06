@@ -185,6 +185,11 @@ acidStateConfigMemory conf = case acidConfigConnect conf of
                                 Left "memory"   -> True
                                 _               -> False
 
+acidStateConfigLocalPath :: AcidStateConfig -> Maybe FilePath
+acidStateConfigLocalPath conf = case acidConfigConnect conf of
+                                Left fp | fp /= "memory" -> Just fp
+                                _                       -> Nothing
+
 acidServeOn :: (SafeCopy st) =>
     (CommChannel -> IO Bool)
     -> Int -> HostPreference
