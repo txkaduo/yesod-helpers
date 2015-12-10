@@ -48,6 +48,7 @@ import Data.Byteable                        (constEqBytes)
 import Network.Wai                          (requestMethod)
 import Text.Blaze                           (Markup)
 import Text.Blaze.Html.Renderer.Text        (renderHtml)
+import Data.Aeson.Types                     (Pair)
 import Data.Maybe
 
 import Yesod.Helpers.JSend
@@ -311,19 +312,21 @@ jsendFormData :: Maybe Html
                     -- sometimes client don't need the html code (just the errors are needed)
                     -- to save bandwidth, html code is optional
                 -> FieldErrors
+                -> [Pair]
                 -> JSendMsg
-jsendFormData m_form_html field_errs =
+jsendFormData m_form_html field_errs extra_fields =
     if nullFieldErrors field_errs
         then JSendSuccess dat
         else JSendFail dat
     where
-        dat = object [ "form" .= object
+        dat = object $
+                [ "form" .= object
                             (catMaybes $
                                 [ fmap (("body" .=) . renderHtml) m_form_html
                                 , Just $ "errors" .= field_errs
                                 ]
                                 )
-                ]
+                ] ++ extra_fields
 
 mhelper :: (site ~ HandlerSite m, MonadHandler m)
         => Field m a
