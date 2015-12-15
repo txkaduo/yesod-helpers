@@ -2,12 +2,15 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Yesod.Helpers.Auth where
 
 import Prelude
 import Yesod
 import Yesod.Auth
 import Control.Monad.Catch                  (MonadThrow)
+import Control.Monad
 
 import qualified Data.Text                  as T
 
@@ -62,3 +65,32 @@ yesodAuthEntityDoSub f = do
     user <- lift (liftHandlerT $ get_user user_id)
                 >>= maybe (permissionDeniedI $ (T.pack "AuthEntity not found")) return
     f (user_id, user)
+
+
+-- | 用于实现一种简单的身份认证手段：使用 google email 作为用户标识
+newtype GoogleEmail = GoogleEmail { unGoogleEmail :: T.Text }
+                    deriving (Show, Eq, PathPiece)
+
+-- | used to implement 'authenticate' method of 'YesodAuth' class
+authenticateGeImpl :: (MonadHandler m, AuthId master ~ GoogleEmail)
+                    => Creds master
+                    -> m (AuthenticationResult master)
+authenticateGeImpl creds = do
+    setSession "authed_gmail" raw_email
+    return $ Authenticated $ GoogleEmail raw_email
+    where
+        raw_email = credsIdent creds
+
+-- | used to implement 'manybeAuthId' method of 'YesodAuth' class
+maybeAuthIdGeImpl :: MonadHandler m => m (Maybe GoogleEmail)
+maybeAuthIdGeImpl = do
+    liftM (fmap GoogleEmail) $ lookupSession "authed_gmail"
+
+
+eitherGetLoggedInUserId :: YesodAuth master
+                        => HandlerT master IO (Either AuthResult (AuthId master))
+eitherGetLoggedInUserId = do
+    m_uid <- maybeAuthId
+    case m_uid of
+        Nothing -> return $ Left AuthenticationRequired
+        Just uid -> return $ Right uid
