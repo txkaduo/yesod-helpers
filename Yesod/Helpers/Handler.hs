@@ -26,6 +26,7 @@ import Data.Text                            (Text)
 import Data.List                            (findIndex, sortBy)
 import Data.Ord                             (comparing)
 import Data.Maybe                           (listToMaybe, catMaybes)
+import Data.Aeson.Types                     (Pair)
 import Control.Applicative
 import Data.Monoid
 import Data.String                          (IsString)
@@ -133,7 +134,7 @@ generateEMFormPostHandlerJH ::
     -> HandlerT site m TypedContent
 generateEMFormPostHandlerJH form_func show_page = do
     generateEMFormPostHandler form_func $ do
-        jsonOrHtmlOutputFormEX show_page
+        jsonOrHtmlOutputFormEX [] show_page
 
 runFormPostHandler ::
     ( Monad m, MonadThrow m, MonadBaseControl IO m, MonadIO m
@@ -181,17 +182,18 @@ jsonOrHtmlOutputFormX show_form errs = do
 --           }
 -- }
 jsonOrHtmlOutputFormEX :: (Yesod site, MonadIO m, MonadThrow m, MonadBaseControl IO m)
-                        => EFormHandlerT site m Html
+                        => [Pair]
+                        -> EFormHandlerT site m Html
                             -- ^ provide HTML content
                         -> EFormHandlerT site m TypedContent
-jsonOrHtmlOutputFormEX show_form = do
+jsonOrHtmlOutputFormEX extra_js_fields show_form = do
     r@(((formWidget, _formEnctype), _token), field_errs) <- R.ask
     lift $ do
         selectRep $ do
             provideRep $ R.runReaderT show_form r
             provideRep $ do
                 form_body <- widgetToBodyHtml formWidget
-                return $ jsendFormData (Just form_body) field_errs
+                return $ jsendFormData (Just form_body) field_errs extra_js_fields
 
 jsonOrHtmlOutputFormHandleResult ::
     (Yesod site, RenderMessage site msg
