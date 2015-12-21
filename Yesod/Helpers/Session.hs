@@ -41,4 +41,7 @@ amendSessionCookie settings = add_domain . add_name . add_path . add_max_age
         add_path ck = case sessCookieSettingsPath settings of
                             Just n | not (B.null n)   -> ck { setCookiePath = Just n }
                             _                       -> ck
-        add_max_age ck = ck { setCookieMaxAge = sessCookieSettingsMaxAge settings <|> setCookieMaxAge ck }
+        add_max_age ck = case sessCookieSettingsMaxAge settings of
+                            Just dt | dt > 0    -> ck { setCookieMaxAge = Just dt }
+                                -- 这个逻辑是为了方便可以从环境变量输入一个值(如0)来代表 Nothing
+                            _                   -> ck
