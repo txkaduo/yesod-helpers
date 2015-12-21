@@ -57,6 +57,7 @@ library
                        Yesod.Helpers.About
                        Yesod.Helpers.Logger
                        Yesod.Helpers.BgThread
+                       Yesod.Helpers.Session
                        Yesod.Helpers.Utils
 
   -- other-modules:       
@@ -119,6 +120,7 @@ library
                      , monad-control
                      , enclosed-exceptions
                      -- ^ not needed if using classy-prelude
+                     , cookie
 
   if flag(parsec3)
       build-depends:   parsec3
