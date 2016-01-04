@@ -25,7 +25,7 @@ import Control.Monad.Catch                  (MonadThrow)
 import Data.Text                            (Text)
 import Data.List                            (findIndex, sortBy)
 import Data.Ord                             (comparing)
-import Data.Maybe                           (listToMaybe, catMaybes)
+import Data.Maybe                           (listToMaybe, catMaybes, fromMaybe)
 import Data.Aeson.Types                     (Pair)
 import Control.Applicative
 import Data.Monoid
@@ -380,3 +380,20 @@ widgetToBodyHtml :: (Yesod site, MonadIO m, MonadThrow m, MonadBaseControl IO m)
 widgetToBodyHtml widget = liftHandlerT $ do
     widgetToPageContent widget
         >>= withUrlRenderer . pageBody
+
+
+-- | 目前来说，大多数时候情况都不需要 i18n
+-- 这个函数包装了 languages:
+-- 仅在必要时才真正调用 languages，其它时候只返回固定的语言
+defaultLangs :: MonadHandler m
+                => Lang
+                -> m [Lang]
+defaultLangs def_lang = do
+    b <- fromMaybe (0 :: Int) <$> optPathPieceParamPostGet "_i18n"
+    if b > 0
+        then languages
+        else return [ def_lang ]
+
+defaultZhCnLangs :: MonadHandler m
+                => m [Lang]
+defaultZhCnLangs = defaultLangs "zh-CN"
