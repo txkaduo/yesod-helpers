@@ -60,6 +60,7 @@ library
                        Yesod.Helpers.Session
                        Yesod.Helpers.Utils
                        Yesod.Helpers.Message
+                       Yesod.Helpers.Widget
 
   -- other-modules:       
   default-extensions:  CPP
