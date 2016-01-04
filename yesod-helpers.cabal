@@ -59,6 +59,7 @@ library
                        Yesod.Helpers.BgThread
                        Yesod.Helpers.Session
                        Yesod.Helpers.Utils
+                       Yesod.Helpers.Message
 
   -- other-modules:       
   default-extensions:  CPP
