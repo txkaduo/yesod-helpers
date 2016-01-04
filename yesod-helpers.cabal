@@ -61,6 +61,7 @@ library
                        Yesod.Helpers.Utils
                        Yesod.Helpers.Message
                        Yesod.Helpers.Widget
+                       Yesod.Helpers.SubSite
 
   -- other-modules:       
   default-extensions:  CPP
@@ -70,6 +71,7 @@ library
                      , wai-logger
                      , yesod
                      , yesod-form
+                     , yesod-static
                      , persistent
                      , text
                      , bytestring
