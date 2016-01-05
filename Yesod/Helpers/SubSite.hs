@@ -9,3 +9,9 @@ class ToStaticRoute site where
 
 instance ToStaticRoute Static where
     toStaticRoute = id
+
+
+liftWithRouteToParent :: Monad m
+                        => ((Route child -> Route parent) -> HandlerT parent m b)
+                        -> HandlerT child (HandlerT parent m) b
+liftWithRouteToParent f = getRouteToParent >>= lift . f
