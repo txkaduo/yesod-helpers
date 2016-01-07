@@ -183,6 +183,9 @@ loginParamHiddenFormParts = do
         , mopt hiddenField (nameToFs "login_msg") (Just $ loginParamMessage lp)
         ]
 
+loginParamNames :: [Text]
+loginParamNames = [ "from_url", "login_msg" ]
+
 ------------------------------------------------------------------------------
 
 
