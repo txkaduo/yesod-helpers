@@ -121,6 +121,7 @@ library
                      , enclosed-exceptions
                      -- ^ not needed if using classy-prelude
                      , cookie
+                     , clientsession
 
   if flag(parsec3)
       build-depends:   parsec3
