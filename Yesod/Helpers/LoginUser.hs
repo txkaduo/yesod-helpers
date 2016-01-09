@@ -136,7 +136,7 @@ runLoggedInHandler msg (LoggedInHandler rdr h) = do
 -- | 一种常用的登录重定向方式
 -- 用 query-string 传递以下的参数:
 -- login_msg: 登录的提示语
--- from_url: 登录成功后应回到的位置
+-- return_url: 登录成功后应回到的位置
 --
 -- 没有使用 setMessage setUltDest 是为了减少使用 session
 -- Yesod 的 session 内容不宜太多，因全部 session 都直接加密保存于 client
@@ -155,7 +155,7 @@ redirectToLoginRoute login_route msg = do
     redirect $ url_render_p login_route $
         ("login_msg", mr msg) : case m_current_r of
                                     Nothing -> []
-                                    Just r -> [ ("from_url", url_render_p r (reqGetParams req)) ]
+                                    Just r -> [ ("return_url", url_render_p r (reqGetParams req)) ]
 
 data LoginParams = LoginParams {
                     loginParamFromUrl   :: Maybe Text
@@ -165,7 +165,7 @@ data LoginParams = LoginParams {
 getLoginParam :: (MonadIO m, MonadThrow m, MonadBaseControl IO m) =>
     HandlerT site m LoginParams
 getLoginParam = do
-    u <- lk "from_url"
+    u <- lk "return_url"
     msg <- lk "login_msg"
     return $ LoginParams u msg
     where
@@ -179,12 +179,12 @@ loginParamHiddenFormParts ::
 loginParamHiddenFormParts = do
     lp <- lift getLoginParam
     sequence
-        [ mopt hiddenField (nameToFs "from_url") (Just $ loginParamFromUrl lp)
+        [ mopt hiddenField (nameToFs "return_url") (Just $ loginParamFromUrl lp)
         , mopt hiddenField (nameToFs "login_msg") (Just $ loginParamMessage lp)
         ]
 
 loginParamNames :: [Text]
-loginParamNames = [ "from_url", "login_msg" ]
+loginParamNames = [ "return_url", "login_msg" ]
 
 ------------------------------------------------------------------------------
 
