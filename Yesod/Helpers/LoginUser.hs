@@ -155,7 +155,7 @@ redirectToLoginRoute login_route msg = do
     redirect $ url_render_p login_route $
         ("login_msg", mr msg) : case m_current_r of
                                     Nothing -> []
-                                    Just r -> [ ("return_url", url_render_p r (reqGetParams req)) ]
+                                    Just r -> [ (returnUrlParamName, url_render_p r (reqGetParams req)) ]
 
 data LoginParams = LoginParams {
                     loginParamFromUrl   :: Maybe Text
@@ -165,7 +165,7 @@ data LoginParams = LoginParams {
 getLoginParam :: (MonadIO m, MonadThrow m, MonadBaseControl IO m) =>
     HandlerT site m LoginParams
 getLoginParam = do
-    u <- lk "return_url"
+    u <- lk returnUrlParamName
     msg <- lk "login_msg"
     return $ LoginParams u msg
     where
@@ -179,12 +179,15 @@ loginParamHiddenFormParts ::
 loginParamHiddenFormParts = do
     lp <- lift getLoginParam
     sequence
-        [ mopt hiddenField (nameToFs "return_url") (Just $ loginParamFromUrl lp)
+        [ mopt hiddenField (nameToFs returnUrlParamName) (Just $ loginParamFromUrl lp)
         , mopt hiddenField (nameToFs "login_msg") (Just $ loginParamMessage lp)
         ]
 
 loginParamNames :: [Text]
-loginParamNames = [ "return_url", "login_msg" ]
+loginParamNames = [ returnUrlParamName, "login_msg" ]
+
+returnUrlParamName :: Text
+returnUrlParamName = "return_url"
 
 ------------------------------------------------------------------------------
 
