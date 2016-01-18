@@ -63,6 +63,7 @@ library
                        Yesod.Helpers.Widget
                        Yesod.Helpers.SubSite
                        Yesod.Helpers.Jquery
+                       Yesod.Helpers.ResumeState
 
   -- other-modules:       
   default-extensions:  CPP
