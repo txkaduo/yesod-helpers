@@ -35,6 +35,10 @@ Flag old-time
     Description:   Use old time package
     Default:       False
 
+Flag network-uri
+    Description: Get Network.URI from the network-uri package
+    Default: True
+
 library
   exposed-modules:     Yesod.Helpers.Form
                        Yesod.Helpers.Form2
@@ -79,6 +83,7 @@ library
                      , bytestring
                      , blaze-markup
                      , blaze-html
+                     , blaze-builder
                      , attoparsec
                      , parsec3-numbers
                      , aeson
@@ -102,7 +107,6 @@ library
                      , safecopy
                      , cereal
                      , acid-state
-                     , network
                      , monad-logger
                      , data-default
                      , streaming-commons
@@ -128,6 +132,7 @@ library
                      -- ^ not needed if using classy-prelude
                      , cookie
                      , clientsession
+                     , http-types
 
   if flag(parsec3)
       build-depends:   parsec3
@@ -144,6 +149,11 @@ library
      build-depends:    time < 1.5, old-locale
   else
      build-depends:    time >= 1.5
+
+  if flag(network-uri)
+     build-depends: network-uri >= 2.6, network >= 2.6
+  else
+     build-depends: network-uri < 2.6, network < 2.6
 
   -- hs-source-dirs:      
   default-language:    Haskell2010

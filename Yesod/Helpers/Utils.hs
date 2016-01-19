@@ -30,6 +30,10 @@ import Control.Exception.Enclosed           (catchAny)
 import Control.Monad.Trans.Control          (MonadBaseControl)
 import Control.Monad.Catch                  (MonadCatch)
 import System.Timeout                       (timeout)
+import Network.HTTP.Types                   (parseQueryText, renderQueryText, QueryText)
+import Network.URI                          (parseURIReference, uriQuery, uriToString)
+import qualified Blaze.ByteString.Builder   as BBB
+import qualified Data.ByteString.UTF8       as UTF8
 
 
 toHalfWidthEnglishAlpha :: Char -> Char
@@ -127,3 +131,28 @@ foreverLogExc block_check_exit interval f = go
                 >>= maybe go (const $ return ())
         h e = do
             $(logError) $ "Got exception in loop: " <> T.pack (show e)
+
+
+urlUpdateQueryText :: (QueryText -> QueryText)
+                    -> String
+                    -> Maybe String
+urlUpdateQueryText f s = do
+    uri <- parseURIReference s
+    return $ flip (uriToString id) "" $
+        uri { uriQuery = (UTF8.toString $ BBB.toByteString $
+                                renderQueryText True $
+                                    f $ parseQueryText $ UTF8.fromString $ strip_qm $ uriQuery uri)
+                }
+    where
+        strip_qm ('?':xs)   = xs
+        strip_qm xs         = xs
+
+
+queryTextSetParam :: [(Text, Maybe Text)]
+                    -> QueryText
+                    -> QueryText
+queryTextSetParam = flip go
+    where
+        go ys []        = ys
+        go ys (x:xs)    =   let ys' = filter ((/= fst x) . fst) ys
+                            in go (ys' ++ [ x ]) xs
