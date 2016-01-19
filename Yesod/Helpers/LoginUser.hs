@@ -21,6 +21,7 @@ import Data.Maybe                           (fromMaybe)
 import Yesod.Helpers.Json                   (jsonDecodeKey, jsonEncodeKey)
 import Yesod.Helpers.Form                   (nameToFs)
 import Yesod.Helpers.Handler                (lookupReqAccept, matchMimeType)
+import Yesod.Helpers.ResumeState            (savedReqStateParamName)
 
 -- | Any logged-in user on Web
 -- 本意是要打算支持多种类型用户互相独立地登录
@@ -184,7 +185,7 @@ loginParamHiddenFormParts = do
         ]
 
 loginParamNames :: [Text]
-loginParamNames = [ returnUrlParamName, "login_msg" ]
+loginParamNames = [ savedReqStateParamName, returnUrlParamName, "login_msg" ]
 
 returnUrlParamName :: Text
 returnUrlParamName = "return_url"
