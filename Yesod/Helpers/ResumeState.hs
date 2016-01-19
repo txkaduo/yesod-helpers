@@ -15,6 +15,7 @@ import Control.Monad.State hiding (forM, mapM)
 import Control.Monad.Reader hiding (forM, mapM)
 import System.Random                        (randomIO)
 import Data.String                          (IsString(..))
+import Data.Time
 -- import Data.Text                            (Text)
 import Data.Acid
 import Data.SafeCopy
@@ -31,13 +32,15 @@ class ReqSaveState a where
     saveNewReqState :: a -> ReqSaveVal a -> IO (ReqSaveKey a)
 
     -- | lookup a state
-    lookupReqState  :: a -> ReqSaveKey a -> IO (Maybe ByteString)
+    lookupReqState  :: a -> ReqSaveKey a -> IO (Maybe (ByteString, UTCTime))
 
     -- | delete a state
     dropReqState  :: a -> ReqSaveKey a -> IO ()
 
     -- | lookup and delete a state
-    popReqState  :: a -> ReqSaveKey a -> IO (Maybe ByteString)
+    popReqState  :: a -> ReqSaveKey a -> IO (Maybe (ByteString, UTCTime))
+
+    cleanupReqState :: a -> NominalDiffTime -> IO ()
 
 
 -- | use this name to pass get parameter, value of which is save state key
@@ -61,20 +64,20 @@ class YesodHandlingState site s where
 
 
 -- | Some simple instance of ReqSaveState
-data ReqSaveStateMap = ReqSaveStateMap !(Map ByteString ByteString)
+data ReqSaveStateMap = ReqSaveStateMap !(Map ByteString (ByteString, UTCTime))
 
 $(deriveSafeCopy 0 'base ''ReqSaveStateMap)
 
-acidOpSaveReqSaveState :: ByteString -> ByteString -> Update ReqSaveStateMap Bool
-acidOpSaveReqSaveState key val = do
+acidOpSaveReqSaveState :: ByteString -> ByteString -> UTCTime -> Update ReqSaveStateMap Bool
+acidOpSaveReqSaveState key val now = do
     ReqSaveStateMap m <- get
     case Map.lookup key m of
         Nothing -> do
-                    put $! ReqSaveStateMap $ Map.insert key val m
+                    put $! ReqSaveStateMap $ Map.insert key (val, now) m
                     return True
         Just _  -> return False
 
-acidOpLookupReqSaveState :: ByteString -> Query ReqSaveStateMap (Maybe ByteString)
+acidOpLookupReqSaveState :: ByteString -> Query ReqSaveStateMap (Maybe (ByteString, UTCTime))
 acidOpLookupReqSaveState key = do
     ReqSaveStateMap m <- ask
     return $ Map.lookup key m
@@ -84,7 +87,7 @@ acidOpDropReqSaveState key = do
     ReqSaveStateMap m <- get
     put $! ReqSaveStateMap $ Map.delete key m
 
-acidOpPopReqSaveState :: ByteString -> Update ReqSaveStateMap (Maybe ByteString)
+acidOpPopReqSaveState :: ByteString -> Update ReqSaveStateMap (Maybe (ByteString, UTCTime))
 acidOpPopReqSaveState key = do
     ReqSaveStateMap m <- get
     case Map.lookup key m of
@@ -93,11 +96,17 @@ acidOpPopReqSaveState key = do
             put $! ReqSaveStateMap $ Map.delete key m
             return $ Just v
 
+acidOpCleanupReqSaveState :: UTCTime -> Update ReqSaveStateMap ()
+acidOpCleanupReqSaveState oldest = do
+    ReqSaveStateMap m <- get
+    put $! ReqSaveStateMap $ Map.filter ((>= oldest) . snd) m
+
 $(makeAcidic ''ReqSaveStateMap
     [ 'acidOpSaveReqSaveState
     , 'acidOpLookupReqSaveState
     , 'acidOpDropReqSaveState
     , 'acidOpPopReqSaveState
+    , 'acidOpCleanupReqSaveState
     ]
     )
 
@@ -109,7 +118,8 @@ instance ReqSaveState (AcidState ReqSaveStateMap) where
         where
             go = do
                 key <- fmap B.pack $ replicateM 16 randomIO
-                done <- update acid $ AcidOpSaveReqSaveState key val
+                now <- getCurrentTime
+                done <- update acid $ AcidOpSaveReqSaveState key val now
                 if done
                     then return key
                     else go
@@ -122,3 +132,8 @@ instance ReqSaveState (AcidState ReqSaveStateMap) where
 
     popReqState acid key = do
         update acid $ AcidOpPopReqSaveState key
+
+    cleanupReqState acid ttl = do
+        now <- getCurrentTime
+        let oldest = addUTCTime (negate (abs ttl)) now
+        update acid $ AcidOpCleanupReqSaveState oldest
