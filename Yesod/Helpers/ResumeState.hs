@@ -2,11 +2,13 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 -- | 实现: 在 web 服务器处理时，把用户引导到其它网站后，回来继续原来的处理
 -- 通常用于处理过程中，发现用户需要登录，登录后可以继续原来的请求
 module Yesod.Helpers.ResumeState where
 
 import Prelude
+import Data.Proxy
 import qualified Data.Map.Strict            as Map
 import Data.Map.Strict                      (Map)
 import Data.ByteString                      (ByteString)
@@ -48,19 +50,26 @@ savedReqStateParamName :: IsString a => a
 savedReqStateParamName = fromString "_SRS"
 
 
-{-
-class YesodHandlingState site s where
-    type YesodHandlingStatePreCond site s :: *
-    type YesodHandlingStateOutput site s :: *
+type family HandlingStateOutput s :: *
+
+type family HandlingStateExtra s :: *
+
+-- | 一个可恢复现场的处理状态
+-- 以未登录的请求为例：
+-- postXXX 页面: 发现用户未登录，调用 newHandlingState，并保存必要的状态
+--               然后重定向至登录页面;
+--               如果用户已登录，则直接执行 runHandlingState
+--
+-- getReturnXXX 页面: 恢复之前保存的状态，执行 runHandlingState
+class MonadIO m => HandlingState m s where
+    -- type HandlingStatePreCond site s :: *
 
     -- | 认为 s 总是可以得到的，如果不能取得，或不合法，则可以使用其它短路（如抛异常）
-    newYesodHandlingState :: Proxy s -> HandlerT site IO s
+    newHandlingState :: Proxy s -> m s
 
-    runYesodHandlingState ::
-                        s
-                        -> YesodHandlingStatePreCond s
-                        -> HandlerT site IO (YesodHandlingStateOutput s)
---}
+    resumeHandlingState :: Proxy s -> m s
+
+    runHandlingState :: s -> HandlingStateExtra s -> m (HandlingStateOutput s)
 
 
 -- | Some simple instance of ReqSaveState
