@@ -3,6 +3,7 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 -- | 实现: 在 web 服务器处理时，把用户引导到其它网站后，回来继续原来的处理
 -- 通常用于处理过程中，发现用户需要登录，登录后可以继续原来的请求
 module Yesod.Helpers.ResumeState where
@@ -17,8 +18,10 @@ import Control.Monad.State hiding (forM, mapM)
 import Control.Monad.Reader hiding (forM, mapM)
 import System.Random                        (randomIO)
 import Data.String                          (IsString(..))
+import Yesod.Helpers.Types                  (UrlText)
+import Data.Aeson
 import Data.Time
--- import Data.Text                            (Text)
+import Data.Text                            (Text)
 import Data.Acid
 import Data.SafeCopy
 
@@ -70,6 +73,24 @@ class MonadIO m => HandlingState m s where
     resumeHandlingState :: Proxy s -> m s
 
     runHandlingState :: s -> HandlingStateExtra s -> m (HandlingStateOutput s)
+
+
+-- | 为统一起见，约定 ajax 请求处理时如果遇到需要重定向至另一个页面然后回来再处理的情况
+-- 应返回这样的值。并约定其 JSON 格式
+-- 典型的情况就是登录之后回来再恢复处理之前暂停的请求
+type RetryReason = Text
+
+data RetryOrDone a b = RetryLater UrlText RetryReason a
+                            -- ^ 需要完成其它操作后，到所提供的新URL上重试一次，a 是附带的其它数据
+                    | JobDone b
+
+instance (ToJSON a, ToJSON b) => ToJSON (RetryOrDone a b) where
+    toJSON (RetryLater url reason x)    = object [ "retry" .= object [ "url"    .= url
+                                                                     , "reason" .= reason
+                                                                     , "data"   .= x
+                                                                     ]
+                                                 ]
+    toJSON (JobDone x)                  = object [ "done" .= x ]
 
 
 -- | Some simple instance of ReqSaveState
