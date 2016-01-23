@@ -133,6 +133,7 @@ library
                      , cookie
                      , clientsession
                      , http-types
+                     , parsec-utils
 
   if flag(parsec3)
       build-depends:   parsec3
