@@ -8,6 +8,7 @@ module Yesod.Helpers.Types where
 import Prelude
 import qualified Data.ByteString.Base64.URL as B64U
 import qualified Data.ByteString.Char8      as C8
+import qualified Data.ByteString.Lazy       as LB
 -- import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as TE
 
@@ -40,6 +41,8 @@ import Yesod.Core                           (PathPiece(..))
 import Data.ByteString                      (ByteString)
 import Data.Aeson                           (FromJSON(..), ToJSON(..))
 import qualified System.FilePath.Glob       as G
+import qualified Data.Binary                as Binary
+import Data.Binary                          (Binary)
 import Text.Parsec
 import Yesod.Helpers.Parsec
 import Yesod.Helpers.SafeCopy
@@ -281,6 +284,29 @@ instance FromJSON B64UByteStringPathPiece where
 instance ToJSON B64UByteStringPathPiece where
     toJSON = toJSON . toPathPiece
 
+
+-- | A wrapper type to make some instances using base64-url-encoding
+data B64UByteString a = B64UByteString { unB64UByteString :: a }
+                                deriving (Eq, Ord, Show, Read)
+
+instance Binary a => PathPiece (B64UByteString a) where
+    toPathPiece (B64UByteString bs) =
+        fromString $ C8.unpack $ B64U.encode $ LB.toStrict $ Binary.encode bs
+
+    fromPathPiece t = either (const Nothing) Just $ do
+        bs <- B64U.decode (TE.encodeUtf8 t)
+        (left_bs, _, y) <- either (\(_, _, x) -> Left x) Right $ Binary.decodeOrFail $ LB.fromStrict bs
+        if LB.null left_bs
+            then return $ B64UByteString y
+            else Left "not all input consumed"
+
+instance Binary a => FromJSON (B64UByteString a) where
+    parseJSON v = do
+        fmap fromPathPiece (parseJSON v)
+            >>= maybe mzero return
+
+instance Binary a => ToJSON (B64UByteString a) where
+    toJSON = toJSON . toPathPiece
 
 -- | used in URL, represent a url piece
 -- that can be

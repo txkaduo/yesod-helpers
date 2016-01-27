@@ -127,6 +127,7 @@ library
                      , th-lift
                      , simple-archive-conduit
                      , byteable
+                     , binary
                      , monad-control
                      , enclosed-exceptions
                      -- ^ not needed if using classy-prelude
