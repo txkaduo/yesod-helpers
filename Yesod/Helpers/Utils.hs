@@ -25,6 +25,8 @@ import Control.Monad.IO.Class               (MonadIO, liftIO)
 import Control.Monad
 import Control.Monad.Logger
 import System.Random                        (randomIO)
+import Data.Word                            (Word8)
+import Data.String                          (IsString(..))
 import Control.Concurrent                   (Chan, writeChan, MVar, takeMVar, newEmptyMVar)
 import Control.Exception.Enclosed           (catchAny)
 import Control.Monad.Trans.Control          (MonadBaseControl)
@@ -101,6 +103,20 @@ randomPick choices = do
 
 randomString :: MonadIO m => Int -> [Char] -> m [Char]
 randomString len chars = replicateM len (randomPick chars)
+
+
+-- | generate random string with 'safe' characters:
+-- ASCII alpha and number only, with some characters ('l', 'o') excluded.
+randomHumanSafeStr :: MonadIO m => IsString s => Int -> m s
+randomHumanSafeStr slen = do
+    ws <- liftIO $ replicateM slen $ randomIO
+    return $ fromString $ flip map ws $
+                    \w -> safe_chars !!
+                        (fromIntegral (w :: Word8) `mod` length safe_chars)
+
+    where
+        -- length of safe_char is 32
+        safe_chars = filter (not . (`elem` ['l', 'o'])) $ ['a' .. 'z'] ++ ['2' .. '9']
 
 
 -- | Make an empty MVar, supply it to the constructor, construct a message for the Chan,
