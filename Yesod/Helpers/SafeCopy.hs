@@ -6,6 +6,7 @@
 module Yesod.Helpers.SafeCopy where
 
 import qualified Data.Text                  as T
+import qualified Data.Aeson                 as Aeson
 import Data.SafeCopy
 import Data.Typeable                        (Typeable)
 import Yesod hiding (get)
@@ -27,6 +28,20 @@ import Data.Word                            (Word8)
 import Control.DeepSeq                      (NFData(..))
 
 import Yesod.Helpers.Parsec
+
+
+newtype SafeCopyJsonVal = SafeCopyJsonVal { unSafeCopyJsonVal :: Aeson.Value }
+                            deriving (Eq, Show)
+
+instance SafeCopy SafeCopyJsonVal where
+    putCopy (SafeCopyJsonVal v) = contain $ safePut $ Aeson.encode v
+    getCopy = contain $ do
+                bs <- safeGet
+                either fail (return . SafeCopyJsonVal) $ Aeson.eitherDecode' bs
+
+instance (NFData SafeCopyJsonVal) => NFData SafeCopyJsonVal where
+    rnf (SafeCopyJsonVal x) = rnf x
+
 
 newtype SafeCopyId val = SafeCopyId { unSafeCopyId :: Key val }
                         deriving (Typeable)
