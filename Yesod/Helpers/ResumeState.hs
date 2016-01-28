@@ -64,14 +64,16 @@ type family HandlingStateExtra s :: *
 --               如果用户已登录，则直接执行 runHandlingState
 --
 -- getReturnXXX 页面: 恢复之前保存的状态，执行 runHandlingState
+--
+-- 但这个 class 的方法不包含如何从已保存的状态恢复的方法
+-- 已不包含怎样取得 HandlingStateExtra 的方法
+-- 这些都被认为是其它接口界面的问题
 class MonadIO m => HandlingState m s where
-    -- type HandlingStatePreCond site s :: *
 
     -- | 认为 s 总是可以得到的，如果不能取得，或不合法，则可以使用其它短路（如抛异常）
-    newHandlingState :: Proxy s -> m s
+    newHandlingState :: m s
 
-    resumeHandlingState :: Proxy s -> m s
-
+    -- | 真正处理这个状态，并得到结果
     runHandlingState :: s -> HandlingStateExtra s -> m (HandlingStateOutput s)
 
 
