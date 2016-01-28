@@ -37,13 +37,13 @@ class ReqSaveState a where
     saveNewReqState :: a -> ReqSaveVal a -> IO (ReqSaveKey a)
 
     -- | lookup a state
-    lookupReqState  :: a -> ReqSaveKey a -> IO (Maybe (ByteString, UTCTime))
+    lookupReqState  :: a -> ReqSaveKey a -> IO (Maybe (ReqSaveVal a, UTCTime))
 
     -- | delete a state
     dropReqState  :: a -> ReqSaveKey a -> IO ()
 
     -- | lookup and delete a state
-    popReqState  :: a -> ReqSaveKey a -> IO (Maybe (ByteString, UTCTime))
+    popReqState  :: a -> ReqSaveKey a -> IO (Maybe (ReqSaveVal a, UTCTime))
 
     cleanupReqState :: a -> NominalDiffTime -> IO ()
 
