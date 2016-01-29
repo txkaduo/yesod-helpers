@@ -4,12 +4,13 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts #-}
 -- | 实现: 在 web 服务器处理时，把用户引导到其它网站后，回来继续原来的处理
 -- 通常用于处理过程中，发现用户需要登录，登录后可以继续原来的请求
 module Yesod.Helpers.ResumeState where
 
 import Prelude
-import Data.Proxy
+-- import Data.Proxy
 import qualified Data.Map.Strict            as Map
 import Data.Map.Strict                      (Map)
 import Data.ByteString                      (ByteString)
@@ -17,15 +18,17 @@ import qualified Data.ByteString            as B
 import Control.Monad.State hiding (forM, mapM)
 import Control.Monad.Reader hiding (forM, mapM)
 import System.Random                        (randomIO)
+import Data.Default                         (Default(..))
 import Data.String                          (IsString(..))
-import Yesod.Helpers.Types                  (UrlText)
+import Control.DeepSeq                      (NFData(..), ($!!))
 import Data.Aeson
 import Data.Time
 import Data.Text                            (Text)
 import Data.Acid
 import Data.SafeCopy
 
-
+import Yesod.Helpers.Types                  (UrlText)
+import Yesod.Helpers.SafeCopy               (SafeCopyJsonVal(..))
 
 -- | Some store that can save state
 class ReqSaveState a where
@@ -96,44 +99,50 @@ instance (ToJSON a, ToJSON b) => ToJSON (RetryOrDone a b) where
 
 
 -- | Some simple instance of ReqSaveState
-data ReqSaveStateMap = ReqSaveStateMap !(Map ByteString (ByteString, UTCTime))
+data ReqSaveStateJsonMap = ReqSaveStateJsonMap !(Map ByteString (SafeCopyJsonVal, UTCTime))
 
-$(deriveSafeCopy 0 'base ''ReqSaveStateMap)
+$(deriveSafeCopy 0 'base ''ReqSaveStateJsonMap)
 
-acidOpSaveReqSaveState :: ByteString -> ByteString -> UTCTime -> Update ReqSaveStateMap Bool
+instance NFData ReqSaveStateJsonMap where
+    rnf (ReqSaveStateJsonMap x) = rnf x
+
+instance Default ReqSaveStateJsonMap where
+    def = ReqSaveStateJsonMap def
+
+acidOpSaveReqSaveState :: ByteString -> SafeCopyJsonVal -> UTCTime -> Update ReqSaveStateJsonMap Bool
 acidOpSaveReqSaveState key val now = do
-    ReqSaveStateMap m <- get
+    ReqSaveStateJsonMap m <- get
     case Map.lookup key m of
         Nothing -> do
-                    put $! ReqSaveStateMap $ Map.insert key (val, now) m
+                    put $!! ReqSaveStateJsonMap $ Map.insert key (val, now) m
                     return True
         Just _  -> return False
 
-acidOpLookupReqSaveState :: ByteString -> Query ReqSaveStateMap (Maybe (ByteString, UTCTime))
+acidOpLookupReqSaveState :: ByteString -> Query ReqSaveStateJsonMap (Maybe (SafeCopyJsonVal, UTCTime))
 acidOpLookupReqSaveState key = do
-    ReqSaveStateMap m <- ask
+    ReqSaveStateJsonMap m <- ask
     return $ Map.lookup key m
 
-acidOpDropReqSaveState :: ByteString -> Update ReqSaveStateMap ()
+acidOpDropReqSaveState :: ByteString -> Update ReqSaveStateJsonMap ()
 acidOpDropReqSaveState key = do
-    ReqSaveStateMap m <- get
-    put $! ReqSaveStateMap $ Map.delete key m
+    ReqSaveStateJsonMap m <- get
+    put $!! ReqSaveStateJsonMap $ Map.delete key m
 
-acidOpPopReqSaveState :: ByteString -> Update ReqSaveStateMap (Maybe (ByteString, UTCTime))
+acidOpPopReqSaveState :: ByteString -> Update ReqSaveStateJsonMap (Maybe (SafeCopyJsonVal, UTCTime))
 acidOpPopReqSaveState key = do
-    ReqSaveStateMap m <- get
+    ReqSaveStateJsonMap m <- get
     case Map.lookup key m of
         Nothing -> return Nothing
         Just v -> do
-            put $! ReqSaveStateMap $ Map.delete key m
+            put $!! ReqSaveStateJsonMap $ Map.delete key m
             return $ Just v
 
-acidOpCleanupReqSaveState :: UTCTime -> Update ReqSaveStateMap ()
+acidOpCleanupReqSaveState :: UTCTime -> Update ReqSaveStateJsonMap ()
 acidOpCleanupReqSaveState oldest = do
-    ReqSaveStateMap m <- get
-    put $! ReqSaveStateMap $ Map.filter ((>= oldest) . snd) m
+    ReqSaveStateJsonMap m <- get
+    put $!! ReqSaveStateJsonMap $ Map.filter ((>= oldest) . snd) m
 
-$(makeAcidic ''ReqSaveStateMap
+$(makeAcidic ''ReqSaveStateJsonMap
     [ 'acidOpSaveReqSaveState
     , 'acidOpLookupReqSaveState
     , 'acidOpDropReqSaveState
@@ -142,9 +151,9 @@ $(makeAcidic ''ReqSaveStateMap
     ]
     )
 
-instance ReqSaveState (AcidState ReqSaveStateMap) where
-    type ReqSaveKey (AcidState ReqSaveStateMap) = ByteString
-    type ReqSaveVal (AcidState ReqSaveStateMap) = ByteString
+instance ReqSaveState (AcidState ReqSaveStateJsonMap) where
+    type ReqSaveKey (AcidState ReqSaveStateJsonMap) = ByteString
+    type ReqSaveVal (AcidState ReqSaveStateJsonMap) = SafeCopyJsonVal
 
     saveNewReqState acid val = go
         where
