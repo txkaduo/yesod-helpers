@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Yesod.Helpers.Jquery where
+module Yesod.Helpers.CdnUrl where
 
 import Prelude
 import Data.Text                            (Text)
