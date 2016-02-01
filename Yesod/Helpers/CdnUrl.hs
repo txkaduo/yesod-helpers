@@ -31,6 +31,9 @@ class HandlebarsCdnUrl a where
 class ZeptoCdnUrl a where
     urlZeptoJsText :: a -> Text
 
+class YesodZepto a where
+    urlZeptoJs :: a -> Either (Route a) Text
+
 class OnePageScrollCssCdnUrl a where
     urlOnePageScrollCssText :: a -> Text
 
