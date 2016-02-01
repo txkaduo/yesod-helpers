@@ -2,6 +2,7 @@
 module Yesod.Helpers.CdnUrl where
 
 import Prelude
+import Yesod
 import Data.Text                            (Text)
 
 
@@ -35,6 +36,12 @@ class OnePageScrollCssCdnUrl a where
 
 class OnePageScrollJsJqueryCdnUrl a where
     urlOnePageScrollJsJqueryText :: a -> Text
+
+class YesodOnePageScroll master where
+    urlOnePageScrollPureJs :: master -> Either (Route master) Text
+    urlOnePageScrollZeptoJs :: master -> Either (Route master) Text
+    urlOnePageScrollJqueryJs :: master -> Either (Route master) Text
+    urlOnePageScrollCss :: master -> Either (Route master) Text
 
 
 data BootcssCdn = BootcssCdn Bool
