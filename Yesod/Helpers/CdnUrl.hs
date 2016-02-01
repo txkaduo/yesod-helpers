@@ -12,6 +12,20 @@ class JqueryCdnUrl a where
 
     urlJqueryUiCssText :: a -> Text
 
+class JqueryFormCdnUrl a where
+    urlJqueryFormJsText :: a -> Text
+
+class BootstrapCdnUrl a where
+    urlBootstrapCssText :: a -> Text
+    urlBootstrapJsText :: a -> Text
+
+class FontAwesomeCdnUrl a where
+    urlFontAwesomeCssText :: a -> Text
+    urlFontAwesomeWebFontText :: a -> Text
+
+class HandlebarsCdnUrl a where
+    urlHandlebarsJsText ::a -> Text
+    urlHandlebarsRuntimeJsText ::a -> Text
 
 class ZeptoCdnUrl a where
     urlZeptoJsText :: a -> Text
@@ -40,6 +54,43 @@ instance JqueryCdnUrl BootcssCdn where
         if min_ver
             then "//cdn.bootcss.com/jqueryui/1.11.4/jquery-ui.min.css"
             else "//cdn.bootcss.com/jqueryui/1.11.4/jquery-ui.css"
+
+instance JqueryFormCdnUrl BootcssCdn where
+    urlJqueryFormJsText (BootcssCdn min_ver) =
+        if min_ver
+            then "//cdn.bootcss.com/jquery.form/3.51/jquery.form.min.js"
+            else "//cdn.bootcss.com/jquery.form/3.51/jquery.form.js"
+
+instance BootstrapCdnUrl BootcssCdn where
+    urlBootstrapCssText (BootcssCdn min_ver) =
+        if min_ver
+            then "//cdn.bootcss.com/bootstrap/3.3.6/css/bootstrap.min.css"
+            else "//cdn.bootcss.com/bootstrap/3.3.6/css/bootstrap.css"
+
+    urlBootstrapJsText (BootcssCdn min_ver) =
+        if min_ver
+            then "//cdn.bootcss.com/bootstrap/3.3.6/js/bootstrap.min.js"
+            else "//cdn.bootcss.com/bootstrap/3.3.6/js/bootstrap.js"
+
+instance FontAwesomeCdnUrl BootcssCdn where
+    urlFontAwesomeCssText (BootcssCdn min_ver) =
+        if min_ver
+            then "//cdn.bootcss.com/font-awesome/4.5.0/css/font-awesome.min.css"
+            else "//cdn.bootcss.com/font-awesome/4.5.0/css/font-awesome.css"
+
+    urlFontAwesomeWebFontText _ =
+        "//cdn.bootcss.com/font-awesome/4.5.0/fonts/fontawesome-webfont.svg"
+
+instance HandlebarsCdnUrl BootcssCdn where
+    urlHandlebarsJsText (BootcssCdn min_ver) =
+        if min_ver
+            then "//cdn.bootcss.com/handlebars.js/4.0.5/handlebars.min.js"
+            else "//cdn.bootcss.com/handlebars.js/4.0.5/handlebars.min.js"
+
+    urlHandlebarsRuntimeJsText (BootcssCdn min_ver) =
+        if min_ver
+            then "//cdn.bootcss.com/handlebars.js/4.0.5/handlebars.runtime.min.js"
+            else "//cdn.bootcss.com/handlebars.js/4.0.5/handlebars.runtime.js"
 
 instance ZeptoCdnUrl BootcssCdn where
     urlZeptoJsText (BootcssCdn min_ver) =
