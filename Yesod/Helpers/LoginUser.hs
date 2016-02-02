@@ -154,7 +154,7 @@ redirectToLoginRoute login_route msg = do
     mr <- getMessageRender
     req <- getRequest
     redirect $ url_render_p login_route $
-        ("login_msg", mr msg) : case m_current_r of
+        (loginMsgParamName, mr msg) : case m_current_r of
                                     Nothing -> []
                                     Just r -> [ (returnUrlParamName, url_render_p r (reqGetParams req)) ]
 
@@ -167,7 +167,7 @@ getLoginParam :: (MonadIO m, MonadThrow m, MonadBaseControl IO m) =>
     HandlerT site m LoginParams
 getLoginParam = do
     u <- lk returnUrlParamName
-    msg <- lk "login_msg"
+    msg <- lk loginMsgParamName
     return $ LoginParams u msg
     where
         lk x = lookupPostParam x >>= maybe (lookupGetParam x) (return . Just)
@@ -181,14 +181,26 @@ loginParamHiddenFormParts = do
     lp <- lift getLoginParam
     sequence
         [ mopt hiddenField (nameToFs returnUrlParamName) (Just $ loginParamFromUrl lp)
-        , mopt hiddenField (nameToFs "login_msg") (Just $ loginParamMessage lp)
+        , mopt hiddenField (nameToFs loginMsgParamName) (Just $ loginParamMessage lp)
         ]
 
 loginParamNames :: [Text]
-loginParamNames = [ savedReqStateParamName, returnUrlParamName, "login_msg" ]
+loginParamNames =   [ savedReqStateParamName
+                    , returnUrlParamName
+                    , returnUrl2ParamName
+                    , loginMsgParamName
+                    ]
+
+loginMsgParamName :: Text
+loginMsgParamName = "login_msg"
 
 returnUrlParamName :: Text
 returnUrlParamName = "return_url"
+
+-- | 这是打算用于登录取消或失败时返回的地址，但这里的代码暂时没有直接用到
+-- 定义这个变量名是方便多项目统一
+returnUrl2ParamName :: Text
+returnUrl2ParamName = "return_url2"
 
 ------------------------------------------------------------------------------
 
