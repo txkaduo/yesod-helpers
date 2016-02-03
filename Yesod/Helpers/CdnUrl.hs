@@ -2,8 +2,12 @@
 module Yesod.Helpers.CdnUrl where
 
 import Prelude
+import qualified Data.Text                  as T
 import Yesod
 import Data.Text                            (Text)
+import Data.MinLen
+
+import Blaze.ByteString.Builder             (Builder)
 
 
 class JqueryCdnUrl a where
@@ -45,6 +49,25 @@ class YesodOnePageScroll master where
     urlOnePageScrollZeptoJs :: master -> Either (Route master) Text
     urlOnePageScrollJqueryJs :: master -> Either (Route master) Text
     urlOnePageScrollCss :: master -> Either (Route master) Text
+
+
+-- | To offload static files to CDN. See urlRenderOverride
+urlRenderOverrideStatic :: (Yesod site, Foldable t, RenderRoute a)
+                        => site
+                        -> Text
+                        -> t Text
+                        -> Route a
+                        -> Maybe Builder
+urlRenderOverrideStatic foundation offload_url safe_exts s = do
+    last_p <- Data.MinLen.last <$> (toMinLen ps :: Maybe (MinLen (Succ Zero) [Text]))
+    if any (flip T.isSuffixOf last_p) safe_exts
+        then
+            let ps' = either id id $ cleanPath foundation ps
+            in Just $ joinPath foundation offload_url ps' params
+        else Nothing
+
+    where
+        (ps, params)    = renderRoute s
 
 
 data BootcssCdn = BootcssCdn Bool

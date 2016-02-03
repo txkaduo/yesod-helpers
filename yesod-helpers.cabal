@@ -133,6 +133,7 @@ library
                      -- ^ not needed if using classy-prelude
                      , cookie
                      , clientsession
+                     , mono-traversable
                      , http-types
                      , parsec-tx-utils
 
