@@ -50,6 +50,13 @@ class YesodOnePageScroll master where
     urlOnePageScrollJqueryJs :: master -> Either (Route master) Text
     urlOnePageScrollCss :: master -> Either (Route master) Text
 
+-- | see: https://github.com/js-cookie/js-cookie
+class JsCookieCdnUrl a where
+    urlJsCookieJsText :: a -> Text
+
+class YesodJsCookie a where
+    urlJsCookieJs :: a -> Either (Route a) Text
+
 
 -- | To offload static files to CDN. See urlRenderOverride
 urlRenderOverrideStatic :: (Yesod site, Foldable t, RenderRoute a)
@@ -60,7 +67,7 @@ urlRenderOverrideStatic :: (Yesod site, Foldable t, RenderRoute a)
                         -> Maybe Builder
 urlRenderOverrideStatic foundation offload_url safe_exts s = do
     last_p <- Data.MinLen.last <$> (toMinLen ps :: Maybe (MinLen (Succ Zero) [Text]))
-    if any (flip T.isSuffixOf last_p) safe_exts
+    if null safe_exts || any (flip T.isSuffixOf last_p) safe_exts
         then
             let ps' = either id id $ cleanPath foundation ps
             in Just $ joinPath foundation offload_url ps' params
@@ -142,3 +149,9 @@ instance OnePageScrollJsJqueryCdnUrl BootcssCdn where
         if min_ver
             then "//cdn.bootcss.com/onepage-scroll/1.3.1/jquery.onepage-scroll.min.js"
             else "//cdn.bootcss.com/onepage-scroll/1.3.1/jquery.onepage-scroll.js"
+
+instance JsCookieCdnUrl BootcssCdn where
+    urlJsCookieJsText (BootcssCdn min_ver) =
+        if min_ver
+            then "//cdn.bootcss.com/js-cookie/2.1.0/js.cookie.min.js"
+            else "//cdn.bootcss.com/js-cookie/2.1.0/js.cookie.js"
