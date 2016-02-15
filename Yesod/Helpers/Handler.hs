@@ -71,7 +71,7 @@ type MkForm site m a = Markup -> MForm (HandlerT site m) (FormResult a, WidgetT 
 type MkEMForm site m a = Markup -> EMForm (HandlerT site m) (FormResult a, WidgetT site IO ())
 
 type FormHandlerT site m a = R.ReaderT (WidgetT site IO (), Enctype) (HandlerT site m) a
-type EFormHandlerT site m a = R.ReaderT (((WidgetT site IO (), Enctype), Html), FieldErrors) (HandlerT site m) a
+type EFormHandlerT site m a = R.ReaderT (((WidgetT site IO (), Enctype), Html), FieldErrors site) (HandlerT site m) a
 
 -- ^
 -- Typical Usage:
@@ -189,11 +189,12 @@ jsonOrHtmlOutputFormEX :: (Yesod site, MonadIO m, MonadThrow m, MonadBaseControl
 jsonOrHtmlOutputFormEX extra_js_fields show_form = do
     r@(((formWidget, _formEnctype), _token), field_errs) <- R.ask
     lift $ do
+        render_msg <- getMessageRender
         selectRep $ do
             provideRep $ R.runReaderT show_form r
             provideRep $ do
                 form_body <- widgetToBodyHtml formWidget
-                return $ jsendFormData (Just form_body) field_errs extra_js_fields
+                return $ jsendFormData render_msg (Just form_body) field_errs extra_js_fields
 
 jsonOrHtmlOutputFormHandleResult ::
     (Yesod site, RenderMessage site msg
