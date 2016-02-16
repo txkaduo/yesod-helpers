@@ -44,6 +44,7 @@ import Control.Arrow                        (first, second, (&&&), (***))
 #if !MIN_VERSION_base(4,8,0)
 import Data.Monoid                          (Monoid(..))
 #endif
+import Data.Semigroup                       (Semigroup(..))
 import qualified Control.Monad.Trans.Writer as W
 import Data.Byteable                        (constEqBytes)
 import Network.Wai                          (requestMethod)
@@ -121,6 +122,8 @@ instance Monoid (FieldErrors master) where
     mempty  = FieldErrors mempty
     mappend (FieldErrors x1) (FieldErrors x2) = FieldErrors $ HM.unionWith mappend x1 x2
 
+instance Semigroup (FieldErrors master) where
+    (<>) = mappend
 
 type EMForm m a = WriterT
                         (FieldErrors (HandlerSite m))

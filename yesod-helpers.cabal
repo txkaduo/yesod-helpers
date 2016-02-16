@@ -135,6 +135,7 @@ library
                      , cookie
                      , clientsession
                      , mono-traversable
+                     , semigroups
                      , http-types
                      , parsec-tx-utils
 
