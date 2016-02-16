@@ -42,6 +42,7 @@ import Data.Conduit                         (($$), Conduit, yield, await, ($=), 
 import Control.Monad.Trans.Resource         (runResourceT, transResourceT, ResourceT)
 import Control.Monad.Trans.Maybe            (runMaybeT)
 import Control.Monad                        (mzero, when, unless)
+import Control.Arrow                        (first)
 import Data.Conduit.Binary                  (sourceLbs, sinkLbs)
 
 import Data.List                            (isSuffixOf)
@@ -289,6 +290,17 @@ entityUniqueKeyField not_found_msg mk_unique =
         f t = runExceptT $ do
                 (lift $ runDB $ getBy $ mk_unique t)
                     >>= maybe (throwE $ not_found_msg t) return
+
+
+-- | make a 'mopt' work like 'mreq', by providing a default value
+moptDefault :: (site ~ HandlerSite m, MonadHandler m)
+             => a   -- ^ the default value
+             -> Field m a
+             -> FieldSettings site
+             -> Maybe a
+                    -- ^ initial value of field
+             -> MForm m (FormResult a, FieldView site)
+moptDefault def_v f fs mv = first (fmap $ fromMaybe def_v) <$> mopt f fs (fmap Just mv)
 
 
 -- | parse the content in textarea, into a list of values
