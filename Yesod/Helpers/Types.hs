@@ -2,6 +2,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE StandaloneDeriving #-}
 module Yesod.Helpers.Types where
 
@@ -37,7 +39,7 @@ import Database.Persist.Sql                 (PersistFieldSql(..))
 import Control.DeepSeq                      (NFData(..))
 import Control.DeepSeq.Generics             (genericRnf)
 import GHC.Generics                         (Generic)
-import Yesod.Core                           (PathPiece(..))
+import Yesod.Core                           (PathPiece(..), RedirectUrl(..))
 import Data.ByteString                      (ByteString)
 import Data.Aeson                           (FromJSON(..), ToJSON(..))
 import qualified System.FilePath.Glob       as G
@@ -103,6 +105,8 @@ instance SafeCopy UrlText where
 instance FromJSON UrlText where parseJSON = fmap UrlText . parseJSON
 
 instance ToJSON UrlText where toJSON = toJSON . unUrlText
+
+instance RedirectUrl m UrlText where toTextUrl = toTextUrl . unUrlText
 
 
 newtype XTimeZone = XTimeZone { unXTimeZone :: TimeZone }
