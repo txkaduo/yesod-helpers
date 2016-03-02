@@ -71,6 +71,7 @@ library
 
   -- other-modules:       
   default-extensions:  CPP
+                       GeneralizedNewtypeDeriving
 
   build-depends:       base >=4.7
                      , wai
@@ -128,6 +129,7 @@ library
                      , simple-archive-conduit
                      , byteable
                      , binary
+                     , binary-orphans
                      , monad-control
                      , hashable
                      , enclosed-exceptions

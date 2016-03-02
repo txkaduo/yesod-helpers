@@ -33,6 +33,9 @@ import Data.Foldable                        (asum)
 import Data.List                            (intersperse)
 import Data.SafeCopy
 import Data.String                          (fromString)
+import Data.Binary                          (Binary)
+import Data.Binary.Orphans                  ()
+import Data.Typeable                        (Typeable)
 import Data.Text                            (Text)
 import Database.Persist                     (PersistField(..), SqlType(SqlString))
 import Database.Persist.Sql                 (PersistFieldSql(..))
@@ -87,7 +90,7 @@ instance SimpleStringRep Gender where
 
 -- | A URL in Text.
 newtype UrlText = UrlText { unUrlText :: Text}
-                deriving (Show, Eq, Ord)
+                deriving (Show, Eq, Ord, Typeable, Generic, Binary)
 $(deriveLift ''UrlText)
 
 instance PersistField UrlText where
@@ -110,7 +113,7 @@ instance RedirectUrl m UrlText where toTextUrl = toTextUrl . unUrlText
 
 
 newtype XTimeZone = XTimeZone { unXTimeZone :: TimeZone }
-                    deriving (Show, Read, Eq, Ord)
+                    deriving (Show, Read, Eq, Ord, Typeable, Generic, Binary)
 
 instance SimpleStringRep XTimeZone where
     simpleEncode = timeZoneOffsetString . unXTimeZone
@@ -269,7 +272,7 @@ validateSimpleVersion (VerLogicOr c1 c2) ver =
 
 -- | 为把一个 bytestring 放到 yesod url 里
 newtype B64UByteStringPathPiece = B64UByteStringPathPiece { unB64UByteStringPathPiece :: ByteString }
-                                deriving (Eq, Ord, Show, Read)
+                                deriving (Eq, Ord, Show, Read, Typeable, Generic, Binary)
 
 instance PathPiece B64UByteStringPathPiece where
     toPathPiece (B64UByteStringPathPiece bs) =
