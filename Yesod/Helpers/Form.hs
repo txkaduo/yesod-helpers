@@ -440,6 +440,32 @@ stripUpFront fd = fd { fieldParse = new_parse }
 
 -- | check the result by constructing a Unique key,
 -- if record matching that Unique key already exists, report the error message.
+checkFieldDBUnique2 ::
+    ( YesodPersist site, PersistEntity val
+    , RenderMessage site msg
+#if MIN_VERSION_persistent(2, 0, 0)
+    , PersistEntityBackend val ~ YesodPersistBackend site
+    , PersistUnique (YesodPersistBackend site)
+#else
+    , PersistUnique (YesodDB site)
+    , PersistMonadBackend (YesodDB site) ~ PersistEntityBackend val
+#endif
+    , Eq a
+    ) =>
+    (a -> Unique val)
+    -> msg
+    -> Maybe a
+        -- ^ Old value. Don't check DB if result is the same as this.
+    -> Field (HandlerT site IO) a
+    -> Field (HandlerT site IO) a
+checkFieldDBUnique2 mk_unique msg m_old_val = checkMMap chk id
+    where
+        chk t = if Just t == m_old_val
+                    then return $ Right t
+                    else (runDB $ getBy $ mk_unique t)
+                            >>= return . maybe
+                                    (Right t)
+                                    (const $ Left msg)
 checkFieldDBUnique ::
     ( YesodPersist site, PersistEntity val
     , RenderMessage site msg
@@ -450,17 +476,13 @@ checkFieldDBUnique ::
     , PersistUnique (YesodDB site)
     , PersistMonadBackend (YesodDB site) ~ PersistEntityBackend val
 #endif
+    , Eq a
     ) =>
     (a -> Unique val)
     -> msg
     -> Field (HandlerT site IO) a
     -> Field (HandlerT site IO) a
-checkFieldDBUnique mk_unique msg = checkMMap chk id
-    where
-        chk t = (runDB $ getBy $ mk_unique t)
-                    >>= return . maybe
-                            (Right t)
-                            (const $ Left msg)
+checkFieldDBUnique mk_unique msg = checkFieldDBUnique2 mk_unique msg Nothing
 
 
 -- | can be used as a placeholder
