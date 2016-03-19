@@ -90,7 +90,7 @@ instance SimpleStringRep Gender where
 
 -- | A URL in Text.
 newtype UrlText = UrlText { unUrlText :: Text}
-                deriving (Show, Eq, Ord, Typeable, Generic, Binary)
+  deriving (Show, Eq, Ord, Typeable, Generic, Binary, NFData)
 $(deriveLift ''UrlText)
 
 instance PersistField UrlText where
