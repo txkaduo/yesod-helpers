@@ -29,7 +29,6 @@ import Data.List                            (stripPrefix)
 import Data.Maybe
 import Network.Wai.Logger                   (DateCacheGetter)
 import Yesod.Core.Types
-import Language.Haskell.TH.Syntax           (loc_package, loc_module, loc_filename, loc_start)
 import System.FilePath                      ((</>), splitFileName, takeFileName)
 import System.Directory                     (renameFile)
 import System.IO                            (hPutStrLn, stderr)

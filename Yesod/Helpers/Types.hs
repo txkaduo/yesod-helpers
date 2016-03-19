@@ -47,7 +47,6 @@ import Data.ByteString                      (ByteString)
 import Data.Aeson                           (FromJSON(..), ToJSON(..))
 import qualified System.FilePath.Glob       as G
 import qualified Data.Binary                as Binary
-import Data.Binary                          (Binary)
 import Text.Parsec
 import Yesod.Helpers.Parsec
 import Yesod.Helpers.SafeCopy
