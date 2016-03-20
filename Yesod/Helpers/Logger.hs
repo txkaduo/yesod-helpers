@@ -14,6 +14,7 @@ import Data.Vector                          (Vector)
 import qualified Data.Text                  as T
 import Data.Default                         (Default(..))
 import Control.Applicative
+import Control.DeepSeq                      (force)
 import Data.IORef
 
 #if MIN_VERSION_base(4,8,0)
@@ -171,7 +172,7 @@ instance LogStore LogFileAtMaxSize where
     lxPushLogStr lf@(LogFileAtMaxSize max_sz _fp size_cnt ls) log_str = do
         lxPushLogStr ls log_str
         new_sz <- atomicModifyIORef' size_cnt $
-                        \x -> let y = x + fromIntegral (logStrLength log_str) in (y, y)
+          \x -> let y = x + fromIntegral (logStrLength log_str) in force (y, y)
 
         when (new_sz >= max_sz) $ do
             renewLogFileAtMaxSize lf
