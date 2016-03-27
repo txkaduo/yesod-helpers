@@ -13,6 +13,7 @@ import qualified Data.ByteString.Char8      as C8
 import qualified Data.ByteString.Lazy       as LB
 -- import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as TE
+import           Data.Proxy                 (Proxy(..))
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative                  ((<$>))
@@ -313,6 +314,13 @@ instance Binary a => FromJSON (B64UByteString a) where
 
 instance Binary a => ToJSON (B64UByteString a) where
     toJSON = toJSON . toPathPiece
+
+instance PersistField a => PersistField (B64UByteString a) where
+  toPersistValue   = toPersistValue . unB64UByteString
+  fromPersistValue = fmap B64UByteString . fromPersistValue
+
+instance PersistFieldSql a => PersistFieldSql (B64UByteString a) where
+  sqlType _ = sqlType (Proxy :: Proxy a)
 
 -- | used in URL, represent a url piece
 -- that can be
