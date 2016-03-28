@@ -294,7 +294,7 @@ instance ToJSON B64UByteStringPathPiece where
 
 
 -- | A wrapper type to make some instances using base64-url-encoding
-data B64UByteString a = B64UByteString { unB64UByteString :: a }
+newtype B64UByteString a = B64UByteString { unB64UByteString :: a }
                                 deriving (Eq, Ord, Show, Read)
 
 instance Binary a => PathPiece (B64UByteString a) where
