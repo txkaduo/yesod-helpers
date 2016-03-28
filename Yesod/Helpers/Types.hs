@@ -8,6 +8,7 @@
 module Yesod.Helpers.Types where
 
 import Prelude
+import qualified Data.Aeson                 as A
 import qualified Data.ByteString.Base64.URL as B64U
 import qualified Data.ByteString.Char8      as C8
 import qualified Data.ByteString.Lazy       as LB
@@ -321,6 +322,21 @@ instance PersistField a => PersistField (B64UByteString a) where
 
 instance PersistFieldSql a => PersistFieldSql (B64UByteString a) where
   sqlType _ = sqlType (Proxy :: Proxy a)
+
+
+-- | A wrapper type to make it store as bytestring in DB, in JSON format.
+newtype JsonSerialized a =  JsonSerialized { unJsonSerialized :: a }
+                            deriving (Eq, Ord, Show, Read)
+
+instance (ToJSON a, FromJSON a) => PersistField (JsonSerialized a) where
+  toPersistValue   = toPersistValue . LB.toStrict . A.encode . unJsonSerialized
+  fromPersistValue t = do
+    bs <- fromPersistValue t
+    either (Left . fromString) (return . JsonSerialized) $ A.eitherDecode $ LB.fromStrict bs
+
+instance (ToJSON a, FromJSON a) => PersistFieldSql (JsonSerialized a) where
+  sqlType _ = sqlType (Proxy :: Proxy ByteString)
+
 
 -- | used in URL, represent a url piece
 -- that can be
