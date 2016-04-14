@@ -69,6 +69,7 @@ library
                        Yesod.Helpers.CdnUrl
                        Yesod.Helpers.ResumeState
                        Yesod.Helpers.Class
+                       Yesod.Helpers.PersistDiff
 
   -- other-modules:       
   default-extensions:  CPP
