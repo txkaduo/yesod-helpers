@@ -68,6 +68,7 @@ library
                        Yesod.Helpers.SubSite
                        Yesod.Helpers.CdnUrl
                        Yesod.Helpers.ResumeState
+                       Yesod.Helpers.Class
 
   -- other-modules:       
   default-extensions:  CPP
