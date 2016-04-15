@@ -1,3 +1,8 @@
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Yesod.Helpers.Class where
 
 import Prelude
@@ -5,6 +10,7 @@ import Database.Persist
 import Data.Time
 import Data.Text (Text)
 
+import Yesod.Helpers.Persist
 
 -- | 更新时间
 class HasUpdatedTime a where
@@ -36,8 +42,19 @@ instance HasDeleted a => HasDeleted (Entity  a) where
 
 
 -- | 含有 deleted 字段的 PersistEntity
-class HasEntityFieldDeleted a where
+class PersistEntity a => HasEntityFieldDeleted a where
   entityFieldDeleted :: EntityField a Bool
+
+
+selectListWithDeleted :: ( HasEntityFieldDeleted a, PersistQueryMonad backend n m
+                         , IsPersistMonadOf backend n m a
+                         )
+                      => Bool
+                      -> [ Filter a ]
+                      -> [ SelectOpt a ]
+                      -> m [Entity a]
+selectListWithDeleted is_deleted filters opts =
+  selectList ((entityFieldDeleted ==. is_deleted) : filters) opts
 
 
 -- | 很多对象都有个用于显示的字串值
