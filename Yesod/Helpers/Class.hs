@@ -29,9 +29,15 @@ class HasDeleted a where
   isDeleted :: a -> Bool
   markDeleted :: Bool -> a -> a
 
+
 instance HasDeleted a => HasDeleted (Entity  a) where
   isDeleted = isDeleted . entityVal
   markDeleted b (Entity k v) = Entity k (markDeleted b v)
+
+
+-- | 含有 deleted 字段的 PersistEntity
+class HasEntityFieldDeleted a where
+  entityFieldDeleted :: EntityField a Bool
 
 
 -- | 很多对象都有个用于显示的字串值
