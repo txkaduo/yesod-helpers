@@ -56,6 +56,16 @@ selectListWithDeleted :: ( HasEntityFieldDeleted a, PersistQueryMonad backend n 
 selectListWithDeleted is_deleted filters opts =
   selectList ((entityFieldDeleted ==. is_deleted) : filters) opts
 
+selectKeysListWithDeleted :: ( HasEntityFieldDeleted a, PersistQueryMonad backend n m
+                             , IsPersistMonadOf backend n m a
+                             )
+                          => Bool
+                          -> [ Filter a ]
+                          -> [ SelectOpt a ]
+                          -> m [Key a]
+selectKeysListWithDeleted is_deleted filters opts =
+  selectKeysList ((entityFieldDeleted ==. is_deleted) : filters) opts
+
 
 -- | 很多对象都有个用于显示的字串值
 class HasDisplayName a where
