@@ -82,7 +82,7 @@ labelNameToFs label name = FieldSettings
 
 -- | add 'form-control' CSS class to form input field
 fsAddFormControlClass :: FieldSettings site -> FieldSettings site
-fsAddFormControlClass fs = fs { fsAttrs = new_attrs }
+fsAddFormControlClass fs = fs { fsAttrs = new_attrs' }
     where
         classes = fromMaybe "" $ lookup "class" $ fsAttrs fs
         new_classes = T.unwords ("form-control" : T.words classes)
@@ -92,6 +92,9 @@ fsAddFormControlClass fs = fs { fsAttrs = new_attrs }
                                        else v
                         in (n, new_v)
 
+        new_attrs' = case lookup "class" new_attrs of
+                       Nothing -> ("class", new_classes) : new_attrs
+                       Just _ -> new_attrs
 
 minimialLayoutBody :: (Yesod site, MonadIO m, MonadThrow m, MonadBaseControl IO m) =>
                     WidgetT site IO () -> HandlerT site m Html
