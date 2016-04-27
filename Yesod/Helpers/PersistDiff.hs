@@ -21,7 +21,7 @@ import qualified Data.Text as T
 
 data SomeEntityField record = forall v.
   (Eq v, Show v, PersistField v)
-    -- ^ 关于 v 的约束仅仅是为了 diffEntity 及其它相关工具函数
+    -- 关于 v 的约束仅仅是为了 diffEntity 及其它相关工具函数
   => SomeEntityField
       (EntityField record v)
 
@@ -44,8 +44,8 @@ data SomeEntityFieldDiff record = forall v.
   (Eq v, Show v, PersistField v)
   => SomeEntityFieldDiff
             (EntityField record v)
-            v   -- ^ old
-            v   -- ^ new
+            v   -- old
+            v   -- new
 
 
 class DiffablePersistEntity record => PartlyUpdatablePersistEntity record where
