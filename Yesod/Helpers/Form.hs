@@ -45,7 +45,7 @@ import Control.Monad                        (mzero, when, unless)
 import Control.Arrow                        (first)
 import Data.Conduit.Binary                  (sourceLbs, sinkLbs)
 
-import Data.List                            (isSuffixOf)
+import Data.List                            (isSuffixOf, nub)
 import Data.Text                            (Text)
 import Data.Char                            (isDigit)
 import Data.Maybe                           (catMaybes, fromMaybe, listToMaybe)
@@ -82,10 +82,14 @@ labelNameToFs label name = FieldSettings
 
 -- | add 'form-control' CSS class to form input field
 fsAddFormControlClass :: FieldSettings site -> FieldSettings site
-fsAddFormControlClass fs = fs { fsAttrs = new_attrs' }
+fsAddFormControlClass = fsAddCssClass "form-control"
+
+-- | add a CSS class to form input field, remove duplicates
+fsAddCssClass :: Text -> FieldSettings site -> FieldSettings site
+fsAddCssClass css_cls fs = fs { fsAttrs = new_attrs' }
     where
         classes = fromMaybe "" $ lookup "class" $ fsAttrs fs
-        new_classes = T.unwords ("form-control" : T.words classes)
+        new_classes = T.unwords (nub $ css_cls : T.words classes)
         new_attrs = flip map (fsAttrs fs) $ \(n, v) ->
                         let new_v = if n == "class"
                                        then new_classes
