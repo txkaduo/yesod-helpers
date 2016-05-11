@@ -58,6 +58,11 @@ class YesodJsCookie a where
     urlJsCookieJs :: a -> Either (Route a) Text
 
 
+-- | Typeahead library from twitter
+class TypeaheadCdnUrl a where
+  urlTypeaheadBundleJs :: a -> Text
+
+
 -- | To offload static files to CDN. See urlRenderOverride
 urlRenderOverrideStatic :: (Yesod site, Foldable t, RenderRoute a)
                         => site
@@ -155,3 +160,9 @@ instance JsCookieCdnUrl BootcssCdn where
         if min_ver
             then "//cdn.bootcss.com/js-cookie/2.1.0/js.cookie.min.js"
             else "//cdn.bootcss.com/js-cookie/2.1.0/js.cookie.js"
+
+instance TypeaheadCdnUrl BootcssCdn where
+  urlTypeaheadBundleJs (BootcssCdn min_ver) =
+    if min_ver
+       then "//cdn.bootcss.com/typeahead.js/0.11.1/typeahead.bundle.min.js"
+       else "//cdn.bootcss.com/typeahead.js/0.11.1/typeahead.bundle.js"
