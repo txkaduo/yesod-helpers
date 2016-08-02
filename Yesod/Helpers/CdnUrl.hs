@@ -5,7 +5,7 @@ import Prelude
 import qualified Data.Text                  as T
 import Yesod
 import Data.Text                            (Text)
-import Data.MinLen
+import Data.NonNull
 
 import Blaze.ByteString.Builder             (Builder)
 
@@ -71,7 +71,7 @@ urlRenderOverrideStatic :: (Yesod site, Foldable t, RenderRoute a)
                         -> Route a
                         -> Maybe Builder
 urlRenderOverrideStatic foundation offload_url safe_exts s = do
-    last_p <- Data.MinLen.last <$> (toMinLen ps :: Maybe (MinLen (Succ Zero) [Text]))
+    last_p <- Data.NonNull.last <$> fromNullable ps
     if null safe_exts || any (flip T.isSuffixOf last_p) safe_exts
         then
             let ps' = either id id $ cleanPath foundation ps
