@@ -205,13 +205,19 @@ entityField ::
     ( RenderMessage site msg
     , RenderMessage site FormMessage
 #if MIN_VERSION_persistent(2, 0, 0)
+
+#if MIN_VERSION_persistent(2, 5, 0)
+    , PersistRecordBackend val (YesodPersistBackend site)
+#else
     , PersistEntityBackend val ~ YesodPersistBackend site
+    , PersistEntity val
+#endif
+
     , PersistStore (YesodPersistBackend site)
 #else
     , PersistMonadBackend (YesodDB site) ~ PersistEntityBackend val
     , PersistStore (YesodDB site)
 #endif
-    , PersistEntity val
     , YesodPersist site
     , PathPiece (Key val)
     ) =>
@@ -229,13 +235,19 @@ entityKeyField ::
     ( RenderMessage site msg
     , RenderMessage site FormMessage
 #if MIN_VERSION_persistent(2, 0, 0)
+
+#if MIN_VERSION_persistent(2, 5, 0)
+    , PersistRecordBackend val (YesodPersistBackend site)
+#else
     , PersistEntityBackend val ~ YesodPersistBackend site
+    , PersistEntity val
+#endif
+
     , PersistStore (YesodPersistBackend site)
 #else
     , PersistMonadBackend (YesodDB site) ~ PersistEntityBackend val
     , PersistStore (YesodDB site)
 #endif
-    , PersistEntity val
     , YesodPersist site
     , PathPiece (Key val)
     ) =>
@@ -254,13 +266,19 @@ entityKeyHiddenField ::
     ( RenderMessage site msg
     , RenderMessage site FormMessage
 #if MIN_VERSION_persistent(2, 0, 0)
+
+#if MIN_VERSION_persistent(2, 5, 0)
+    , PersistRecordBackend val (YesodPersistBackend site)
+#else
     , PersistEntityBackend val ~ YesodPersistBackend site
+    , PersistEntity val
+#endif
+
     , PersistStore (YesodPersistBackend site)
 #else
     , PersistMonadBackend (YesodDB site) ~ PersistEntityBackend val
     , PersistStore (YesodDB site)
 #endif
-    , PersistEntity val
     , YesodPersist site
     , PathPiece (Key val)
     ) =>
@@ -279,14 +297,19 @@ entityUniqueKeyField ::
     ( RenderMessage site msg
     , RenderMessage site FormMessage
 #if MIN_VERSION_persistent(2, 0, 0)
+
+#if MIN_VERSION_persistent(2, 5, 0)
+    , PersistRecordBackend val (YesodPersistBackend site)
+#else
     , PersistEntityBackend val ~ YesodPersistBackend site
-    , PersistStore (YesodPersistBackend site)
+    , PersistEntity val
+#endif
+
     , PersistUnique (YesodPersistBackend site)
 #else
     , PersistMonadBackend (YesodDB site) ~ PersistEntityBackend val
     , PersistUnique (YesodDB site)
 #endif
-    , PersistEntity val
     , YesodPersist site
     , PathPiece (Key val)
     ) =>
@@ -450,10 +473,17 @@ stripUpFront fd = fd { fieldParse = new_parse }
 -- | check the result by constructing a Unique key,
 -- if record matching that Unique key already exists, report the error message.
 checkFieldDBUnique2 ::
-    ( YesodPersist site, PersistEntity val
+    ( YesodPersist site
     , RenderMessage site msg
 #if MIN_VERSION_persistent(2, 0, 0)
+
+#if MIN_VERSION_persistent(2, 5, 0)
+    , PersistRecordBackend val (YesodPersistBackend site)
+#else
     , PersistEntityBackend val ~ YesodPersistBackend site
+    , PersistEntity val
+#endif
+
     , PersistUnique (YesodPersistBackend site)
 #else
     , PersistUnique (YesodDB site)
@@ -476,10 +506,17 @@ checkFieldDBUnique2 mk_unique msg m_old_val = checkMMap chk id
                                     (Right t)
                                     (const $ Left msg)
 checkFieldDBUnique ::
-    ( YesodPersist site, PersistEntity val
+    ( YesodPersist site
     , RenderMessage site msg
 #if MIN_VERSION_persistent(2, 0, 0)
+
+#if MIN_VERSION_persistent(2, 5, 0)
+    , PersistRecordBackend val (YesodPersistBackend site)
+#else
     , PersistEntityBackend val ~ YesodPersistBackend site
+    , PersistEntity val
+#endif
+
     , PersistUnique (YesodPersistBackend site)
 #else
     , PersistUnique (YesodDB site)

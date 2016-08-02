@@ -77,7 +77,11 @@ type PersistQueryUniqueMonad backend n m =
 #endif
 
 type IsPersistMonadOf backend n m val =
-#if MIN_VERSION_persistent(2, 0, 0)
+#if MIN_VERSION_persistent(2, 5, 0)
+    ( PersistRecordBackend val backend
+    , m ~ ReaderT backend n
+    )
+#elif MIN_VERSION_persistent(2, 0, 0)
     ( PersistEntityBackend val ~ backend
     , PersistEntity val
     , m ~ ReaderT backend n
@@ -172,13 +176,21 @@ insertOrUpdateWithList fts new_ones = do
 
 -- | like insertOrUpdateWithList, but also delete untouched keys.
 replaceWithList ::
-    (PersistEntity val, Eq val
+    ( Eq val
 #if MIN_VERSION_persistent(2, 0, 0)
+
+#if MIN_VERSION_persistent(2, 5, 0)
+    , PersistRecordBackend val backend
+#else
     , PersistEntityBackend val ~ backend
+    , PersistEntity val
+#endif
+
     , PersistUnique backend
     , PersistQuery backend
     , m ~ ReaderT backend n
     , MonadIO n
+
 #else
     , PersistEntityBackend val ~ PersistMonadBackend m
     , PersistUnique m
@@ -219,10 +231,16 @@ undoTransWhenE2 f = catchError f h
 
 -- | wrapped 'get', throwError when record does not exist.
 getOrE ::
-    ( PersistEntity val
+    ( PersistStore backend
 #if MIN_VERSION_persistent(2, 0, 0)
+
+#if MIN_VERSION_persistent(2, 5, 0)
+    , PersistRecordBackend val backend
+#else
     , PersistEntityBackend val ~ backend
-    , PersistStore backend
+    , PersistEntity val
+#endif
+
     , m ~ ReaderT backend n
     , MonadIO n
 #else
@@ -234,9 +252,15 @@ getOrE ::
 getOrE err k = lift (get k) >>= maybe (throwError err) return
 
 #if MIN_VERSION_persistent(2, 0, 0)
-getOrE2 :: ( PersistEntity val
+getOrE2 :: ( PersistStore backend
+
+#if MIN_VERSION_persistent(2, 5, 0)
+            , PersistRecordBackend val backend
+#else
             , PersistEntityBackend val ~ backend
-            , PersistStore backend
+            , PersistEntity val
+#endif
+
             , MonadIO m
             , MonadError e m
             )
@@ -248,10 +272,16 @@ getOrE2 err k = get k >>= maybe (throwError err) return
 
 -- | wrapped 'getBy', throwError when record does not exist.
 getByOrE ::
-    ( PersistEntity val
+    ( PersistUnique backend
 #if MIN_VERSION_persistent(2, 0, 0)
+
+#if MIN_VERSION_persistent(2, 5, 0)
+    , PersistRecordBackend val backend
+#else
     , PersistEntityBackend val ~ backend
-    , PersistUnique backend
+    ,  PersistEntity val
+#endif
+
     , m ~ ReaderT backend n
     , MonadIO n
 #else
@@ -264,9 +294,14 @@ getByOrE err k = lift (getBy k) >>= maybe (throwError err) return
 
 #if MIN_VERSION_persistent(2, 0, 0)
 getByOrE2 ::
-    ( PersistEntity val
+    ( PersistUnique backend
+#if MIN_VERSION_persistent(2, 5, 0)
+    , PersistRecordBackend val backend
+#else
     , PersistEntityBackend val ~ backend
-    , PersistUnique backend
+    , PersistEntity val
+#endif
+
     , MonadIO m, MonadError e m
     ) =>
     e -> Unique val -> ReaderT backend m (Entity val)
@@ -276,11 +311,16 @@ getByOrE2 err k = getBy k >>= maybe (throwError err) return
 
 -- | update or replace a record
 insertOrUpdate ::
-    ( PersistEntity val
+    ( PersistUnique backend
 #if MIN_VERSION_persistent(2, 0, 0)
+
+#if MIN_VERSION_persistent(2, 5, 0)
+    , PersistRecordBackend val backend
+#else
     , PersistEntityBackend val ~ backend
-    , PersistUnique backend
-    , PersistQuery backend
+    , PersistEntity val
+#endif
+
     , m ~ ReaderT backend n
     , MonadIO n
 #else
@@ -303,11 +343,16 @@ insertOrUpdate v updates = do
 -- | Delete all records matching the given criterion
 -- , except those whose keys in a specific list.
 deleteWhereExcept ::
-    ( PersistEntity val
+    ( PersistQuery backend
 #if MIN_VERSION_persistent(2, 0, 0)
+
+#if MIN_VERSION_persistent(2, 5, 0)
+    , PersistRecordBackend val backend
+#else
     , PersistEntityBackend val ~ backend
-    , PersistStore backend
-    , PersistQuery backend
+    , PersistEntity val
+#endif
+
     , m ~ ReaderT backend n
     , MonadIO n
 #else
@@ -330,19 +375,24 @@ type CachedInMap val m = StateT (Map (Key val) val) m
 -- | when we don't should that might reselect the same record multiple times,
 -- use this function to reduce DB access.
 cget ::
-    ( PersistEntity val
+    ( PersistStore backend
 #if MIN_VERSION_persistent(2, 0, 0)
+
+#if MIN_VERSION_persistent(2, 5, 0)
+    , PersistRecordBackend val backend
+#else
     , PersistEntityBackend val ~ backend
-    , PersistStore backend
+    , PersistEntity val
+#endif
+
     , m ~ ReaderT backend n
     , MonadIO n
 #else
     , PersistEntityBackend val ~ PersistMonadBackend m
     , PersistStore m
 #endif
-    , Ord (Key val)
-    ) =>
-    Key val
+    )
+    => Key val
     -> CachedInMap val m (Maybe val)
 cget k = do
     mv <- S.gets $ Map.lookup k
@@ -354,19 +404,25 @@ cget k = do
             return mv2
 
 cselectList ::
-    ( PersistEntity val
+    ( PersistQuery backend
 #if MIN_VERSION_persistent(2, 0, 0)
+
+#if MIN_VERSION_persistent(2, 5, 0)
+    , PersistRecordBackend val backend
+#else
     , PersistEntityBackend val ~ backend
-    , PersistQuery backend
+    , PersistEntity val
+#endif
+
     , m ~ ReaderT backend n
     , MonadIO n
 #else
     , PersistEntityBackend val ~ PersistMonadBackend m
     , PersistQuery m
 #endif
-    , Ord (Key val)
-    ) =>
-    [Filter val] -> [SelectOpt val]
+    )
+    => [Filter val]
+    -> [SelectOpt val]
     -> CachedInMap val m [Entity val]
 cselectList f o = do
     records <- lift $ selectList f o
@@ -374,17 +430,22 @@ cselectList f o = do
     return records
 
 cput ::
-    ( PersistEntity val
+    (
 #if MIN_VERSION_persistent(2, 0, 0)
-    , PersistEntityBackend val ~ backend
-    , PersistStore backend
+
+#if MIN_VERSION_persistent(2, 5, 0)
+    PersistRecordBackend val backend
+#else
+    PersistEntityBackend val ~ backend
+    , PersistEntity val
+#endif
+
     , m ~ ReaderT backend n
     , MonadIO n
 #else
     , PersistEntityBackend val ~ PersistMonadBackend m
     , PersistStore m
 #endif
-    , Ord (Key val)
     ) =>
     Entity val -> CachedInMap val m ()
 cput (Entity k v) = S.modify $ Map.insert k v

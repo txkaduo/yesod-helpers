@@ -54,7 +54,12 @@ class DiffablePersistEntity record => PartlyUpdatablePersistEntity record where
 
 
 -- | like 'upsert', but only update allowed fields
-partlyUpsert :: ( MonadIO m, backend ~ PersistEntityBackend record
+partlyUpsert :: ( MonadIO m
+#if MIN_VERSION_persistent(2, 5, 0)
+                , PersistRecordBackend record backend
+#else
+                , backend ~ PersistEntityBackend record
+#endif
                 , PartlyUpdatablePersistEntity record
                 , PersistUnique backend
                  )

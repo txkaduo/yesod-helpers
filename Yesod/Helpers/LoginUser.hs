@@ -57,7 +57,13 @@ class
 getLoggedInUser :: forall u site.
     ( LoginUser u
 #if MIN_VERSION_persistent(2, 0, 0)
+
+#if MIN_VERSION_persistent(2, 5, 0)
+    , PersistRecordBackend u (YesodPersistBackend site)
+#else
     , PersistEntityBackend u ~ YesodPersistBackend site
+#endif
+
     , PersistStore (YesodPersistBackend site)
 #else
     , PersistEntityBackend u ~ PersistMonadBackend (YesodDB site)
@@ -102,7 +108,13 @@ runLoggedInHandler ::
     ( LoginUser u
     , RenderMessage site message
 #if MIN_VERSION_persistent(2, 0, 0)
+
+#if MIN_VERSION_persistent(2, 5, 0)
+    , PersistRecordBackend u (YesodPersistBackend site)
+#else
     , PersistEntityBackend u ~ YesodPersistBackend site
+#endif
+
     , PersistStore (YesodPersistBackend site)
 #else
     , PersistEntityBackend u ~ PersistMonadBackend (YesodDB site)
@@ -174,7 +186,7 @@ getLoginParam = do
 
 loginParamHiddenFormParts ::
     -- (Monad m, PathPiece p, RenderMessage (HandlerSite m) FormMessage) =>
-    (MonadIO m, MonadBase IO m, MonadBaseControl IO m, MonadThrow m
+    (MonadIO m, MonadBaseControl IO m, MonadThrow m
     , RenderMessage site FormMessage) =>
     MForm (HandlerT site m) [(FormResult (Maybe Text), FieldView site)]
 loginParamHiddenFormParts = do

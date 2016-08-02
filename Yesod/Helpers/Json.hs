@@ -129,9 +129,12 @@ jsonEncodeKey = TE.decodeUtf8 . LB.toStrict . A.encode .
 
 jsonDecodeKey ::
 #if MIN_VERSION_persistent(2, 0, 0)
-    ( ToJSON (BackendKey backend)
-    , ToBackendKey backend a
+    ( ToBackendKey backend a
+#if MIN_VERSION_persistent(2, 5, 0)
+#else
     , backend ~ PersistEntityBackend a
+#endif
+
     ) =>
 #endif
     Text -> Either String (Key a)
@@ -148,15 +151,21 @@ jsonDecodeKey k =
         k' = T.unpack k
 
 getOrRedirectJH ::
-    ( PersistEntity val
+    ( YesodPersist site
 #if MIN_VERSION_persistent(2, 0, 0)
+
+#if MIN_VERSION_persistent(2, 5, 0)
+    , PersistRecordBackend val (YesodPersistBackend site)
+#else
     , YesodPersistBackend site ~ PersistEntityBackend val
+    , PersistEntity val
+#endif
+
     , PersistStore (YesodPersistBackend site)
 #else
     , PersistMonadBackend (YesodDB site) ~ PersistEntityBackend val
     , PersistStore (YesodPersistBackend site (HandlerT site IO))
 #endif
-    , YesodPersist site
     , RenderMessage site message
     , RedirectUrl site url
     ) =>
@@ -165,15 +174,21 @@ getOrRedirectJH msg route key = do
     (runDB $ get key) >>= maybe (redirectOrJson msg route) return
 
 getByOrRedirectJH ::
-    ( PersistEntity val
+    ( YesodPersist site
 #if MIN_VERSION_persistent(2, 0, 0)
+
+#if MIN_VERSION_persistent(2, 5, 0)
+    , PersistRecordBackend val (YesodPersistBackend site)
+#else
     , YesodPersistBackend site ~ PersistEntityBackend val
+    , PersistEntity val
+#endif
+
     , PersistUnique (YesodPersistBackend site)
 #else
     , PersistMonadBackend (YesodDB site) ~ PersistEntityBackend val
     , PersistUnique (YesodPersistBackend site (HandlerT site IO))
 #endif
-    , YesodPersist site
     , RenderMessage site message
     , RedirectUrl site url
     ) =>
