@@ -32,6 +32,13 @@ derivePathPieceS s = do
             ]
         ]
 
+
+#if MIN_VERSION_template_haskell(2, 11, 0)
+#define NO_OVERLAP Nothing
+#else
+#define NO_OVERLAP
+#endif
+
 pathPieceInstanceD :: Type -> [Dec] -> Dec
 pathPieceInstanceD typ =
-    InstanceD [] (ConT ''PathPiece `AppT` typ)
+    InstanceD NO_OVERLAP [] (ConT ''PathPiece `AppT` typ)

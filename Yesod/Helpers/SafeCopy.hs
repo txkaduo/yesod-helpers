@@ -30,6 +30,13 @@ import Control.DeepSeq                      (NFData(..))
 import Yesod.Helpers.Parsec
 
 
+#if MIN_VERSION_template_haskell(2, 11, 0)
+#define NO_OVERLAP Nothing
+#else
+#define NO_OVERLAP
+#endif
+
+
 newtype SafeCopyJsonVal = SafeCopyJsonVal { unSafeCopyJsonVal :: Aeson.Value }
                             deriving (Eq, Show)
 
@@ -235,4 +242,4 @@ deriveSafeCopySimpleEncoded name = do
 
 safeCopyInstanceD :: Type -> [Dec] -> Dec
 safeCopyInstanceD typ =
-    InstanceD [] (ConT ''SafeCopy `AppT` typ)
+    InstanceD NO_OVERLAP [] (ConT ''SafeCopy `AppT` typ)
