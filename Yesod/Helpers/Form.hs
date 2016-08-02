@@ -157,10 +157,13 @@ jsonOrHtmlOutputForm' show_form formWidget other_data = do
 
 
 -- | the Data.Traversable.traverse function for FormResult
-traverseFormResult :: Applicative m => (a -> m b) -> FormResult a -> m (FormResult b)
+traverseFormResult :: forall a b m . Applicative m
+                   => (a -> m b)
+                   -> FormResult a
+                   -> m (FormResult b)
 traverseFormResult f (FormSuccess x)    = fmap FormSuccess $ f x
 traverseFormResult _ (FormFailure e)    = pure $ FormFailure e
-traverseFormResult _ FormMissing        = pure FormMissing
+traverseFormResult _ FormMissing        = pure (FormMissing :: FormResult b)
 
 
 -- | useful for newtype type
