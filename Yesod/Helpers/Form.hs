@@ -190,7 +190,6 @@ simpleEncodedField mk_msg = simpleEncodedField' mk_msg textField
 simpleEncodedField' ::
     (SimpleStringRep a, Monad m
     , RenderMessage (HandlerSite m) msg
-    , RenderMessage (HandlerSite m) FormMessage
     ) =>
     (String -> msg)     -- ^ a function to generate a error message
     -> Field m Text
@@ -553,9 +552,7 @@ limitedSizeConduitBs max_size = go 0
 -- | catch exception in field's parse functions,
 -- report it as an error message.
 fieldExceptionToMessage :: forall m e msg a.
-    (
-      RenderMessage (HandlerSite m) FormMessage
-    , RenderMessage (HandlerSite m) msg
+    ( RenderMessage (HandlerSite m) msg
     , Exception e
     , MonadCatch m
     ) =>
@@ -569,17 +566,15 @@ fieldExceptionToMessage mk_msg f = f { fieldParse  = p }
 
 
 -- | modify fileField to a size-limited one.
-limitFileSize ::
-    (MonadResource m
-    , RenderMessage (HandlerSite m) FormMessage
-    , RenderMessage (HandlerSite m) msg
-    , MonadCatch m
-    , Integral i
-    ) =>
-    msg         -- ^ make a message when file size exceeds limit
-    -> i        -- ^ the file size limit
-    -> Field m FileInfo
-    -> Field m FileInfo
+limitFileSize :: ( MonadResource m
+                 , RenderMessage (HandlerSite m) msg
+                 , MonadCatch m
+                 , Integral i
+                 )
+              => msg         -- ^ make a message when file size exceeds limit
+              -> i        -- ^ the file size limit
+              -> Field m FileInfo
+              -> Field m FileInfo
 limitFileSize err_msg max_size field =
     let h (_ :: BytestringTooLarge) = err_msg
         c       = limitedSizeConduitBs (fromIntegral max_size)
@@ -612,23 +607,21 @@ liftEitherFormResult _      FormMissing                 = FormMissing
 -- which simplify code a little.
 type SMForm m a = SS.StateT [FieldView (HandlerSite m)] (RWST (Maybe (Env, FileEnv), HandlerSite m, [Lang]) Enctype Ints m) a
 
-smreq ::
-    (RenderMessage site FormMessage, HandlerSite m ~ site, MonadHandler m) =>
-    Field m a
-    -> FieldSettings site
-    -> Maybe a
-    -> SMForm m (FormResult a)
+smreq :: (RenderMessage site FormMessage, HandlerSite m ~ site, MonadHandler m)
+      => Field m a
+      -> FieldSettings site
+      -> Maybe a
+      -> SMForm m (FormResult a)
 smreq field settings initv = do
     (res, view) <- lift $ mreq field settings initv
     SS.modify ( view : )
     return res
 
-smopt ::
-    (RenderMessage site FormMessage, HandlerSite m ~ site, MonadHandler m) =>
-    Field m a
-    -> FieldSettings site
-    -> Maybe (Maybe a)
-    -> SMForm m (FormResult (Maybe a))
+smopt :: ( HandlerSite m ~ site, MonadHandler m)
+      => Field m a
+      -> FieldSettings site
+      -> Maybe (Maybe a)
+      -> SMForm m (FormResult (Maybe a))
 smopt field settings initv = do
     (res, view) <- lift $ mopt field settings initv
     SS.modify ( view : )
@@ -682,19 +675,17 @@ yamlTextareaField yaml_err p =
 
 
 -- | a form input field that accept an uploaded YAML file and parse it
-yamlFileField ::
-    ( RenderMessage (HandlerSite m) FormMessage
-    , RenderMessage (HandlerSite m) msg
-    , FromJSON a, MonadResource m
-    ) =>
-    (String -> String -> msg)
+yamlFileField :: ( RenderMessage (HandlerSite m) msg
+                 , FromJSON a, MonadResource m
+                 )
+              => (String -> String -> msg)
                             -- ^ error message when fail to parse Yaml file
                             -- 1st arg: file_name
                             -- 2nd arg: parse error
-    -> (String -> a -> A.Parser b)
-                            -- ^ the parser
-    -> Field m FileInfo
-    -> Field m (FileInfo, b)
+              -> (String -> a -> A.Parser b)
+                                      -- ^ the parser
+              -> Field m FileInfo
+              -> Field m (FileInfo, b)
 yamlFileField yaml_err p file_field = do
     checkMMap parse_sunk fst file_field
     where
@@ -711,21 +702,19 @@ yamlFileField yaml_err p file_field = do
 -- * or archive file (optionally compressed) of many YAML files
 -- then parse it
 -- Supported Archive file formats and compression format depend on simple-archive-conduit
-archivedYamlFilesField ::
-    ( RenderMessage (HandlerSite m) FormMessage
-    , RenderMessage (HandlerSite m) msg
-    , FromJSON a, MonadResource m
-    , MonadBaseControl IO m
-    ) =>
-    (String -> msg)
-    -> (String -> String -> msg)
-                            -- ^ error message when fail to parse Yaml file
-                            -- 1st arg: file_name
-                            -- 2nd arg: parse error
-    -> (String -> a -> A.Parser b)
-                            -- ^ the parser
-    -> Field m FileInfo
-    -> Field m (FileInfo, [b])
+archivedYamlFilesField :: ( RenderMessage (HandlerSite m) msg
+                          , FromJSON a, MonadResource m
+                          , MonadBaseControl IO m
+                          )
+                       => (String -> msg)
+                       -> (String -> String -> msg)
+                                              -- ^ error message when fail to parse Yaml file
+                                              -- 1st arg: file_name
+                                              -- 2nd arg: parse error
+                       -> (String -> a -> A.Parser b)
+                                              -- ^ the parser
+                       -> Field m FileInfo
+                       -> Field m (FileInfo, [b])
 archivedYamlFilesField archive_err yaml_err p file_field =
     checkMMap parse_sunk fst file_field
     where
@@ -760,20 +749,18 @@ archivedYamlFilesField archive_err yaml_err p file_field =
 -- * an uploaded YAML file,
 -- * or zip file of many YAML files
 -- then parse it
-zippedYamlFilesField ::
-    ( RenderMessage (HandlerSite m) FormMessage
-    , RenderMessage (HandlerSite m) msg
-    , FromJSON a, MonadResource m
-    ) =>
-    (String -> msg)
-    -> (String -> String -> msg)
-                            -- ^ error message when fail to parse Yaml file
-                            -- 1st arg: file_name
-                            -- 2nd arg: parse error
-    -> (String -> a -> A.Parser b)
-                            -- ^ the parser
-    -> Field m FileInfo
-    -> Field m (FileInfo, [b])
+zippedYamlFilesField :: ( RenderMessage (HandlerSite m) msg
+                        , FromJSON a, MonadResource m
+                        )
+                     => (String -> msg)
+                     -> (String -> String -> msg)
+                                              -- ^ error message when fail to parse Yaml file
+                                              -- 1st arg: file_name
+                                              -- 2nd arg: parse error
+                     -> (String -> a -> A.Parser b)
+                                              -- ^ the parser
+                     -> Field m FileInfo
+                     -> Field m (FileInfo, [b])
 zippedYamlFilesField unzip_err yaml_err p file_field =
     checkMMap parse_sunk fst file_field
     where
@@ -813,19 +800,17 @@ zippedYamlFilesField unzip_err yaml_err p file_field =
 
 
 -- | accept an uploaded file and parse it with an Attoparsec Parser
-attoparsecFileField ::
-    ( RenderMessage (HandlerSite m) FormMessage
-    , RenderMessage (HandlerSite m) msg
-    , MonadResource m, MonadCatch m
-    ) =>
-    (String -> String -> msg)
+attoparsecFileField :: ( RenderMessage (HandlerSite m) msg
+                       , MonadResource m, MonadCatch m
+                       )
+                    => (String -> String -> msg)
                             -- ^ error message when fail to parse Yaml file
                             -- 1st arg: file_name
                             -- 2nd arg: parse error
-    -> (String -> Atto.Parser b)
-                            -- ^ the parser
-    -> Field m FileInfo
-    -> Field m (FileInfo, b)
+                    -> (String -> Atto.Parser b)
+                                            -- ^ the parser
+                    -> Field m FileInfo
+                    -> Field m (FileInfo, b)
 attoparsecFileField parse_err p file_field = do
     checkMMap parse_sunk fst file_field
     where
@@ -872,15 +857,13 @@ fileInfoToFileEntry fi = do
     return $ AS.FileEntry (T.unpack $ fileName fi) content
 
 
-archivedFilesField ::
-    ( RenderMessage (HandlerSite m) FormMessage
-    , RenderMessage (HandlerSite m) msg
-    , MonadResource m, MonadCatch m
-    , MonadBaseControl IO m
-    ) =>
-    (String -> msg)
-    -> Field m FileInfo
-    -> Field m (FileInfo, [AS.FileEntry])
+archivedFilesField :: ( RenderMessage (HandlerSite m) msg
+                      , MonadResource m
+                      , MonadBaseControl IO m
+                      )
+                   => (String -> msg)
+                   -> Field m FileInfo
+                   -> Field m (FileInfo, [AS.FileEntry])
 archivedFilesField archive_err file_field = do
     checkMMap parse_sunk fst file_field
     where
@@ -891,21 +874,19 @@ archivedFilesField archive_err file_field = do
 
 -- | accept an uploaded file and parse it with an Attoparsec Parser
 -- If uploaded file is a zip file, parse files in it one by one.
-archivedAttoparsecFilesField ::
-    ( RenderMessage (HandlerSite m) FormMessage
-    , RenderMessage (HandlerSite m) msg
-    , MonadResource m, MonadCatch m
-    , MonadBaseControl IO m
-    ) =>
-    (String -> msg)
-    -> (String -> String -> msg)
-                            -- ^ error message when fail to parse Yaml file
-                            -- 1st arg: file_name
-                            -- 2nd arg: parse error
-    -> (String -> Atto.Parser b)
-                            -- ^ the parser
-    -> Field m FileInfo
-    -> Field m (FileInfo, [b])
+archivedAttoparsecFilesField :: ( RenderMessage (HandlerSite m) msg
+                                , MonadResource m, MonadCatch m
+                                , MonadBaseControl IO m
+                                )
+                             => (String -> msg)
+                             -> (String -> String -> msg)
+                             -- ^ error message when fail to parse Yaml file
+                             -- 1st arg: file_name
+                             -- 2nd arg: parse error
+                             -> (String -> Atto.Parser b)
+                             -- ^ the parser
+                             -> Field m FileInfo
+                             -> Field m (FileInfo, [b])
 archivedAttoparsecFilesField archive_err parse_err p file_field = do
     checkMMap parse_sunk fst file_field
     where
@@ -924,20 +905,18 @@ archivedAttoparsecFilesField archive_err parse_err p file_field = do
 
 -- | accept an uploaded file and parse it with an Attoparsec Parser
 -- If uploaded file is a zip file, parse files in it one by one.
-zippedAttoparsecFilesField ::
-    ( RenderMessage (HandlerSite m) FormMessage
-    , RenderMessage (HandlerSite m) msg
-    , MonadResource m, MonadCatch m
-    ) =>
-    (String -> msg)
-    -> (String -> String -> msg)
-                            -- ^ error message when fail to parse Yaml file
-                            -- 1st arg: file_name
-                            -- 2nd arg: parse error
-    -> (String -> Atto.Parser b)
-                            -- ^ the parser
-    -> Field m FileInfo
-    -> Field m (FileInfo, [b])
+zippedAttoparsecFilesField :: ( RenderMessage (HandlerSite m) msg
+                              , MonadResource m, MonadCatch m
+                              )
+                           => (String -> msg)
+                           -> (String -> String -> msg)
+                           -- ^ error message when fail to parse Yaml file
+                           -- 1st arg: file_name
+                           -- 2nd arg: parse error
+                           -> (String -> Atto.Parser b)
+                           -- ^ the parser
+                           -> Field m FileInfo
+                           -> Field m (FileInfo, [b])
 zippedAttoparsecFilesField unzip_err parse_err p file_field = do
     checkMMap parse_sunk fst file_field
     where
