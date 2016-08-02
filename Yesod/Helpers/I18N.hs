@@ -60,9 +60,12 @@ renderMessageByList func_list = f
 
 -- | A helper for implement renderMessage method of RenderMessage.
 -- Forward renderMessage call to another type.
-renderMessageForward ::
-    (RenderMessage site a, RenderMessage site b, Eq a) =>
-    [(a, b)] -> site -> [Lang] -> a -> Text
+renderMessageForward :: (RenderMessage site b, Eq a)
+                     => [(a, b)]
+                     -> site
+                     -> [Lang]
+                     -> a
+                     -> Text
 renderMessageForward lst s langs x =
     case lookup x lst of
         Nothing -> "<<unmatched i18n message>>"

@@ -18,7 +18,7 @@ import Data.Maybe
 
 
 -- | helper used in devel.hs and main.hs of yesod
-loopWatchAsyncList :: (MonadIO m, MonadLogger m) =>
+loopWatchAsyncList :: (MonadIO m) =>
     STM Bool    -- ^ an action that return True when this loop should be ended
     -> [(a, Async r)]
                 -- ^ 'a' is some kind of identification of the action
