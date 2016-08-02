@@ -30,7 +30,6 @@ import Data.String                          (IsString(..))
 import Control.Concurrent                   (Chan, writeChan, MVar, takeMVar, newEmptyMVar)
 import Control.Exception.Enclosed           (catchAny)
 import Control.Monad.Trans.Control          (MonadBaseControl)
-import Control.Monad.Catch                  (MonadCatch)
 import System.Timeout                       (timeout)
 import Network.HTTP.Types                   (parseQueryText, renderQueryText, QueryText)
 import Network.URI                          (parseURIReference, uriQuery, uriToString)
@@ -133,7 +132,7 @@ writeChanWaitMVar ch mk_cmd = do
 
 
 -- | Run monadic computation forever, log and retry when exceptions occurs.
-foreverLogExc :: (MonadIO m, MonadLogger m, MonadCatch m, MonadBaseControl IO m)
+foreverLogExc :: (MonadIO m, MonadLogger m, MonadBaseControl IO m)
                 => IO Bool     -- ^ This function should be a blocking op,
                             -- return True if the infinite loop should be aborted.
                 -> Int      -- ^ ms

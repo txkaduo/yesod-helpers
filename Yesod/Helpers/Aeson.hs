@@ -90,22 +90,20 @@ liftWithS wf expected p v = do
     lift $ wf expected (flip S.evalStateT ks . p) v
 
 
-atField :: FromJSON a =>
-    (Object -> Text -> Parser a)
-    -> Object
-    -> Text
-    -> (a -> Parser b)
-    -> SubFieldParser b
+atField :: (Object -> Text -> Parser a)
+        -> Object
+        -> Text
+        -> (a -> Parser b)
+        -> SubFieldParser b
 atField getf obj key p = do
     ks <- S.get
     lift $ S.evalStateT (reportFieldPathParser $ getf obj key >>= p) (key : ks)
 
-atFieldS :: FromJSON a =>
-    (Object -> Text -> Parser a)
-    -> Object
-    -> Text
-    -> (a -> SubFieldParser b)
-    -> SubFieldParser b
+atFieldS :: (Object -> Text -> Parser a)
+         -> Object
+         -> Text
+         -> (a -> SubFieldParser b)
+         -> SubFieldParser b
 atFieldS getf obj key p = do
     ks <- S.get
     lift $ S.evalStateT ((reportFieldPathParser $ getf obj key) >>= p) (key : ks)

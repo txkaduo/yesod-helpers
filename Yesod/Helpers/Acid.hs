@@ -17,7 +17,6 @@ import Data.Acid.Remote
 import Data.Acid.Memory                     (openMemoryState)
 import Data.SafeCopy                        (SafeCopy)
 
-import Data.Typeable                        (Typeable)
 import Control.Monad.IO.Class               (MonadIO, liftIO)
 import Control.Concurrent                   (forkIO)
 #if !MIN_VERSION_base(4,8,0)
@@ -130,7 +129,7 @@ acidCacheArmedTTL q u f acid = do
         acid
 
 -- | openRemoteState with timeout and log
-openRemoteStateTL :: (Typeable st, IsAcidic st, MonadIO m, MonadLogger m) =>
+openRemoteStateTL :: (IsAcidic st, MonadIO m, MonadLogger m) =>
     Int
     -> HostName
     -> PortID
@@ -218,7 +217,7 @@ acidServerByConfig config =
 
 -- | open acid state according to AcidStateConfig
 acidOpenByConfig ::
-    (SafeCopy st, IsAcidic st, Typeable st, MonadLogger m, MonadIO m) =>
+    (IsAcidic st, MonadLogger m, MonadIO m) =>
     st
     -> AcidStateConfig
     -> Int
@@ -231,7 +230,7 @@ acidOpenByConfig s config ms = do
 
 
 acidOpenConnectPath ::
-    (SafeCopy st, IsAcidic st, Typeable st, MonadLogger m, MonadIO m) =>
+    (IsAcidic st, MonadLogger m, MonadIO m) =>
     Int
     -> ConnectPath
     -> m (Maybe (AcidState st))

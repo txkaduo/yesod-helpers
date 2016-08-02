@@ -46,7 +46,7 @@ instance SafeCopy SafeCopyJsonVal where
                 bs <- safeGet
                 either fail (return . SafeCopyJsonVal) $ Aeson.eitherDecode' bs
 
-instance (NFData SafeCopyJsonVal) => NFData SafeCopyJsonVal where
+instance NFData SafeCopyJsonVal where
     rnf (SafeCopyJsonVal x) = rnf x
 
 

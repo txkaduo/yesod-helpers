@@ -192,10 +192,9 @@ generateEMFormPost
     -> m (((xml, Enctype), Html), FieldErrors (HandlerSite m))
 generateEMFormPost form = first (first $ first snd) `liftM` postHelper form Nothing
 
-generateEMFormGet'
-    :: (RenderMessage (HandlerSite m) FormMessage, MonadHandler m)
-    => (Html -> EMForm m (FormResult a, xml))
-    -> m ((xml, Enctype), FieldErrors (HandlerSite m))
+generateEMFormGet' :: (MonadHandler m)
+                   => (Html -> EMForm m (FormResult a, xml))
+                   -> m ((xml, Enctype), FieldErrors (HandlerSite m))
 generateEMFormGet' form = first (first snd) `liftM` getHelper form Nothing
 
 generateEMFormGet :: MonadHandler m
@@ -213,7 +212,7 @@ runEMFormGeneric form site langs env = do
     ((res, err_fields), enctype) <- evalRWST (runWriterT form) (env, site, langs) (IntSingle 0)
     return ((res, enctype), err_fields)
 
-postEnv :: (MonadHandler m, MonadResource m)
+postEnv :: (MonadHandler m)
         => m (Maybe (Env, FileEnv))
 postEnv = do
     req <- getRequest
@@ -309,12 +308,11 @@ semreq field settings initv = do
     SS.modify ( view : )
     return res
 
-semopt ::
-    (RenderMessage site FormMessage, HandlerSite m ~ site, MonadHandler m) =>
-    Field m a
-    -> FieldSettings site
-    -> Maybe (Maybe a)
-    -> SEMForm m (FormResult (Maybe a))
+semopt :: (HandlerSite m ~ site, MonadHandler m)
+       => Field m a
+       -> FieldSettings site
+       -> Maybe (Maybe a)
+       -> SEMForm m (FormResult (Maybe a))
 semopt field settings initv = do
     (res, view) <- lift $ emopt field settings initv
     SS.modify ( view : )
