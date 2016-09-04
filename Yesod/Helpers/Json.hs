@@ -4,30 +4,25 @@
 {-# LANGUAGE TypeFamilies #-}
 module Yesod.Helpers.Json where
 
-import Yesod
+import ClassyPrelude.Yesod
 import qualified Data.Text.Encoding         as TE
 import qualified Data.ByteString.Lazy       as LB
 import qualified Data.Aeson.Parser          as AP
 import qualified Data.Aeson                 as A
 import Data.Aeson.Types                     (Pair, parseEither)
 import Data.Attoparsec.ByteString           (parseOnly)
-import Data.Maybe                           (fromMaybe)
-import Control.Monad                        (join)
-import Data.Text                            (pack, Text)
-import qualified Data.Text                  as T
-import Network.HTTP.Types                   (unauthorized401)
 
 
 import Yesod.Helpers.Handler                (lookupReqAccept, matchMimeType)
 
 jsonErrorOutput' :: (ToJSON a) => a -> [ (Text, Value) ]
-jsonErrorOutput' msg = [ "message" .= msg, "result" .= pack "fail" ]
+jsonErrorOutput' msg = [ "message" .= msg, "result" .= ("fail" :: Text) ]
 
 jsonErrorOutput :: (ToJSON a) => a -> Value
 jsonErrorOutput msg = object $ jsonErrorOutput' msg
 
 jsonOkOutput' :: (ToJSON a) => a -> [ (Text, Value) ]
-jsonOkOutput' msg = [ "message" .= msg, "result" .= pack "success" ]
+jsonOkOutput' msg = [ "message" .= msg, "result" .= ("success" :: Text) ]
 
 jsonOkOutput :: (ToJSON a) => a -> Value
 jsonOkOutput msg = object $ jsonOkOutput' msg
@@ -148,7 +143,7 @@ jsonDecodeKey k =
                     Left $ "cannot parse string as PersistValue: " ++ e ++ ", k=" ++ k'
                 Right pv -> Right pv
     where
-        k' = T.unpack k
+        k' = unpack k
 
 getOrRedirectJH ::
     ( YesodPersist site

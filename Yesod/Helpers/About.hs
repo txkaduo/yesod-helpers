@@ -1,13 +1,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Yesod.Helpers.About where
 
+import ClassyPrelude
+import Data.List                            (init)
 import Language.Haskell.TH
 import System.Process                       (readProcessWithExitCode)
 import System.Environment                   (lookupEnv)
-import Control.Monad                        (liftM)
-import Data.Time                            (getCurrentTime)
-import Data.Maybe                           (fromMaybe)
-import Control.Exception                    (handle)
 
 gitRevision :: Q Exp
 gitRevision = (stringE . init) =<<

@@ -5,26 +5,15 @@
 {-# LANGUAGE UndecidableInstances #-}
 module Yesod.Helpers.SafeCopy where
 
-import qualified Data.Text                  as T
+import ClassyPrelude.Yesod hiding (get)
 import qualified Data.Aeson                 as Aeson
 import Data.SafeCopy
-import Data.Typeable                        (Typeable)
-import Yesod hiding (get)
 import Language.Haskell.TH
 import Control.Monad.State hiding (get, put)
-import Control.Monad.Reader
 
-#if MIN_VERSION_base(4,8,0)
-#else
-import Control.Applicative                  ((<$>), (<*>))
-#endif
 import Data.Serialize                       (Get, Put, get, put)
 import Text.Parsec                          (parse)
-import Data.Time                            ( UTCTime, NominalDiffTime
-                                            , addUTCTime, getCurrentTime
-                                            )
-import Data.Default                         (Default, def)
-import Data.Word                            (Word8)
+import Data.Time                            ( NominalDiffTime, addUTCTime)
 import Control.DeepSeq                      (NFData(..))
 
 import Yesod.Helpers.Parsec
@@ -76,7 +65,7 @@ putCopySafeCopyInside k =
 
 getCopySafeCopyInside :: (PersistField (Key val)) => Get (Key val)
 getCopySafeCopyInside = do
-    (fromPersistValue <$> get_pv) >>= either (fail . T.unpack) return
+    (fromPersistValue <$> get_pv) >>= either (fail . unpack) return
     where
         get_pv = do
             x <- get

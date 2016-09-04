@@ -5,30 +5,19 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Yesod.Helpers.Utils where
 
-import Prelude
-import Control.Applicative
-import Data.Monoid
+import ClassyPrelude
 import Data.Char
-import qualified Data.Text                  as T
-import Data.Text                            (Text)
-import Data.Time                            ( UTCTime, localTimeToUTC, zonedTimeToUTC, TimeZone, ParseTime
+import Data.List                            ((!!))
+import Data.Time                            ( localTimeToUTC, zonedTimeToUTC, TimeZone, ParseTime
                                             , LocalTime(..), midnight
                                             )
 #if MIN_VERSION_time(1,5,0)
-import Data.Time.Format                     (defaultTimeLocale)
 import Data.Time                            (parseTimeM)
 #else
-import System.Locale                        (defaultTimeLocale)
 import Data.Time                            (parseTime)
 #endif
-import Control.Monad.IO.Class               (MonadIO, liftIO)
-import Control.Monad
 import Control.Monad.Logger
 import System.Random                        (randomIO)
-import Data.Word                            (Word8)
-import Data.String                          (IsString(..))
-import Control.Concurrent                   (Chan, writeChan, MVar, takeMVar, newEmptyMVar)
-import Control.Exception.Enclosed           (catchAny)
 import Control.Monad.Trans.Control          (MonadBaseControl)
 import System.Timeout                       (timeout)
 import Network.HTTP.Types                   (parseQueryText, renderQueryText, QueryText)
@@ -54,7 +43,7 @@ toHalfWidthEnglishAlphaDigit = toHalfWidthEnglishAlpha . toHalfWidthDigit
 
 
 emptyTextToNothing :: Text -> Maybe Text
-emptyTextToNothing t = if T.null t
+emptyTextToNothing t = if null t
                         then Nothing
                         else Just t
 
@@ -145,7 +134,7 @@ foreverLogExc block_check_exit interval f = go
             liftIO (timeout interval block_check_exit)
                 >>= maybe go (const $ return ())
         h e = do
-            $(logError) $ "Got exception in loop: " <> T.pack (show e)
+            $(logError) $ "Got exception in loop: " <> tshow e
 
 
 urlUpdateQueryText :: (QueryText -> QueryText)

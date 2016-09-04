@@ -4,9 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Yesod.Helpers.JSend where
 
-import Yesod
-import Data.Text                            (Text)
-import Data.Maybe
+import ClassyPrelude.Yesod
 
 data JSendMsg = JSendSuccess Value
                 | JSendFail Value

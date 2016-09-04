@@ -74,8 +74,11 @@ library
   -- other-modules:       
   default-extensions:  CPP
                        GeneralizedNewtypeDeriving
+                       NoImplicitPrelude
 
   build-depends:       base >=4.7
+                     , classy-prelude
+                     , classy-prelude-yesod
                      , wai
                      , wai-logger
                      , yesod
@@ -134,8 +137,6 @@ library
                      , binary-orphans
                      , monad-control
                      , hashable
-                     , enclosed-exceptions
-                     -- ^ not needed if using classy-prelude
                      , cookie
                      , clientsession
                      , mono-traversable
