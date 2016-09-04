@@ -42,11 +42,16 @@ toHalfWidthEnglishAlphaDigit :: Char -> Char
 toHalfWidthEnglishAlphaDigit = toHalfWidthEnglishAlpha . toHalfWidthDigit
 
 
-emptyTextToNothing :: Text -> Maybe Text
-emptyTextToNothing t = if null t
-                        then Nothing
-                        else Just t
+nullToNothing :: MonoFoldable a => a -> Maybe a
+nullToNothing t = if null t
+                     then Nothing
+                     else Just t
 
+{-# DEPRECATED emptyTextToNothing "use nullToNothing instead" #-}
+emptyTextToNothing :: Text -> Maybe Text
+emptyTextToNothing = nullToNothing
+
+{-# DEPRECATED mapLeft "use left in Control.Arrow instead" #-}
 mapLeft :: (a -> b) -> Either a c -> Either b c
 mapLeft _ (Right x) = Right x
 mapLeft f (Left x)  = Left (f x)
