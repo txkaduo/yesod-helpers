@@ -19,7 +19,7 @@ module Yesod.Helpers.VirtualHost where
 import           ClassyPrelude.Yesod hiding (Request, Builder, Proxy)
 import           Control.Monad.Trans.Maybe
 import           Blaze.ByteString.Builder   (Builder)
-import           Data.Proxy                 (Proxy)
+import           Data.Proxy                 (Proxy(..))
 import qualified Data.Vault.Lazy            as V
 import           Network.URI                (parseURI, uriRegName, uriAuthority, uriToString)
 import           Network.Wai                (Middleware, pathInfo, requestHeaderHost, vault, Request)
@@ -36,6 +36,20 @@ class VirtualHostPath a where
   -- we need to find out what virtual host that the request should be mapped to.
   -- If possible, return the virtual host and remaining path pieces
   virtualHostFromPath :: [Text] -> Maybe (a, [Text])
+
+  -- | if an original request path should be kept unchanged (don't add virtualHostPathPrefix)
+  -- Usually these request pathes are considered to be as "shared" with default host
+  virtualHostIfPathNotPefixed :: Proxy a -> [Text] -> Bool
+
+
+-- | How domain name to be mapped to virtual host
+class VirtualHostDomain a where
+  -- | to retrieve virtual host info by looking up domain name
+  virtualHostLookupByDomainName :: Text -> IO (Maybe a)
+
+  -- | Quickly determinate if a domain name is not mapped to any virtual host
+  virtualHostExcludeDomainName :: Proxy a -> Text -> Bool
+  virtualHostExcludeDomainName _ _ = False
 
 
 -- | A simple cache to save the mapping from domain name to virtual host
@@ -74,51 +88,46 @@ class HasMasterApproot a where
 --
 -- CAUTION: The problem of this logic is you need to manually coordinate the settings of routes
 --          and the functions params (those functions to test paths).
-nameBasedVirtualHostMiddleware :: VirtualHostPath s
+nameBasedVirtualHostMiddleware :: forall s. (VirtualHostPath s, VirtualHostDomain s)
                                => VirtualHostVaultKey s
-                               -> (Text -> Bool)
-                               -- ^ test if a domain name is considered to be of "default" host
-                               -> (Text -> IO (Maybe s))
-                               -- ^ to retrieve virtual host info by looking up domain name
-                               -> ([Text] -> Bool)
-                               -- ^ if a request path considered to be as "shared" with default host
                                -> VirtualHostNameCache s
                                -> Middleware
-nameBasedVirtualHostMiddleware k is_master_domain get_host is_shared_path cache app req respond_func = do
+nameBasedVirtualHostMiddleware k cache app req respond_func = do
   m_req2 <- runMaybeT $ do
     -- guard $ not $ any (flip isPrefixOf (pathInfo req)) shared_path
-    guard $ not $ is_shared_path (pathInfo req)
-    case m_virtual_domain of
-      Nothing -> mzero
-      Just virtual_domain -> do
-        m_svs <- lookup virtual_domain <$> readIORef cache
+    guard $ not $ virtualHostIfPathNotPefixed proxy_s (pathInfo req)
+    virtual_domain <- MaybeT $ return m_virtual_domain
+    m_svs <- lookup virtual_domain <$> readIORef cache
 
-        svs <- case m_svs of
-                  Nothing -> do
-                    svs <- MaybeT $ get_host virtual_domain
+    svs <- case m_svs of
+              Nothing -> do
+                svs <- MaybeT $ virtualHostLookupByDomainName virtual_domain
 
-                    atomicModifyIORef' cache ((, ()) . insertMap virtual_domain svs)
-                    return svs
+                atomicModifyIORef' cache ((, ()) . insertMap virtual_domain svs)
+                return svs
 
-                  Just svs -> return svs
+              Just svs -> return svs
 
-        let path_prefix = virtualHostPathPrefix svs
+    let path_prefix = virtualHostPathPrefix svs
 
-        let new_path_info = path_prefix <> pathInfo req
-        -- error $ show new_path_info
+    let new_path_info = path_prefix <> pathInfo req
+    -- error $ show new_path_info
 
-        return $ req { pathInfo = new_path_info
-                     , vault = V.insert k (svs, virtual_domain) (vault req)
-                     }
+    return $ req { pathInfo = new_path_info
+                 , vault = V.insert k (svs, virtual_domain) (vault req)
+                 }
 
   app (fromMaybe req m_req2) respond_func
+
   where
+    proxy_s = Proxy :: Proxy s
+
     m_virtual_domain = do
       host_name <- fmap decodeUtf8 $ requestHeaderHost req
       let host_domain = toLower $ takeWhile (/= ':') host_name
 
       -- 只要不是主域名，就认为是虚拟服务器的域名
-      guard $ not $ is_master_domain host_domain
+      guard $ not $ virtualHostExcludeDomainName proxy_s host_domain
 
       return host_domain
 
