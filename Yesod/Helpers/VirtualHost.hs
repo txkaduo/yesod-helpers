@@ -3,6 +3,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeFamilies #-}
 -- | Add name-based virtual hosting onto yesod server.
 -- Works like this:
 -- * The original yesod server works as the "default" host,
@@ -44,8 +45,11 @@ class VirtualHostPath a where
 
 -- | How domain name to be mapped to virtual host
 class VirtualHostDomain a where
+  -- | To construct an 'a', we may need some extra info, besides the domain name
+  type VirtualHostDomainExtra a :: *
+
   -- | to retrieve virtual host info by looking up domain name
-  virtualHostLookupByDomainName :: Text -> IO (Maybe a)
+  virtualHostByDomainName :: VirtualHostDomainExtra a -> Text -> IO (Maybe a)
 
   -- | Quickly determinate if a domain name is not mapped to any virtual host
   virtualHostExcludeDomainName :: Proxy a -> Text -> Bool
@@ -90,9 +94,10 @@ class HasMasterApproot a where
 --          and the functions params (those functions to test paths).
 nameBasedVirtualHostMiddleware :: forall s. (VirtualHostPath s, VirtualHostDomain s)
                                => VirtualHostVaultKey s
+                               -> VirtualHostDomainExtra s
                                -> VirtualHostNameCache s
                                -> Middleware
-nameBasedVirtualHostMiddleware k cache app req respond_func = do
+nameBasedVirtualHostMiddleware k vh_extra cache app req respond_func = do
   m_req2 <- runMaybeT $ do
     -- guard $ not $ any (flip isPrefixOf (pathInfo req)) shared_path
     guard $ not $ virtualHostIfPathNotPrefixed proxy_s (pathInfo req)
@@ -101,7 +106,7 @@ nameBasedVirtualHostMiddleware k cache app req respond_func = do
 
     svs <- case m_svs of
               Nothing -> do
-                svs <- MaybeT $ virtualHostLookupByDomainName virtual_domain
+                svs <- MaybeT $ virtualHostByDomainName vh_extra virtual_domain
 
                 atomicModifyIORef' cache ((, ()) . insertMap virtual_domain svs)
                 return svs
@@ -154,12 +159,12 @@ virtualHostAppRoot _ foundation req =
 -- | To be used when implementing 'joinPath' method of Yesod class.
 -- Like this: joinPath = virtualHostJoinPath (Proxy :: Proxy XXX)
 virtualHostJoinPath :: forall s master. (VirtualHostPath s, HasMasterApproot master)
-                      => Proxy s
-                      -> master
-                      -> Text
-                      -> [Text]
-                      -> [(Text, Text)]
-                      -> Builder
+                    => Proxy s
+                    -> master
+                    -> Text
+                    -> [Text]
+                    -> [(Text, Text)]
+                    -> Builder
 virtualHostJoinPath _ foundation app_root path_pieces params =
   joinPath dummy_yesod app_root new_path_pieces params
   where
