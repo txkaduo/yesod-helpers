@@ -40,7 +40,7 @@ class VirtualHostPath a where
 
   -- | if an original request path should be kept unchanged (don't add virtualHostPathPrefix)
   -- Usually these request pathes are considered to be as "shared" with default host
-  virtualHostIfPathNotPrefixed :: Proxy a -> [Text] -> Bool
+  virtualHostPathShouldNotPrefix :: Proxy a -> [Text] -> Bool
 
 
 -- | How domain name to be mapped to virtual host
@@ -100,7 +100,7 @@ nameBasedVirtualHostMiddleware :: forall s. (VirtualHostPath s, VirtualHostDomai
 nameBasedVirtualHostMiddleware k vh_extra cache app req respond_func = do
   m_req2 <- runMaybeT $ do
     -- guard $ not $ any (flip isPrefixOf (pathInfo req)) shared_path
-    guard $ not $ virtualHostIfPathNotPrefixed proxy_s (pathInfo req)
+    guard $ not $ virtualHostPathShouldNotPrefix proxy_s (pathInfo req)
     virtual_domain <- MaybeT $ return m_virtual_domain
     m_svs <- lookup virtual_domain <$> readIORef cache
 
