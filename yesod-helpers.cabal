@@ -70,6 +70,7 @@ library
                        Yesod.Helpers.ResumeState
                        Yesod.Helpers.Class
                        Yesod.Helpers.PersistDiff
+                       Yesod.Helpers.VirtualHost
 
   -- other-modules:       
   default-extensions:  CPP
@@ -142,6 +143,7 @@ library
                      , mono-traversable
                      , semigroups
                      , http-types
+                     , vault
                      , parsec-tx-utils
 
   if flag(parsec3)
