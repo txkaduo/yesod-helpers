@@ -50,7 +50,7 @@ import System.Log.FastLogger
 import Data.Aeson
 import qualified Data.Aeson.Types           as AT
 
-import Yesod.Helpers.Aeson                  ( parseTextByRead, nullToNothing, parseSomeObjects
+import Yesod.Helpers.Aeson                  ( parseTextByRead, nullValueToNothing, parseSomeObjects
                                             , parseTextByParsec
                                             )
 import Yesod.Helpers.Parsec                 ( parseByteSizeWithUnit )
@@ -90,7 +90,7 @@ parseLogSourceLevelMap val = do
     the_map <- parseJSON val
     fmap Map.fromList $ forM (Map.toList the_map) $ \(k, v) -> do
         let new_k = fromString k
-        new_v <- nullToNothing v >>= traverse (parseTextByRead "LogLevel")
+        new_v <- nullValueToNothing v >>= traverse (parseTextByRead "LogLevel")
         return (new_k, new_v)
 
 

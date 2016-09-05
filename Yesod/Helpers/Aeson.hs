@@ -31,24 +31,24 @@ import Data.Scientific                  (floatingOrInteger)
 import Text.ParserCombinators.ReadP     (ReadP, readP_to_S)
 
 import Yesod.Helpers.Parsec             (splitByParsec)
-import Yesod.Helpers.Utils              (emptyTextToNothing)
+import Yesod.Helpers.Utils              (nullToNothing)
 
-nullToNothing :: FromJSON a => Maybe Value -> Parser (Maybe a)
-nullToNothing Nothing     = return Nothing
-nullToNothing (Just Null) = return Nothing
-nullToNothing (Just v)    = parseJSON v
+nullValueToNothing :: FromJSON a => Maybe Value -> Parser (Maybe a)
+nullValueToNothing Nothing     = return Nothing
+nullValueToNothing (Just Null) = return Nothing
+nullValueToNothing (Just v)    = parseJSON v
 
 
 -- | convert the value inside json that can be suitable to be considered as null, to Nothing
 nullTextToNothing :: Maybe Value -> Maybe Value
 nullTextToNothing Nothing               = Nothing
 nullTextToNothing (Just Null)           = Nothing
-nullTextToNothing (Just (A.String t))   = fmap A.String $ emptyTextToNothing t
+nullTextToNothing (Just (A.String t))   = fmap A.String $ nullToNothing t
 nullTextToNothing x                     = x
 
 
 (.:?*) :: (FromJSON a) => Object -> Text -> Parser (Maybe a)
-obj .:?* key = obj .:? key >>= nullToNothing
+obj .:?* key = obj .:? key >>= nullValueToNothing
 
 {-
 -- | combines (.:) and (>>=) for better error reporting

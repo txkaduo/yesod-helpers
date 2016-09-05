@@ -34,7 +34,7 @@ import Network.HTTP.Types.Status            (mkStatus)
 
 import Yesod.Helpers.Form2
 import Yesod.Helpers.Form                   (jsonOrHtmlOutputForm')
-import Yesod.Helpers.Utils                  (emptyTextToNothing)
+import Yesod.Helpers.Utils                  (nullToNothing)
 
 
 setLastModified :: UTCTime -> HandlerT site IO ()
@@ -357,8 +357,8 @@ optPathPieceParamPostGet :: (PathPiece a, MonadHandler m) =>
                             -> m (Maybe a)
 optPathPieceParamPostGet pname =
     (fmap (join . fmap fromPathPiece) $ runMaybeT $
-                (MaybeT $ join . fmap emptyTextToNothing <$> lookupPostParam pname)
-                <|> (MaybeT $ join . fmap emptyTextToNothing <$> lookupGetParam pname))
+                (MaybeT $ join . fmap nullToNothing <$> lookupPostParam pname)
+                <|> (MaybeT $ join . fmap nullToNothing <$> lookupGetParam pname))
 
 getUrlRenderParamsIO :: Yesod site => site -> IO (Route site -> [(Text, Text)] -> Text)
 getUrlRenderParamsIO foundation = do
