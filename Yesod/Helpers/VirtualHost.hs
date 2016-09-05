@@ -49,7 +49,9 @@ class VirtualHostDomain a where
   type VirtualHostDomainExtra a :: *
 
   -- | to retrieve virtual host info by looking up domain name
-  virtualHostByDomainName :: VirtualHostDomainExtra a -> Text -> IO (Maybe a)
+  virtualHostByDomainName :: VirtualHostDomainExtra a -- ^ extra info
+                          -> Text                     -- ^ domain name
+                          -> IO (Maybe a)
 
   -- | Quickly determinate if a domain name is not mapped to any virtual host
   virtualHostExcludeDomainName :: Proxy a -> Text -> Bool
