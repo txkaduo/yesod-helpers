@@ -58,13 +58,6 @@ class VirtualHostDomain a where
   virtualHostExcludeDomainName _ _ = False
 
 
--- | A simple cache to save the mapping from domain name to virtual host
--- Text part is the domain name.
--- 'a' part is the virtual host.
--- This cache is useful, because normally domain-to-host mapping is very stable.
-type VirtualHostNameCache a = IORef (Map Text a)
-
-
 -- | Put information about virtual host of current request
 -- into vault of it. This is the key.
 -- The vaule in stored in vault is the virtual host and its domain name.
@@ -97,28 +90,17 @@ class HasMasterApproot a where
 nameBasedVirtualHostMiddleware :: forall s. (VirtualHostPath s, VirtualHostDomain s)
                                => VirtualHostVaultKey s
                                -> VirtualHostDomainExtra s
-                               -> VirtualHostNameCache s
                                -> Middleware
-nameBasedVirtualHostMiddleware k vh_extra cache app req respond_func = do
+nameBasedVirtualHostMiddleware k vh_extra app req respond_func = do
   m_req2 <- runMaybeT $ do
     -- guard $ not $ any (flip isPrefixOf (pathInfo req)) shared_path
     guard $ not $ virtualHostPathShouldNotPrefix proxy_s (pathInfo req)
     virtual_domain <- MaybeT $ return m_virtual_domain
-    m_svs <- lookup virtual_domain <$> readIORef cache
 
-    svs <- case m_svs of
-              Nothing -> do
-                svs <- MaybeT $ virtualHostByDomainName vh_extra virtual_domain
-
-                atomicModifyIORef' cache ((, ()) . insertMap virtual_domain svs)
-                return svs
-
-              Just svs -> return svs
+    svs <- MaybeT $ virtualHostByDomainName vh_extra virtual_domain
 
     let path_prefix = virtualHostPathPrefix svs
-
     let new_path_info = path_prefix <> pathInfo req
-    -- error $ show new_path_info
 
     return $ req { pathInfo = new_path_info
                  , vault = V.insert k (svs, virtual_domain) (vault req)
