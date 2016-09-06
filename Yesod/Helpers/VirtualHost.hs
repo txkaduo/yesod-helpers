@@ -54,8 +54,11 @@ class VirtualHostDomain a where
                           -> IO (Maybe a)
 
   -- | Quickly determinate if a domain name is not mapped to any virtual host
-  virtualHostExcludeDomainName :: Proxy a -> Text -> Bool
-  virtualHostExcludeDomainName _ _ = False
+  virtualHostExcludeDomainName :: Proxy a
+                               -> VirtualHostDomainExtra a
+                               -> Text
+                               -> Bool
+  virtualHostExcludeDomainName _ _ _ = False
 
 
 -- | Put information about virtual host of current request
@@ -116,7 +119,7 @@ nameBasedVirtualHostMiddleware k vh_extra app req respond_func = do
       let host_domain = toLower $ takeWhile (/= ':') host_name
 
       -- 只要不是主域名，就认为是虚拟服务器的域名
-      guard $ not $ virtualHostExcludeDomainName proxy_s host_domain
+      guard $ not $ virtualHostExcludeDomainName proxy_s vh_extra host_domain
 
       return host_domain
 
