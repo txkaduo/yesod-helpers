@@ -64,10 +64,10 @@ class VirtualHostDomain a where
 type VirtualHostVaultKey s = V.Key (s, Text)
 
 class HasVirtualHostVaultKey s a where
-  getVirtualHostKey :: a -> VirtualHostVaultKey s
+  getVirtualHostVaultKey :: a -> VirtualHostVaultKey s
 
 instance HasVirtualHostVaultKey s (VirtualHostVaultKey s) where
-  getVirtualHostKey = id
+  getVirtualHostVaultKey = id
 
 
 -- | Get approot of the "default" host
@@ -136,7 +136,7 @@ virtualHostAppRoot _ foundation req =
     uri_auth <- uriAuthority uri
     return $ fromString $ flip (uriToString id) "" $ uri { uriAuthority = Just (uri_auth { uriRegName = unpack domain }) }
   where
-    k              = getVirtualHostKey foundation
+    k              = getVirtualHostVaultKey foundation
     master_approot = getMasterApproot foundation
 
 
