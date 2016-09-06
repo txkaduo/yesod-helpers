@@ -96,7 +96,6 @@ nameBasedVirtualHostMiddleware :: forall s. (VirtualHostPath s, VirtualHostDomai
                                -> Middleware
 nameBasedVirtualHostMiddleware k vh_extra app req respond_func = do
   m_req2 <- runMaybeT $ do
-    -- guard $ not $ any (flip isPrefixOf (pathInfo req)) shared_path
     guard $ not $ virtualHostPathShouldNotPrefix proxy_s (pathInfo req)
     virtual_domain <- MaybeT $ return m_virtual_domain
 
@@ -118,7 +117,6 @@ nameBasedVirtualHostMiddleware k vh_extra app req respond_func = do
       host_name <- fmap decodeUtf8 $ requestHeaderHost req
       let host_domain = toLower $ takeWhile (/= ':') host_name
 
-      -- 只要不是主域名，就认为是虚拟服务器的域名
       guard $ not $ virtualHostExcludeDomainName proxy_s vh_extra host_domain
 
       return host_domain
