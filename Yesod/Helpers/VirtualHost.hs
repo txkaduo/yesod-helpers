@@ -133,12 +133,19 @@ virtualHostAppRoot :: forall s master. (HasVirtualHostVaultKey s master, HasMast
 virtualHostAppRoot _ foundation req =
   fromMaybe master_approot $ do
     (_ :: s, domain) <- V.lookup k (vault req)
-    uri <- parseURI (unpack master_approot)
-    uri_auth <- uriAuthority uri
-    return $ fromString $ flip (uriToString id) "" $ uri { uriAuthority = Just (uri_auth { uriRegName = unpack domain }) }
+    fmap fromString $ replaceAppRootDomain (unpack domain) (unpack master_approot)
   where
     k              = getVirtualHostVaultKey foundation
     master_approot = getMasterApproot foundation
+
+
+replaceAppRootDomain :: String  -- ^ new domain
+                     -> String  -- ^ original app root
+                     -> Maybe String
+replaceAppRootDomain domain master_approot = do
+    uri <- parseURI master_approot
+    uri_auth <- uriAuthority uri
+    return $ flip (uriToString id) "" $ uri { uriAuthority = Just (uri_auth { uriRegName = domain }) }
 
 
 -- | To be used when implementing 'joinPath' method of Yesod class.
