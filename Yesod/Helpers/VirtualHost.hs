@@ -3,6 +3,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
 -- | Add name-based virtual hosting onto yesod server.
 -- Works like this:
@@ -19,7 +20,7 @@ module Yesod.Helpers.VirtualHost where
 
 import           ClassyPrelude.Yesod hiding (Request, Builder, Proxy)
 import           Control.Monad.Trans.Maybe
-import           Blaze.ByteString.Builder   (Builder)
+import           Blaze.ByteString.Builder   (Builder, toByteString)
 import           Data.Proxy                 (Proxy(..))
 import qualified Data.Vault.Lazy            as V
 import           Network.URI                (parseURI, uriRegName, uriAuthority, uriToString)
@@ -59,6 +60,16 @@ class VirtualHostFromDomain a where
                                -> Text
                                -> Bool
   virtualHostExcludeDomainName _ _ _ = False
+
+
+-- | How a virtual host map to a domain name
+class VirtualHostToDomain a where
+  type VirtualHostToDomainExtra a :: *
+
+  -- | Get the domain name of a virtual host
+  virtualHostToDomainName :: VirtualHostToDomainExtra a
+                          -> a
+                          -> IO (Maybe Text)
 
 
 -- | Put information about virtual host of current request
@@ -125,6 +136,8 @@ nameBasedVirtualHostMiddleware k vh_extra app req respond_func = do
 -- | To be used when implementing 'approot' method of Yesod class.
 -- Like this: approot = ApprootRequest (virtualHostAppRoot (Proxy :: Proxy XXX))
 -- With this function, routes of virtual host will be rendered correct domain name.
+--
+-- CAUTION: Works with nameBasedVirtualHostMiddleware
 virtualHostAppRoot :: forall s master. (HasVirtualHostVaultKey s master, HasMasterApproot master)
                    => Proxy s
                    -> master
@@ -169,3 +182,44 @@ virtualHostJoinPath _ foundation app_root path_pieces params =
 
     dummy_yesod = LiteApp $ \_ _ -> Nothing
     master_approot = getMasterApproot foundation
+
+
+-- | Try to render a route using virtual host domain name
+-- Try using url in the form of virtual host,
+-- fall back to normal form (master host).
+virtualHostRenderUrlParams :: forall s m.
+                              ( VirtualHostToDomain s, VirtualHostPath s
+                              , HasMasterApproot (HandlerSite m), MonadHandler m
+                              , RenderRoute (HandlerSite m)
+                              )
+                           => Proxy s
+                           -> VirtualHostToDomainExtra s
+                           -> Route (HandlerSite m)
+                           -> [(Text, Text)]
+                           -> m Text
+virtualHostRenderUrlParams _ to_extra r params = do
+  foundation <- getYesod
+  let master_approot = getMasterApproot foundation
+      def_url        = joinPath dummy_yesod master_approot pps (params0 <> params)
+
+  fmap (decodeUtf8 . toByteString) $
+    case virtualHostFromPath pps of
+      Nothing -> -- not a virtual host path
+        return def_url
+
+      Just (vh :: s, pps2) ->  do
+        -- it is a virtual host path
+        m_vh_domain <- liftIO $ virtualHostToDomainName to_extra vh
+        let m_app_root = do
+                domain <- m_vh_domain
+                replaceAppRootDomain (unpack domain) (unpack master_approot)
+
+        case m_app_root of
+          Nothing -> return def_url
+
+          Just app_root -> do
+            return $ joinPath dummy_yesod (fromString app_root) pps2 (params0 <> params)
+
+  where
+    dummy_yesod    = LiteApp $ \_ _ -> Nothing
+    (pps, params0) = renderRoute r
