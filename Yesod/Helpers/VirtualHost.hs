@@ -44,18 +44,18 @@ class VirtualHostPath a where
 
 
 -- | How domain name to be mapped to virtual host
-class VirtualHostDomain a where
+class VirtualHostFromDomain a where
   -- | To construct an 'a', we may need some extra info, besides the domain name
-  type VirtualHostDomainExtra a :: *
+  type VirtualHostFromDomainExtra a :: *
 
   -- | to retrieve virtual host info by looking up domain name
-  virtualHostByDomainName :: VirtualHostDomainExtra a -- ^ extra info
+  virtualHostByDomainName :: VirtualHostFromDomainExtra a -- ^ extra info
                           -> Text                     -- ^ domain name
                           -> IO (Maybe a)
 
   -- | Quickly determinate if a domain name is not mapped to any virtual host
   virtualHostExcludeDomainName :: Proxy a
-                               -> VirtualHostDomainExtra a
+                               -> VirtualHostFromDomainExtra a
                                -> Text
                                -> Bool
   virtualHostExcludeDomainName _ _ _ = False
@@ -90,9 +90,9 @@ class HasMasterApproot a where
 --
 -- CAUTION: The problem of this logic is you need to manually coordinate the settings of routes
 --          and the functions params (those functions to test paths).
-nameBasedVirtualHostMiddleware :: forall s. (VirtualHostPath s, VirtualHostDomain s)
+nameBasedVirtualHostMiddleware :: forall s. (VirtualHostPath s, VirtualHostFromDomain s)
                                => VirtualHostVaultKey s
-                               -> VirtualHostDomainExtra s
+                               -> VirtualHostFromDomainExtra s
                                -> Middleware
 nameBasedVirtualHostMiddleware k vh_extra app req respond_func = do
   m_req2 <- runMaybeT $ do
