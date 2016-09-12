@@ -87,18 +87,18 @@ data BootcssCdn = BootcssCdn Bool
 instance JqueryCdnUrl BootcssCdn where
     urlJqueryJsText (BootcssCdn min_ver) =
         if min_ver
-            then "//cdn.bootcss.com/jquery/1.11.3/jquery.min.js"
-            else "//cdn.bootcss.com/jquery/1.11.3/jquery.js"
+            then "//cdn.bootcss.com/jquery/1.12.4/jquery.min.js"
+            else "//cdn.bootcss.com/jquery/1.12.4/jquery.js"
 
     urlJqueryUiJsText (BootcssCdn min_ver) =
         if min_ver
-            then "//cdn.bootcss.com/jqueryui/1.11.4/jquery-ui.min.js"
-            else "//cdn.bootcss.com/jqueryui/1.11.4/jquery-ui.js"
+            then "//cdn.bootcss.com/jqueryui/1.12.0/jquery-ui.min.js"
+            else "//cdn.bootcss.com/jqueryui/1.12.0/jquery-ui.js"
 
     urlJqueryUiCssText (BootcssCdn min_ver) =
         if min_ver
-            then "//cdn.bootcss.com/jqueryui/1.11.4/jquery-ui.min.css"
-            else "//cdn.bootcss.com/jqueryui/1.11.4/jquery-ui.css"
+            then "//cdn.bootcss.com/jqueryui/1.12.0/jquery-ui.min.css"
+            else "//cdn.bootcss.com/jqueryui/1.12.0/jquery-ui.css"
 
 instance JqueryFormCdnUrl BootcssCdn where
     urlJqueryFormJsText (BootcssCdn min_ver) =
@@ -158,8 +158,8 @@ instance OnePageScrollJsJqueryCdnUrl BootcssCdn where
 instance JsCookieCdnUrl BootcssCdn where
     urlJsCookieJsText (BootcssCdn min_ver) =
         if min_ver
-            then "//cdn.bootcss.com/js-cookie/2.1.0/js.cookie.min.js"
-            else "//cdn.bootcss.com/js-cookie/2.1.0/js.cookie.js"
+            then "//cdn.bootcss.com/js-cookie/2.1.3/js.cookie.min.js"
+            else "//cdn.bootcss.com/js-cookie/2.1.3/js.cookie.js"
 
 instance TypeaheadCdnUrl BootcssCdn where
   urlTypeaheadBundleJs (BootcssCdn min_ver) =
