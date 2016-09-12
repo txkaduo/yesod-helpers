@@ -1,20 +1,15 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE GADTs #-}
 module Yesod.Helpers.BgThread where
 
-import Prelude
+import ClassyPrelude
 
-import Control.Concurrent.STM               (STM, atomically, check)
+import Control.Concurrent.STM               (check)
 import Control.Concurrent.Async             (Async, pollSTM, async)
-import Control.Monad.IO.Class               (MonadIO(..))
-import Data.Text                            (Text)
-import Data.String                          (fromString)
-import Control.Monad
-import Control.Exception
 import Control.Monad.Logger
-import Data.Monoid
-import Data.Maybe
+import Control.Monad.Writer.Class           (MonadWriter(..))
 
 
 -- | helper used in devel.hs and main.hs of yesod
@@ -66,3 +61,12 @@ reportBgThreadExited ident _ay res = do
 
 startBgThread :: Text -> IO r -> IO (Text, Async r)
 startBgThread ident action = fmap (ident, ) $ async action
+
+
+startBgThreadW :: (MonadIO m, MonadWriter w m, IsSequence w, Element w ~ (Text, Async r))
+               => Text
+               -> IO r
+               -> m ()
+startBgThreadW ident action = do
+  liftIO (startBgThread ident action)
+    >>= tell . singleton
