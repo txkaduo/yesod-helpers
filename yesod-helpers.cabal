@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                yesod-helpers
-version:             0.14.1
+version:             0.14.2
 -- synopsis:            
 -- description:         
 license:             BSD3
