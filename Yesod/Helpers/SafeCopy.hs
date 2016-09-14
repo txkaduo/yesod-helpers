@@ -36,7 +36,7 @@ instance SafeCopy SafeCopyJsonVal where
                 either fail (return . SafeCopyJsonVal) $ Aeson.eitherDecode' bs
 
 instance NFData SafeCopyJsonVal where
-    rnf (SafeCopyJsonVal x) = rnf x
+    rnf (SafeCopyJsonVal x) = rnf x `seq` ()
 
 
 newtype SafeCopyId val = SafeCopyId { unSafeCopyId :: Key val }
@@ -47,7 +47,7 @@ deriving instance (Ord (Key val)) => Ord (SafeCopyId val)
 deriving instance (Show (Key val)) => Show (SafeCopyId val)
 
 instance (NFData (Key val)) => NFData (SafeCopyId val) where
-    rnf (SafeCopyId x) = rnf x
+    rnf (SafeCopyId x) = rnf x `seq` ()
 
 instance PersistEntity val => SafeCopy (SafeCopyId val) where
     putCopy (SafeCopyId k) = contain $ putCopySafeCopyInside k
@@ -115,7 +115,7 @@ data TimeTagged a = TimeTagged {
                     deriving (Typeable)
 
 instance NFData a => NFData (TimeTagged a) where
-    rnf (TimeTagged t x) = rnf t `seq` rnf x
+    rnf (TimeTagged t x) = rnf t `seq` rnf x `seq` ()
 
 instance Functor TimeTagged where
     fmap f (TimeTagged t x) = TimeTagged t (f x)
