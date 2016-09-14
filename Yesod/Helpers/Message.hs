@@ -4,14 +4,10 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 module Yesod.Helpers.Message where
 
-import Prelude
-import Data.Text                            (Text)
+import ClassyPrelude
 
 import Text.Shakespeare.I18N                (mkMessage, renderMessage)
 
-
-asText :: Text -> Text
-asText = id
 
 data YHCommon = YHCommon
 
