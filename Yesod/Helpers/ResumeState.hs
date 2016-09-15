@@ -104,7 +104,7 @@ data ReqSaveStateJsonMap = ReqSaveStateJsonMap !(Map ByteString (SafeCopyJsonVal
 $(deriveSafeCopy 0 'base ''ReqSaveStateJsonMap)
 
 instance NFData ReqSaveStateJsonMap where
-    rnf (ReqSaveStateJsonMap x) = rnf x
+    rnf (ReqSaveStateJsonMap x) = rnf x `seq` ()
 
 instance Default ReqSaveStateJsonMap where
     def = ReqSaveStateJsonMap def
