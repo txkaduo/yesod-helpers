@@ -35,6 +35,19 @@ isXHR = do
     let req_with = lookup "X-Request-With" $ requestHeaders req
     return $ maybe False (== "XMLHTTPRequest") req_with
 
+clientOriginalIp :: MonadHandler m => m (Maybe ByteString)
+clientOriginalIp = do
+  req <- waiRequest
+  let headers = requestHeaders req
+
+  let f1 = lookup "X-Real-IP" headers
+      f2 = do
+            h <- lookup "X-Forwarded-For" headers
+            listToMaybe $ map (encodeUtf8 . T.strip) $ T.splitOn "," $ decodeUtf8 h
+      f3 = lookup "Remote-Addr" headers
+
+  return $ f1 <|> f2 <|> f3
+
 
 getCurrentUrl :: MonadHandler m => m Text
 getCurrentUrl = do
