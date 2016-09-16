@@ -3,8 +3,7 @@
 {-# LANGUAGE TupleSections #-}
 module Yesod.Helpers.Handler where
 
-import Prelude
-import Yesod hiding (runFakeHandler)
+import ClassyPrelude.Yesod hiding (runFakeHandler, requestHeaders)
 import Yesod.Core.Types                     (HandlerT(..), handlerRequest)
 import qualified Control.Monad.Trans.Reader as R
 import qualified Data.Text                  as T
@@ -16,21 +15,11 @@ import Yesod.Core                           (runFakeHandler)
 #endif
 import qualified Data.Map.Strict            as Map
 import Control.Monad.Trans.Maybe
-import Control.Monad                        (join)
 
 import Network.Wai                          (requestHeaders, rawQueryString)
-import Data.Time                            (UTCTime)
 import Text.Blaze                           (Markup)
-import Control.Monad.Catch                  (MonadThrow)
-import Data.Text                            (Text)
-import Data.List                            (findIndex, sortBy)
-import Data.Ord                             (comparing)
-import Data.Maybe                           (listToMaybe, catMaybes, fromMaybe)
+import Data.List                            (findIndex)
 import Data.Aeson.Types                     (Pair)
-import Control.Applicative
-import Data.Monoid
-import Data.String                          (IsString)
-import Network.HTTP.Types.Status            (mkStatus)
 
 import Yesod.Helpers.Form2
 import Yesod.Helpers.Form                   (jsonOrHtmlOutputForm')
@@ -287,7 +276,7 @@ instance Monad ParamResult where
 
 
 httpErrorRetryWithValidParams ::
-    (IsString s, Monoid s, ToTypedContent s, MonadHandler m) =>
+    (IsString s, Semigroup s, ToTypedContent s, MonadHandler m) =>
     s -> m a
 httpErrorRetryWithValidParams msg = do
     sendResponseStatus (mkStatus 449 "Retry With") $
