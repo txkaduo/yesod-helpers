@@ -25,33 +25,18 @@ module Yesod.Helpers.Form2
     , jsendFormData
     ) where
 
-import Prelude
-import Yesod
-import qualified Data.Map                   as Map
-import qualified Data.Set                   as Set
-import qualified Data.HashMap.Strict        as HM
+import ClassyPrelude.Yesod
 import qualified Data.Text.Encoding         as TE
 import qualified Control.Monad.Trans.State.Strict as SS
 
-import Data.Set                             (Set)
-import Data.HashMap.Strict                  (HashMap)
-import Data.Hashable                        (Hashable(..))
-import Data.Text                            (Text)
-import Control.Monad.Trans.RWS              (RWST, ask, tell, evalRWST)
+import Control.Monad.Trans.RWS              (RWST, tell, evalRWST)
 import Control.Monad.Trans.Writer           (runWriterT, WriterT(..))
-import Control.Monad                        (join, liftM)
-import Control.Arrow                        (first, second, (&&&), (***))
-#if !MIN_VERSION_base(4,8,0)
-import Data.Monoid                          (Monoid(..))
-#endif
-import Data.Semigroup                       (Semigroup(..))
 import qualified Control.Monad.Trans.Writer as W
 import Data.Byteable                        (constEqBytes)
 import Network.Wai                          (requestMethod)
 import Text.Blaze                           (Markup)
 import Text.Blaze.Html.Renderer.Text        (renderHtml)
 import Data.Aeson.Types                     (Pair)
-import Data.Maybe
 
 import Yesod.Helpers.JSend
 
@@ -91,27 +76,27 @@ oneFieldError :: Text
                 -> FieldSettings master
                 -> Text
                 -> FieldErrors master
-oneFieldError name fs msg = FieldErrors $ HM.singleton
+oneFieldError name fs msg = FieldErrors $ singletonMap
                                             (name, WrappedFieldSettings fs)
-                                            (Set.singleton msg)
+                                            (singletonSet msg)
 
 overallFieldError :: Text -> FieldErrors master
 overallFieldError msg = oneFieldError "__all__" (fieldSettingsLabel ("" :: Text)) msg
 
 nullFieldErrors :: FieldErrors master -> Bool
-nullFieldErrors = HM.null . unFieldErrors
+nullFieldErrors = null . unFieldErrors
 
 fieldErrorsToList :: FieldErrors master -> [((Text, FieldSettings master), [Text])]
-fieldErrorsToList = map (second unWrappedFieldSettings *** Set.toList) .
-                    HM.toList .
+fieldErrorsToList = map (second unWrappedFieldSettings *** toList) .
+                    mapToList .
                     unFieldErrors
 
 fieldErrorsToJSON :: (SomeMessage master ->Text)
                     -> FieldErrors master
                     -> Value
-fieldErrorsToJSON render_msg = object . map json_it . HM.toList . unFieldErrors
+fieldErrorsToJSON render_msg = object . map json_it . mapToList . unFieldErrors
     where
-        json_it ((name, fs), v) = (name, object [ "fs" .= json_fs fs, "errs" .= toJSON (Set.toList v) ])
+        json_it ((name, fs), v) = (name, object [ "fs" .= json_fs fs, "errs" .= toJSON (toList v) ])
         json_fs (WrappedFieldSettings x) = object
                     [ "id" .= fsId x
                     , "label" .= render_msg (fsLabel x)
@@ -120,7 +105,7 @@ fieldErrorsToJSON render_msg = object . map json_it . HM.toList . unFieldErrors
 
 instance Monoid (FieldErrors master) where
     mempty  = FieldErrors mempty
-    mappend (FieldErrors x1) (FieldErrors x2) = FieldErrors $ HM.unionWith mappend x1 x2
+    mappend (FieldErrors x1) (FieldErrors x2) = FieldErrors $ unionWith mappend x1 x2
 
 instance Semigroup (FieldErrors master) where
     (<>) = mappend
@@ -179,7 +164,7 @@ runEMFormGet form = do
     let env =
             case lookup getKey gets of
                 Nothing -> Nothing
-                Just _ -> Just (Map.unionsWith (++) $ map (\(x, y) -> Map.singleton x [y]) gets, Map.empty)
+                Just _ -> Just (unionsWith (++) $ map (\(x, y) -> singletonMap x [y]) gets, mempty)
     getHelper form env
 
 -- | Similar to 'runFormPost', except it always ignores the currently available
@@ -220,8 +205,8 @@ postEnv = do
         then return Nothing
         else do
             (p, f) <- runRequestBody
-            let p' = Map.unionsWith (++) $ map (\(x, y) -> Map.singleton x [y]) p
-            return $ Just (p', Map.unionsWith (++) $ map (\(k, v) -> Map.singleton k [v]) f)
+            let p' = unionsWith (++) $ map (\(x, y) -> singletonMap x [y]) p
+            return $ Just (p', unionsWith (++) $ map (\(k, v) -> singletonMap k [v]) f)
 
 postHelper  :: (MonadHandler m, RenderMessage (HandlerSite m) FormMessage)
             => (Html -> EMForm m (FormResult a, xml))
@@ -244,7 +229,7 @@ postHelper form env = do
             case (res, env) of
                 (_, Nothing) -> return (FormMissing, err_fields)
                 (FormSuccess{}, Just (params, _))
-                    | not (Map.lookup tokenKey params === reqToken req) -> do
+                    | not (lookup tokenKey params === reqToken req) -> do
                         let err_msg = renderMessage m langs MsgCsrfWarning
                         return ( FormFailure [err_msg]
                                 , err_fields `mappend` overallFieldError err_msg
@@ -402,8 +387,8 @@ mhelper Field {..} fs@(FieldSettings {..}) mdef onMissing onFound isReq = do
             Nothing -> return (FormMissing, maybe (Left "") Right mdef)
             Just p -> do
                 mfs <- lift askFiles
-                let mvals = fromMaybe [] $ Map.lookup name p
-                    files = fromMaybe [] $ mfs >>= Map.lookup name
+                let mvals = fromMaybe [] $ lookup name p
+                    files = fromMaybe [] $ mfs >>= lookup name
                 emx <- lift $ lift $ fieldParse mvals files
                 case emx of
                     Left (SomeMessage e) -> do
