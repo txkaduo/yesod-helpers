@@ -17,7 +17,7 @@ module Yesod.Helpers.Form2
     , generateEMFormGet'
     , generateEMFormGet
     , emreq, emopt
-    , semreq, semopt
+    , semreq, semopt, semreqOpt
     , addEMFieldError
     , addEMOverallError
     , renderBootstrapES
@@ -317,6 +317,16 @@ semopt field settings initv = do
     (res, view) <- lift $ emopt field settings initv
     SS.modify ( view : )
     return res
+
+-- | Use `semreq` internally, but make the signature like `semopt`.
+-- Useful when whether some fields is required depends on other conditions.
+semreqOpt :: (HandlerSite m ~ site, MonadHandler m, RenderMessage site FormMessage)
+          => Field m a
+          -> FieldSettings site
+          -> Maybe (Maybe a)
+          -> SEMForm m (FormResult (Maybe a))
+semreqOpt field settings initv = do
+  fmap (fmap Just) $ semreq field settings (join initv)
 
 renderBootstrapES :: Monad m =>
                     Markup
