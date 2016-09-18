@@ -155,6 +155,7 @@ traverseFormResult _ (FormFailure e)    = pure $ FormFailure e
 traverseFormResult _ FormMissing        = pure (FormMissing :: FormResult b)
 
 
+{-# DEPRECATED simpleWrappedField "use convertField instead" #-}
 -- | useful for newtype type
 simpleWrappedField :: forall a b m. Monad m =>
     (a -> b)
