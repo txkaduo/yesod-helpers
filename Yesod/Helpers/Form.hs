@@ -9,8 +9,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 module Yesod.Helpers.Form where
 
-import Prelude
-import Yesod
+import ClassyPrelude.Yesod hiding (catch)
 
 #if MIN_VERSION_yesod_form(1, 3, 8)
 import Yesod.Form.Bootstrap3                ( renderBootstrap3
@@ -34,30 +33,20 @@ import qualified Data.Conduit.Attoparsec    as CA
 import qualified Data.Conduit.List          as CL
 import qualified Data.Attoparsec.ByteString as Atto
 
-import Data.Typeable                        (Typeable)
-import Control.Exception                    (Exception)
 import Control.Monad.RWS.Lazy               (RWST)
 import Text.Blaze                           (Markup)
-import Data.Conduit                         (($$), Conduit, yield, await, ($=), ($$+-), ($$+), (=$), transPipe)
-import Control.Monad.Trans.Resource         (runResourceT, transResourceT, ResourceT)
+import Control.Monad.Trans.Resource         (transResourceT)
 import Control.Monad.Trans.Maybe            (runMaybeT)
-import Control.Monad                        (mzero, when, unless)
-import Control.Arrow                        (first)
+import Control.Arrow                        (right)
 import Data.Conduit.Binary                  (sourceLbs, sinkLbs)
 
-import Data.List                            (isSuffixOf, nub)
-import Data.Text                            (Text)
+import Data.List                            (nub)
 import Data.Char                            (isDigit)
-import Data.Maybe                           (catMaybes, fromMaybe, listToMaybe)
 import Text.Blaze.Renderer.Utf8             (renderMarkup)
 import Text.Blaze.Internal                  (MarkupM(Empty))
-import Control.Monad                        (liftM, forM)
-import Control.Monad.Catch                  (catch, throwM, MonadCatch, MonadThrow)
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative                  (Applicative, pure, (<*))
-#endif
+import Control.Monad.Catch                  (catch)
 import Text.Parsec                          (parse, space, eof)
-import Control.Monad.Trans.Except           (runExceptT, throwE, ExceptT(..), withExceptT)
+import Control.Monad.Except                 (runExceptT, throwError, ExceptT(..), withExceptT)
 import Data.Aeson.Types                     (parseEither)
 import Data.Yaml                            (decodeEither)
 
@@ -228,8 +217,8 @@ entityField invalid_msg not_found_msg =
     checkMMap f (toPathPiece . entityKey) strippedTextField
     where
         f t = runExceptT $ do
-            k <- maybe (throwE invalid_msg) return $ fromPathPiece t
-            (lift $ runDB $ get k) >>= maybe (throwE not_found_msg) (return . Entity k)
+            k <- maybe (throwError invalid_msg) return $ fromPathPiece t
+            (lift $ runDB $ get k) >>= maybe (throwError not_found_msg) (return . Entity k)
 
 entityKeyField ::
     ( RenderMessage site msg
@@ -258,8 +247,8 @@ entityKeyField invalid_msg not_found_msg =
     checkMMap f toPathPiece strippedTextField
     where
         f t = runExceptT $ do
-            k <- maybe (throwE invalid_msg) return $ fromPathPiece t
-            (lift $ runDB $ get k) >>= maybe (throwE not_found_msg) (const $ return k)
+            k <- maybe (throwError invalid_msg) return $ fromPathPiece t
+            (lift $ runDB $ get k) >>= maybe (throwError not_found_msg) (const $ return k)
 
 
 entityKeyHiddenField ::
@@ -289,8 +278,8 @@ entityKeyHiddenField invalid_msg not_found_msg =
     checkMMap f toPathPiece hiddenField
     where
         f t = runExceptT $ do
-            k <- maybe (throwE invalid_msg) return $ fromPathPiece t
-            (lift $ runDB $ get k) >>= maybe (throwE not_found_msg) (const $ return k)
+            k <- maybe (throwError invalid_msg) return $ fromPathPiece t
+            (lift $ runDB $ get k) >>= maybe (throwError not_found_msg) (const $ return k)
 
 
 entityUniqueKeyField ::
@@ -321,7 +310,7 @@ entityUniqueKeyField not_found_msg mk_unique =
     where
         f t = runExceptT $ do
                 (lift $ runDB $ getBy $ mk_unique t)
-                    >>= maybe (throwE $ not_found_msg t) return
+                    >>= maybe (throwError $ not_found_msg t) return
 
 
 -- | make a 'mopt' work like 'mreq', by providing a default value
@@ -706,7 +695,7 @@ yamlTextareaField yaml_err p =
     checkMMap parse_input snd textareaField
     where
         parse_input t = runExceptT $ do
-            either (throwE . yaml_err) (return . (,t)) $ do
+            either (throwError . yaml_err) (return . (,t)) $ do
                 (decodeEither $ TE.encodeUtf8 $ unTextarea t)
                     >>= parseEither p
 
@@ -729,7 +718,7 @@ yamlFileField yaml_err p file_field = do
         parse_sunk fi = runExceptT $ do
             let file_name = T.unpack $ fileName fi
             bs <- liftIO $ runResourceT $ fileSourceRaw fi $$ sinkLbs
-            either (throwE . yaml_err file_name) (return . (fi,)) $
+            either (throwError . yaml_err file_name) (return . (fi,)) $
                 (decodeEither $ LB.toStrict bs)
                     >>= parseEither (p file_name)
 
@@ -778,7 +767,7 @@ archivedYamlFilesField archive_err yaml_err p file_field =
                     when (LB.length file_bs <= 0) $ mzero
                     when (not $ ".yml" `isSuffixOf` file_name || ".yaml" `isSuffixOf` file_name)
                         mzero
-                    lift $ either (throwE . yaml_err file_name) return $
+                    lift $ either (throwError . yaml_err file_name) return $
                             decodeEither (LB.toStrict file_bs) >>= parseEither (p file_name)
 
 
@@ -820,19 +809,19 @@ zippedYamlFilesField unzip_err yaml_err p file_field =
 
         parse_fi_one fi bs = do
             let file_name = T.unpack $ fileName fi
-            either (throwE . yaml_err file_name) (return . (fi,) . (:[])) $
+            either (throwError . yaml_err file_name) (return . (fi,) . (:[])) $
                 (decodeEither $ LB.toStrict bs)
                     >>= parseEither (p file_name)
 
         parse_fi_zip fi bs = do
-            arc <- either (throwE . unzip_err) return $
+            arc <- either (throwError . unzip_err) return $
                             Zip.toArchiveOrFail bs
             fmap (fi,) $ liftM catMaybes $ forM (Zip.zEntries arc) $
                 \entry -> runMaybeT $ do
                     let file_bs     = LB.toStrict $ Zip.fromEntry entry
                         file_name   = Zip.eRelativePath entry
                     when (B.length file_bs <= 0) $ mzero
-                    lift $ either (throwE . yaml_err file_name) return $
+                    lift $ either (throwError . yaml_err file_name) return $
                             decodeEither file_bs >>= parseEither (p file_name)
 
 
@@ -986,7 +975,7 @@ zippedAttoparsecFilesField unzip_err parse_err p file_field = do
 
         parse_fi_zip fi = do
             bs <- liftIO $ runResourceT $ fileSourceRaw fi $$ sinkLbs
-            arc <- either (throwE . unzip_err) return $
+            arc <- either (throwError . unzip_err) return $
                             Zip.toArchiveOrFail bs
             fmap (fi,) $ liftM catMaybes $ forM (Zip.zEntries arc) $ \entry -> runMaybeT $ do
                 let file_bs     = LB.toStrict $ Zip.fromEntry entry
