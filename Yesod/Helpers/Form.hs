@@ -155,6 +155,24 @@ traverseFormResult _ (FormFailure e)    = pure $ FormFailure e
 traverseFormResult _ FormMissing        = pure (FormMissing :: FormResult b)
 
 
+-- | Construct a new field that will never fail because of missing value.
+-- Useful when user want to control more what should do on missing value.
+-- Like report missing value base on other conditions.
+neverMissingField :: Functor m => Text -> Field m a -> Field m (Maybe a)
+neverMissingField missing_msg field =
+  field { fieldParse = fp2, fieldView = fv2 }
+  where
+    fp2 x y = fmap (right Just) $ (fieldParse field) x y
+    fv = fieldView field
+    fv2 tid name attrs t_or_res is_req =
+      fv tid name attrs t_or_res' is_req
+      where
+        t_or_res' = case t_or_res of
+                      Right Nothing   -> Left missing_msg
+                      Right (Just x)  -> Right x
+                      Left t          -> Left t
+
+
 {-# DEPRECATED simpleWrappedField "use convertField instead" #-}
 -- | useful for newtype type
 simpleWrappedField :: forall a b m. Monad m =>
