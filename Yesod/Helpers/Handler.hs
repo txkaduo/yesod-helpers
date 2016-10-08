@@ -3,6 +3,7 @@
 {-# LANGUAGE TupleSections #-}
 module Yesod.Helpers.Handler where
 
+-- {{{1 imports
 import ClassyPrelude.Yesod hiding (runFakeHandler, requestHeaders)
 import Yesod.Core.Types                     (HandlerT(..), handlerRequest)
 import qualified Control.Monad.Trans.Reader as R
@@ -24,6 +25,7 @@ import Data.Aeson.Types                     (Pair)
 import Yesod.Helpers.Form2
 import Yesod.Helpers.Form                   (jsonOrHtmlOutputForm')
 import Yesod.Helpers.Utils                  (nullToNothing)
+-- }}}1
 
 
 setLastModified :: UTCTime -> HandlerT site IO ()
@@ -400,3 +402,7 @@ defaultLangs def_lang = do
 defaultZhCnLangs :: MonadHandler m
                 => m [Lang]
 defaultZhCnLangs = defaultLangs "zh-CN"
+
+
+
+-- vim: set foldmethod=marker:
