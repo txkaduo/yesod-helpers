@@ -2,9 +2,16 @@
  Tools for output JSON message in JSend
 -}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE RankNTypes #-}
 module Yesod.Helpers.JSend where
 
 import ClassyPrelude.Yesod
+import Control.Monad.Writer (Writer)
+import Data.Monoid (Endo)
+import Text.Julius (rawJS, Javascript, toJavascript)
+
 
 data JSendMsg = JSendSuccess Value
                 | JSendFail Value
@@ -34,3 +41,32 @@ instance ToTypedContent JSendMsg where
 
 instance HasContentType JSendMsg where
     getContentType _ = getContentType (Nothing :: Maybe Value)
+
+
+-- | One way to pack JSendMsg to a JSONP message
+jsendToJsonp :: Text -> JSendMsg -> Javascript
+jsendToJsonp callback jmsg =
+  toJavascript $ rawJS $ renderJavascriptUrl dummy_render $ jsendToJsonpU callback jmsg
+    where dummy_render _ _ = error "jsendToJsonp: should never reach here"
+
+
+jsendToJsonpU :: Text -> JSendMsg -> JavascriptUrl url
+jsendToJsonpU callback (JSendSuccess v)             = [julius| #{rawJS callback}(#{v}); |]
+jsendToJsonpU callback (JSendFail v)                = [julius| #{rawJS callback}(undefined, #{v}); |]
+jsendToJsonpU callback (JSendError msg code m_data) = [julius| #{rawJS callback}(undefined, #{toJSON msg}, #{toJSON code}, #{toJSON m_data}); |]
+
+
+-- | Use this instead of `provideRep`:
+-- to provide both a jsend and a jsonp response
+provideRepJsendOrJsonp :: (MonadHandler m)
+                       => m JSendMsg
+                       -> Writer (Endo [ProvidedRep m]) ()
+provideRepJsendOrJsonp get_jmsg = do
+  provideRep get_jmsg
+  provideRep f
+  where
+    f = do callback <- fmap (fromMaybe "callback") $ lookupGetParam "callback"
+           fmap (jsendToJsonp callback) $ get_jmsg
+
+
+-- vim: set foldmethod=marker:
