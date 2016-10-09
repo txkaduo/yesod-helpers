@@ -21,7 +21,9 @@ import System.Random                        (randomIO)
 import Control.Monad.Trans.Control          (MonadBaseControl)
 import System.Timeout                       (timeout)
 import Network.HTTP.Types                   (parseQueryText, renderQueryText, QueryText)
-import Network.URI                          (parseURIReference, uriQuery, uriToString)
+import Network.URI                          (parseURIReference, uriQuery, uriToString
+                                            , parseAbsoluteURI, uriAuthority, uriRegName
+                                            )
 import qualified Blaze.ByteString.Builder   as BBB
 import qualified Data.ByteString.UTF8       as UTF8
 
@@ -165,3 +167,10 @@ queryTextSetParam = flip go
         go ys []        = ys
         go ys (x:xs)    =   let ys' = filter ((/= fst x) . fst) ys
                             in go (ys' ++ [ x ]) xs
+
+
+extractHostFromAbsUrl :: String -> Maybe String
+extractHostFromAbsUrl uri = do
+    puri <- parseAbsoluteURI uri
+    auth <- uriAuthority puri
+    return (uriRegName auth)

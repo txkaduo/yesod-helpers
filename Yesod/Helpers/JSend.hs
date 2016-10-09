@@ -58,10 +58,10 @@ jsendToJsonpU callback (JSendError msg code m_data) = [julius| #{rawJS callback}
 
 -- | Use this instead of `provideRep`:
 -- to provide both a jsend and a jsonp response
-provideRepJsendOrJsonp :: (MonadHandler m)
-                       => m JSendMsg
-                       -> Writer (Endo [ProvidedRep m]) ()
-provideRepJsendOrJsonp get_jmsg = do
+provideRepJsendAndJsonp :: (MonadHandler m)
+                        => m JSendMsg
+                        -> Writer (Endo [ProvidedRep m]) ()
+provideRepJsendAndJsonp get_jmsg = do
   provideRep get_jmsg
   provideRep f
   where
