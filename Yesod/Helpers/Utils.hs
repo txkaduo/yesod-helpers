@@ -174,3 +174,10 @@ extractHostFromAbsUrl uri = do
     puri <- parseAbsoluteURI uri
     auth <- uriAuthority puri
     return (uriRegName auth)
+
+
+-- | Prepend a dot on a domain unless it already begins with a dot.
+domainPrependDot :: (IsString s, EqSequence s) => s -> s
+domainPrependDot d = if isPrefixOf "." d
+                        then d
+                        else "." <> d
