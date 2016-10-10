@@ -7,6 +7,7 @@ module Yesod.Helpers.Handler where
 import ClassyPrelude.Yesod hiding (runFakeHandler, requestHeaders)
 import Yesod.Core.Types                     (HandlerT(..), handlerRequest)
 import qualified Control.Monad.Trans.Reader as R
+import qualified Data.ByteString.Char8      as B8
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as TE
 #if MIN_VERSION_yesod_core(1,4,0)
@@ -31,11 +32,27 @@ import Yesod.Helpers.Utils                  (nullToNothing)
 setLastModified :: UTCTime -> HandlerT site IO ()
 setLastModified = addHeader "Last-Modified" . formatRFC1123
 
+{-# DEPRECATED isXHR "use acceptsJson instead" #-}
 isXHR :: (MonadHandler m) => m Bool
 isXHR = do
     req <- waiRequest
     let req_with = lookup "X-Request-With" $ requestHeaders req
     return $ maybe False (== "XMLHTTPRequest") req_with
+
+
+-- | Works like aceeptsJson, but for jsonp: check for javascript
+-- Code stolen from: Yesod.Core.Json
+acceptsJavascript :: MonadHandler m => m Bool
+acceptsJavascript =  (maybe False ((== "application/javascript") . B8.takeWhile (/= ';'))
+            .  listToMaybe
+            .  reqAccept)
+           `liftM` getRequest
+
+
+-- | Check accepts for json or jsonp
+acceptsJsonOrJsonp :: MonadHandler m => m Bool
+acceptsJsonOrJsonp = liftM2 (||) acceptsJson acceptsJavascript
+
 
 clientOriginalIp :: MonadHandler m => m (Maybe ByteString)
 clientOriginalIp = do
