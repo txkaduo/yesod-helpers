@@ -26,6 +26,8 @@ import Data.Aeson.Types                     (Pair)
 import Yesod.Helpers.Form2
 import Yesod.Helpers.Form                   (jsonOrHtmlOutputForm')
 import Yesod.Helpers.Utils                  (nullToNothing)
+
+import Yesod.Helpers.JSend                  (provideRepJsendAndJsonp)
 -- }}}1
 
 
@@ -213,7 +215,7 @@ jsonOrHtmlOutputFormEX extra_js_fields show_form = do
         render_msg <- getMessageRender
         selectRep $ do
             provideRep $ R.runReaderT show_form r
-            provideRep $ do
+            provideRepJsendAndJsonp $ do
                 form_body <- widgetToBodyHtml formWidget
                 return $ jsendFormData render_msg (Just form_body) field_errs extra_js_fields
 
