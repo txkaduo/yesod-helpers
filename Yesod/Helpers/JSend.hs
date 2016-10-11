@@ -51,9 +51,9 @@ jsendToJsonp callback jmsg =
 
 
 jsendToJsonpU :: Text -> JSendMsg -> JavascriptUrl url
-jsendToJsonpU callback (JSendSuccess v)             = [julius| #{rawJS callback}(#{v}); |]
-jsendToJsonpU callback (JSendFail v)                = [julius| #{rawJS callback}(undefined, #{v}); |]
-jsendToJsonpU callback (JSendError msg code m_data) = [julius| #{rawJS callback}(undefined, #{toJSON msg}, #{toJSON code}, #{toJSON m_data}); |]
+jsendToJsonpU callback (JSendSuccess v)             = [julius| #{rawJS callback}([#{v}]); |]
+jsendToJsonpU callback (JSendFail v)                = [julius| #{rawJS callback}([undefined, #{v}]); |]
+jsendToJsonpU callback (JSendError msg code m_data) = [julius| #{rawJS callback}([undefined, #{toJSON msg}, #{toJSON code}, #{toJSON m_data}]); |]
 
 
 -- | Use this instead of `provideRep`:
