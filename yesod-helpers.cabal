@@ -144,7 +144,7 @@ library
                      , semigroups
                      , http-types
                      , vault
-                     , parsec-tx-utils
+                     , parsec-tx-utils         >= 0.2
 
   if flag(parsec3)
       build-depends:   parsec3

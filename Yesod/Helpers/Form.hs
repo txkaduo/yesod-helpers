@@ -45,7 +45,7 @@ import Data.Char                            (isDigit)
 import Text.Blaze.Renderer.Utf8             (renderMarkup)
 import Text.Blaze.Internal                  (MarkupM(Empty))
 import Control.Monad.Catch                  (catch)
-import Text.Parsec                          (parse, space, eof)
+import Text.Parsec                          (parse, space, eof, Parsec)
 import Control.Monad.Except                 (runExceptT, throwError, ExceptT(..), withExceptT)
 import Data.Aeson.Types                     (parseEither)
 import Data.Yaml                            (decodeEither)
@@ -345,14 +345,13 @@ moptDefault def_v f fs mv = first (fmap $ fromMaybe def_v) <$> mopt f fs (fmap J
 
 -- | parse the content in textarea, into a list of values
 -- using methods of SimpleStringRep
-simpleEncodedListTextareaField ::
-    (SimpleStringRep a, Monad m
-    , RenderMessage (HandlerSite m) msg
-    , RenderMessage (HandlerSite m) FormMessage
-    ) =>
-    (CharParser b, Text)   -- ^ separator: parser and its 'standard' representation
-    -> (String -> msg)      -- ^ a function to generate a error message
-    -> Field m [a]
+simpleEncodedListTextareaField :: (SimpleStringRep a, Monad m
+                                  , RenderMessage (HandlerSite m) msg
+                                  , RenderMessage (HandlerSite m) FormMessage
+                                  )
+                               => (Parsec Text () b, Text)   -- ^ separator: parser and its 'standard' representation
+                               -> (String -> msg)      -- ^ a function to generate a error message
+                               -> Field m [a]
 simpleEncodedListTextareaField sep_inf mk_msg =
     encodedListTextareaField sep_inf (simpleParser, T.pack . simpleEncode) mk_msg
 
@@ -372,16 +371,15 @@ simpleEncodedOptionList' render lst = mkOptionList $ map f lst
         f x = Option (render x) x (T.pack $ simpleEncode x)
 
 -- | parse the content in textarea, into a list of values
-encodedListTextareaField ::
-    (Monad m
-    , RenderMessage (HandlerSite m) msg
-    , RenderMessage (HandlerSite m) FormMessage
-    ) =>
-    (CharParser b, Text)   -- ^ separator: parser and its 'standard' representation
-    -> (CharParser a, a -> Text)
-                            -- ^ parse a single value and render a single value
-    -> (String -> msg)      -- ^ a function to generate a error message
-    -> Field m [a]
+encodedListTextareaField :: ( Monad m
+                              , RenderMessage (HandlerSite m) msg
+                              , RenderMessage (HandlerSite m) FormMessage
+                            )
+                         => (Parsec Text () b, Text)   -- ^ separator: parser and its 'standard' representation
+                         -> (Parsec Text () a, a -> Text)
+                                                -- ^ parse a single value and render a single value
+                         -> (String -> msg)      -- ^ a function to generate a error message
+                         -> Field m [a]
 encodedListTextareaField (p_sep, sep) (p, render) mk_msg =
     checkMMap f (Textarea . T.intercalate sep . map render) textareaField
     where
@@ -396,7 +394,7 @@ lineSepListTextareaField ::
     , RenderMessage (HandlerSite m) msg
     , RenderMessage (HandlerSite m) FormMessage
     ) =>
-    (CharParser a, a -> Text)
+      (Parsec Text () a, a -> Text)
                             -- ^ parse a single value and render a single value
     -> (String -> msg)      -- ^ a function to generate a error message
     -> Field m [a]
@@ -409,7 +407,7 @@ wsSepListTextareaField ::
     , RenderMessage (HandlerSite m) msg
     , RenderMessage (HandlerSite m) FormMessage
     ) =>
-    (CharParser a, a -> Text)
+      (Parsec Text () a, a -> Text)
                             -- ^ parse a single value and render a single value
     -> (String -> msg)      -- ^ a function to generate a error message
     -> Field m [a]
