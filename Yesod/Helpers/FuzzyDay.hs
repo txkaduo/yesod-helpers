@@ -77,7 +77,7 @@ parseFuzzyDayFromJson v              = typeMismatch "integer" v
 
 
 -- | Parse human-readable string, output a FuzzyDay
-humanParseFuzzyDay :: CharParser FuzzyDay
+humanParseFuzzyDay :: Stream s m Char => ParsecT s u m FuzzyDay
 humanParseFuzzyDay = do
     y <- p_year
     month_res <- optionMaybe $ try $ do
@@ -133,7 +133,7 @@ humanParseFuzzyDay = do
 
 
 -- | Parse human-readable string
-humanParseFuzzyDayRange :: CharParser (FuzzyDay, FuzzyDay)
+humanParseFuzzyDayRange :: Stream s m Char => ParsecT s u m (FuzzyDay, FuzzyDay)
 humanParseFuzzyDayRange = do
     d1 <- humanParseFuzzyDay
     optional $ (try $ spaces >> string "--" >> spaces)
