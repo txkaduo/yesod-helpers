@@ -63,8 +63,15 @@ import Yesod.Helpers.Parsec
 nameIdToFs :: Text -> Text -> FieldSettings site
 nameIdToFs name idName = FieldSettings "" Nothing (Just idName) (Just name) []
 
+
 nameToFs :: Text -> FieldSettings site
 nameToFs name = FieldSettings "" Nothing Nothing (Just name) []
+
+
+setPlaceholder :: Text -> FieldSettings site -> FieldSettings site
+setPlaceholder t (fs@FieldSettings{ fsAttrs = attrs }) =
+  fs { fsAttrs = insertMap "placeholder" t attrs }
+
 
 labelNameToFs :: RenderMessage site message => message -> Text -> FieldSettings site
 -- {{{1
