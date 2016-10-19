@@ -1,3 +1,4 @@
+-- {{{1 language options
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -7,8 +8,10 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+-- }}}1
 module Yesod.Helpers.Form where
 
+-- {{{1 imports
 import ClassyPrelude.Yesod hiding (catch)
 
 #if MIN_VERSION_yesod_form(1, 3, 8)
@@ -53,6 +56,9 @@ import Data.Yaml                            (decodeEither)
 import qualified Codec.Archive.Smooth.All as AS
 
 import Yesod.Helpers.Parsec
+-- }}}1
+
+
 
 nameIdToFs :: Text -> Text -> FieldSettings site
 nameIdToFs name idName = FieldSettings "" Nothing (Just idName) (Just name) []
@@ -61,12 +67,14 @@ nameToFs :: Text -> FieldSettings site
 nameToFs name = FieldSettings "" Nothing Nothing (Just name) []
 
 labelNameToFs :: RenderMessage site message => message -> Text -> FieldSettings site
+-- {{{1
 labelNameToFs label name = FieldSettings
                     (SomeMessage label)
                     Nothing             -- tooltip
                     Nothing             -- id
                     (Just name)
                     []
+-- }}}1
 
 
 -- | add 'form-control' CSS class to form input field
@@ -75,6 +83,7 @@ fsAddFormControlClass = fsAddCssClass "form-control"
 
 -- | add a CSS class to form input field, remove duplicates
 fsAddCssClass :: Text -> FieldSettings site -> FieldSettings site
+-- {{{1
 fsAddCssClass css_cls fs = fs { fsAttrs = new_attrs' }
     where
         classes = fromMaybe "" $ lookup "class" $ fsAttrs fs
@@ -88,9 +97,12 @@ fsAddCssClass css_cls fs = fs { fsAttrs = new_attrs' }
         new_attrs' = case lookup "class" new_attrs of
                        Nothing -> ("class", new_classes) : new_attrs
                        Just _ -> new_attrs
+-- }}}1
+
 
 minimialLayoutBody :: (Yesod site, MonadIO m, MonadThrow m, MonadBaseControl IO m) =>
                     WidgetT site IO () -> HandlerT site m Html
+-- {{{1
 minimialLayoutBody widget = do
     pc <- liftHandlerT $ widgetToPageContent widget
 #if MIN_VERSION_yesod_core(1, 2, 20)
@@ -99,6 +111,8 @@ minimialLayoutBody widget = do
     giveUrlRenderer
 #endif
         $ [hamlet|^{pageBody pc}|]
+-- }}}1
+
 
 -- | 把 form 的 html 代码用 json 打包返回
 jsonOutputForm :: (Yesod site, MonadIO m, MonadThrow m, MonadBaseControl IO m) =>
@@ -112,6 +126,7 @@ jsonOutputFormMsg :: (Yesod site, RenderMessage site message
                     Maybe message
                     -> WidgetT site IO ()
                     -> HandlerT site m Value
+-- {{{1
 jsonOutputFormMsg m_msg formWidget = do
     body <- liftM (TE.decodeUtf8 . LB.toStrict . renderMarkup)
                             (minimialLayoutBody formWidget)
@@ -120,6 +135,8 @@ jsonOutputFormMsg m_msg formWidget = do
                     [ Just $ "body" .= body
                     , fmap (\msg -> "message" .= mr msg) m_msg
                     ]
+-- }}}1
+
 
 type ShowFormPage site m = WidgetT site IO () -> Enctype -> HandlerT site m Html
 
@@ -137,12 +154,14 @@ jsonOrHtmlOutputForm' :: (Yesod site, MonadIO m, MonadThrow m, MonadBaseControl 
     -> WidgetT site IO ()
     -> [A.Pair]
     -> HandlerT site m TypedContent
+-- {{{1
 jsonOrHtmlOutputForm' show_form formWidget other_data = do
     selectRep $ do
         provideRep $ do
             js_form <- jsonOutputForm formWidget
             return $ object $ ("form_body" .= js_form) : other_data
         provideRep $ show_form
+-- }}}1
 
 
 -- | the Data.Traversable.traverse function for FormResult
@@ -150,15 +169,18 @@ traverseFormResult :: forall a b m . Applicative m
                    => (a -> m b)
                    -> FormResult a
                    -> m (FormResult b)
+-- {{{1
 traverseFormResult f (FormSuccess x)    = fmap FormSuccess $ f x
 traverseFormResult _ (FormFailure e)    = pure $ FormFailure e
 traverseFormResult _ FormMissing        = pure (FormMissing :: FormResult b)
+-- }}}1
 
 
 -- | Construct a new field that will never fail because of missing value.
 -- Useful when user want to control more what should do on missing value.
 -- Like report missing value base on other conditions.
 neverMissingField :: Functor m => Text -> Field m a -> Field m (Maybe a)
+-- {{{1
 neverMissingField missing_msg field =
   field { fieldParse = fp2, fieldView = fv2 }
   where
@@ -171,6 +193,7 @@ neverMissingField missing_msg field =
                       Right Nothing   -> Left missing_msg
                       Right (Just x)  -> Right x
                       Left t          -> Left t
+-- }}}1
 
 
 {-# DEPRECATED simpleWrappedField "use convertField instead" #-}
@@ -324,12 +347,14 @@ entityUniqueKeyField ::
     (Text -> msg)
     -> (Text -> Unique val)
     -> Field (HandlerT site IO) (Entity val)
+-- {{{1
 entityUniqueKeyField not_found_msg mk_unique =
     checkMMap f (toPathPiece . entityKey) strippedTextField
     where
         f t = runExceptT $ do
                 (lift $ runDB $ getBy $ mk_unique t)
                     >>= maybe (throwError $ not_found_msg t) return
+-- }}}1
 
 
 -- | make a 'mopt' work like 'mreq', by providing a default value
@@ -380,12 +405,14 @@ encodedListTextareaField :: ( Monad m
                                                 -- ^ parse a single value and render a single value
                          -> (String -> msg)      -- ^ a function to generate a error message
                          -> Field m [a]
+-- {{{1
 encodedListTextareaField (p_sep, sep) (p, render) mk_msg =
     checkMMap f (Textarea . T.intercalate sep . map render) textareaField
     where
         f t = case parse (manySepEndBy p_sep p <* eof) "" (unTextarea t) of
                 Left err -> return $ Left $ mk_msg $ show err
                 Right x -> return $ Right x
+-- }}}1
 
 
 -- | parse every line in textarea, each nonempty line parsed as a single value
@@ -503,6 +530,7 @@ checkFieldDBUnique2 ::
         -- ^ Old value. Don't check DB if result is the same as this.
     -> Field (HandlerT site IO) a
     -> Field (HandlerT site IO) a
+-- {{{1
 checkFieldDBUnique2 mk_unique msg m_old_val = checkMMap chk id
     where
         chk t = if Just t == m_old_val
@@ -511,6 +539,9 @@ checkFieldDBUnique2 mk_unique msg m_old_val = checkMMap chk id
                             >>= return . maybe
                                     (Right t)
                                     (const $ Left msg)
+-- }}}1
+
+
 checkFieldDBUnique ::
     ( YesodPersist site
     , RenderMessage site msg
@@ -579,6 +610,7 @@ instance Exception BytestringTooLarge
 limitedSizeConduitBs ::
     (MonadThrow m) =>
     Int -> Conduit B.ByteString m B.ByteString
+-- {{{1
 limitedSizeConduitBs max_size = go 0
     where
         go cnt = do
@@ -590,6 +622,7 @@ limitedSizeConduitBs max_size = go 0
                     if new_cnt > max_size
                         then throwM BytestringTooLarge
                         else yield x >> go new_cnt
+-- }}}1
 
 
 -- | catch exception in field's parse functions,
@@ -708,6 +741,7 @@ yamlTextareaField ::
     (String -> msg)         -- ^ error message when fail to parse Yaml file
     -> (a -> A.Parser b)    -- ^ the parser
     -> Field m (b, Textarea)
+-- {{{1
 yamlTextareaField yaml_err p =
     checkMMap parse_input snd textareaField
     where
@@ -715,6 +749,7 @@ yamlTextareaField yaml_err p =
             either (throwError . yaml_err) (return . (,t)) $ do
                 (decodeEither $ TE.encodeUtf8 $ unTextarea t)
                     >>= parseEither p
+-- }}}1
 
 
 -- | a form input field that accept an uploaded YAML file and parse it
@@ -729,6 +764,7 @@ yamlFileField :: ( RenderMessage (HandlerSite m) msg
                                       -- ^ the parser
               -> Field m FileInfo
               -> Field m (FileInfo, b)
+-- {{{1
 yamlFileField yaml_err p file_field = do
     checkMMap parse_sunk fst file_field
     where
@@ -738,6 +774,7 @@ yamlFileField yaml_err p file_field = do
             either (throwError . yaml_err file_name) (return . (fi,)) $
                 (decodeEither $ LB.toStrict bs)
                     >>= parseEither (p file_name)
+-- }}}1
 
 
 -- | a form input field that accept
@@ -758,6 +795,7 @@ archivedYamlFilesField :: ( RenderMessage (HandlerSite m) msg
                                               -- ^ the parser
                        -> Field m FileInfo
                        -> Field m (FileInfo, [b])
+-- {{{1
 archivedYamlFilesField archive_err yaml_err p file_field =
     checkMMap parse_sunk fst file_field
     where
@@ -786,6 +824,7 @@ archivedYamlFilesField archive_err yaml_err p file_field =
                         mzero
                     lift $ either (throwError . yaml_err file_name) return $
                             decodeEither (LB.toStrict file_bs) >>= parseEither (p file_name)
+-- }}}1
 
 
 -- | a form input field that accept
@@ -804,6 +843,7 @@ zippedYamlFilesField :: ( RenderMessage (HandlerSite m) msg
                                               -- ^ the parser
                      -> Field m FileInfo
                      -> Field m (FileInfo, [b])
+-- {{{1
 zippedYamlFilesField unzip_err yaml_err p file_field =
     checkMMap parse_sunk fst file_field
     where
@@ -840,6 +880,7 @@ zippedYamlFilesField unzip_err yaml_err p file_field =
                     when (B.length file_bs <= 0) $ mzero
                     lift $ either (throwError . yaml_err file_name) return $
                             decodeEither file_bs >>= parseEither (p file_name)
+-- }}}1
 
 
 -- | accept an uploaded file and parse it with an Attoparsec Parser
@@ -854,6 +895,7 @@ attoparsecFileField :: ( RenderMessage (HandlerSite m) msg
                                             -- ^ the parser
                     -> Field m FileInfo
                     -> Field m (FileInfo, b)
+-- {{{1
 attoparsecFileField parse_err p file_field = do
     checkMMap parse_sunk fst file_field
     where
@@ -866,6 +908,7 @@ attoparsecFileField parse_err p file_field = do
                             ) `catch` (\(e :: CA.ParseError) ->
                                             return $ Left $ parse_err file_name $ show e
                                         )
+-- }}}1
 
 
 -- | used in archivedFilesField
@@ -874,6 +917,7 @@ parseFileInfoAsArchive :: forall e (m :: * -> *).
                           ([Char] -> e)
                           -> FileInfo
                           -> ResourceT (ExceptT e m) [AS.FileEntry]
+-- {{{1
 parseFileInfoAsArchive archive_err fi = do
     (rsrc1, m_arc) <- (transPipe (transResourceT liftIO) $ fileSourceRaw fi)
                         $= AS.autoDecompressByCompressors AS.allKnownDetectiveCompressors
@@ -891,13 +935,16 @@ parseFileInfoAsArchive archive_err fi = do
                         (transResourceT $ withExceptT archive_err)
                         $ AS.extractFilesByDetectiveArchive ax)
                 =$ CL.consume
+-- }}}1
 
 
 fileInfoToFileEntry :: MonadIO m => FileInfo -> m AS.FileEntry
+-- {{{1
 fileInfoToFileEntry fi = do
     content <- liftIO $ runResourceT $
                     fileSourceRaw fi $$ sinkLbs
     return $ AS.FileEntry (T.unpack $ fileName fi) content
+-- }}}1
 
 
 archivedFilesField :: ( RenderMessage (HandlerSite m) msg
@@ -907,12 +954,14 @@ archivedFilesField :: ( RenderMessage (HandlerSite m) msg
                    => (String -> msg)
                    -> Field m FileInfo
                    -> Field m (FileInfo, [AS.FileEntry])
+-- {{{1
 archivedFilesField archive_err file_field = do
     checkMMap parse_sunk fst file_field
     where
         parse_sunk fi = runExceptT $ do
             fe_list <- runResourceT $ parseFileInfoAsArchive archive_err fi
             return (fi, fe_list)
+-- }}}1
 
 
 -- | accept an uploaded file and parse it with an Attoparsec Parser
@@ -930,6 +979,7 @@ archivedAttoparsecFilesField :: ( RenderMessage (HandlerSite m) msg
                              -- ^ the parser
                              -> Field m FileInfo
                              -> Field m (FileInfo, [b])
+-- {{{1
 archivedAttoparsecFilesField archive_err parse_err p file_field = do
     checkMMap parse_sunk fst file_field
     where
@@ -944,6 +994,7 @@ archivedAttoparsecFilesField archive_err parse_err p file_field = do
                         ) `catch` (\(e :: CA.ParseError) ->
                                         return $ Left $ parse_err file_name $ show e
                                     )
+-- }}}1
 
 
 -- | accept an uploaded file and parse it with an Attoparsec Parser
@@ -960,6 +1011,7 @@ zippedAttoparsecFilesField :: ( RenderMessage (HandlerSite m) msg
                            -- ^ the parser
                            -> Field m FileInfo
                            -> Field m (FileInfo, [b])
+-- {{{1
 zippedAttoparsecFilesField unzip_err parse_err p file_field = do
     checkMMap parse_sunk fst file_field
     where
@@ -1004,6 +1056,7 @@ zippedAttoparsecFilesField unzip_err parse_err p file_field = do
                     ) `catch` (\(e :: CA.ParseError) ->
                                     return $ Left $ parse_err file_name $ show e
                                 )
+-- }}}1
 
 
 chineseMobileField :: (RenderMessage (HandlerSite m) msg
@@ -1012,6 +1065,7 @@ chineseMobileField :: (RenderMessage (HandlerSite m) msg
                     ) =>
                     msg
                     -> Field m Text
+-- {{{1
 chineseMobileField err_msg = checkM chk_mobile strippedTextField
     where
         chk_mobile_raw t = do
@@ -1032,3 +1086,8 @@ chineseMobileField err_msg = checkM chk_mobile strippedTextField
                                         ]
 
         chk_mobile t = return $ maybe (Left err_msg) Right $ listToMaybe $ chk_mobile_maybe t
+-- }}}1
+
+
+
+-- vim: set foldmethod=marker:
