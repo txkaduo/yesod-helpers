@@ -9,7 +9,7 @@ import ClassyPrelude
 import Data.Char
 import Data.List                            ((!!))
 import Data.Time                            ( localTimeToUTC, zonedTimeToUTC, TimeZone, ParseTime
-                                            , LocalTime(..), midnight
+                                            , LocalTime(..), midnight, TimeOfDay, addDays
                                             )
 #if MIN_VERSION_time(1,5,0)
 import Data.Time                            (parseTimeM)
@@ -181,3 +181,18 @@ domainPrependDot :: (IsString s, EqSequence s) => s -> s
 domainPrependDot d = if isPrefixOf "." d
                         then d
                         else "." <> d
+
+
+-- | Construct LocalTime for the start point of time range, with optional time of day.
+-- if TimeOfDay specified, use 'midnight' (the start time of the day)
+mkLocalTimeSince :: Day -> Maybe TimeOfDay -> LocalTime
+mkLocalTimeSince d m_tod = LocalTime d (fromMaybe midnight m_tod)
+
+
+-- | Construct LocalTime for the end point of time range, with optional time of day.
+-- if TimeOfDay specified, use 'midnight' (the start time of the day) of the next day.
+mkLocalTimeTill :: Day -> Maybe TimeOfDay -> LocalTime
+mkLocalTimeTill d Nothing    = LocalTime (addDays 1 d) midnight
+mkLocalTimeTill d (Just tod) = LocalTime d tod
+
+
