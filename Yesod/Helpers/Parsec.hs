@@ -1,8 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE CPP #-}
 module Yesod.Helpers.Parsec
     ( module Yesod.Helpers.Parsec
     , module Text.Parsec.TX.Utils

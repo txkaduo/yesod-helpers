@@ -1,7 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE DeriveGeneric #-}
 module Yesod.Helpers.FuzzyDay where
 
 import Prelude

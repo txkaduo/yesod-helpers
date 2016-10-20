@@ -1,13 +1,5 @@
 -- {{{1 language options
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE ImpredicativeTypes #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE LiberalTypeSynonyms #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DeriveDataTypeable #-}
 -- }}}1
 module Yesod.Helpers.Form where
 

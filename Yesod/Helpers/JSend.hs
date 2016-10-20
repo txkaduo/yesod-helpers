@@ -1,10 +1,6 @@
 {-|
  Tools for output JSON message in JSend
 -}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE RankNTypes #-}
 module Yesod.Helpers.JSend where
 
 import ClassyPrelude.Yesod

@@ -1,7 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE GADTs #-}
 module Yesod.Helpers.BgThread where
 
 import ClassyPrelude

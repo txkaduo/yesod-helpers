@@ -2,11 +2,6 @@
  Form functions that report errors about each form field.
  Most code are copied and modified from yesod-form.
 -}
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE GADTs #-}
 module Yesod.Helpers.Form2
     ( FieldErrors, oneFieldError, overallFieldError, nullFieldErrors, fieldErrorsToList
     , EMForm, SEMForm
@@ -214,7 +209,7 @@ postHelper  :: (MonadHandler m, RenderMessage (HandlerSite m) FormMessage)
             -> m ((((FormResult a, xml), Enctype), Html), FieldErrors (HandlerSite m))
 postHelper form env = do
     req <- getRequest
-    let tokenKey = "_token"
+    let tokenKey = asText "_token"
     let token =
             case reqToken req of
                 Nothing -> mempty

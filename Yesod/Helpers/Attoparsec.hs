@@ -1,16 +1,13 @@
 module Yesod.Helpers.Attoparsec where
 
-import Prelude
+import ClassyPrelude
 import qualified Data.ByteString            as B
 import qualified Data.ByteString.Char8      as C8
 import qualified Data.ByteString.Base64     as B64
 
-import Data.ByteString                      (ByteString)
 import Data.Attoparsec.ByteString           (Parser, many1)
 import Data.Attoparsec.ByteString.Char8     (satisfy)
 import Data.Char                            (isHexDigit, isAlphaNum)
-import Data.Word                            (Word8)
-import Data.Maybe                           (listToMaybe)
 import Numeric                              (readHex)
 
 
@@ -35,4 +32,4 @@ base64EncodedByteString = do
         Left err -> fail $ "failed to base64-decode: " ++ err
         Right bs -> return bs
     where
-        is_base64_char c = isAlphaNum c || c `elem` "+/="
+        is_base64_char c = isAlphaNum c || c `elem` (asString "+/=")

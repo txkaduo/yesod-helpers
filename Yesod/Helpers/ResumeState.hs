@@ -1,10 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FlexibleContexts #-}
 -- | 实现: 在 web 服务器处理时，把用户引导到其它网站后，回来继续原来的处理
 -- 通常用于处理过程中，发现用户需要登录，登录后可以继续原来的请求
 module Yesod.Helpers.ResumeState where

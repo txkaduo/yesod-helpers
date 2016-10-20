@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Yesod.Helpers.I18N where
 
 import Prelude

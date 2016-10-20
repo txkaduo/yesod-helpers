@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
 module Yesod.Helpers.Yaml (
     module Yesod.Helpers.Yaml
     , DefaultEnv(..)

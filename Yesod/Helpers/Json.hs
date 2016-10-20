@@ -1,7 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilies #-}
 module Yesod.Helpers.Json where
 
 import ClassyPrelude.Yesod

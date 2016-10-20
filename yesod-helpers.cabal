@@ -181,6 +181,28 @@ library
   if flag(prof)
       ghc-options:   -fprof-auto
 
+  extensions: TemplateHaskell
+              QuasiQuotes
+              OverloadedStrings
+              NoImplicitPrelude
+              MultiParamTypeClasses
+              TypeFamilies
+              GADTs
+              GeneralizedNewtypeDeriving
+              FlexibleContexts
+              FlexibleInstances
+              EmptyDataDecls
+              NoMonomorphismRestriction
+              DeriveDataTypeable
+              ViewPatterns
+              TupleSections
+              RecordWildCards
+              RankNTypes
+              DeriveGeneric
+              PartialTypeSignatures
+              CPP
+              ConstraintKinds
+
 test-suite test
     type:              exitcode-stdio-1.0
     main-is:           test.hs
