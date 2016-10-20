@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                yesod-helpers
-version:             0.14.9
+version:             0.14.10
 -- synopsis:            
 -- description:         
 license:             BSD3
@@ -71,6 +71,7 @@ library
                        Yesod.Helpers.Class
                        Yesod.Helpers.PersistDiff
                        Yesod.Helpers.VirtualHost
+                       Yesod.Helpers.Pager
 
   -- other-modules:       
   default-extensions:  CPP
