@@ -1,13 +1,11 @@
 module Yesod.Helpers.Persist where
 
-import Prelude
-import Yesod
+-- {{{1
+import ClassyPrelude.Yesod
 
-import Data.Maybe                           (catMaybes)
 import Control.DeepSeq                      (NFData(..), deepseq)
 
 #if MIN_VERSION_persistent(2, 0, 0)
-import Database.Persist.Sql                 (SqlBackend)
 #else
 import Database.Persist.Sql                 (MonadSqlPersist, Connection)
 #endif
@@ -16,25 +14,11 @@ import Database.Persist.Sql                 (transactionUndo
 
 import Control.Monad.Except                 (ExceptT, MonadError(..))
 
-#if MIN_VERSION_persistent(2, 0, 0)
-import Control.Monad.Trans.Reader           (ReaderT)
-#endif
-
-import Control.Monad                        (forM)
-import Data.Text                            (Text)
-import qualified Data.Text                  as T
-#if MIN_VERSION_base(4,8,0)
-#else
-import Data.Monoid                          (mconcat)
-#endif
-import Data.List                            ((\\))
-import Data.Conduit                         (Sink, await)
+import qualified Data.List                  as L
 
 import Control.Monad.State.Strict           (StateT)
 import qualified Control.Monad.State.Strict as S
-
-import Data.Map.Strict                      (Map)
-import qualified Data.Map.Strict            as Map
+-- }}}1
 
 
 class DBActionRunner a where
@@ -165,7 +149,7 @@ insertOrUpdateWithList fts new_ones = do
                                 else Just v
     new_keys <- forM to_be_inserted $ \v -> do
                     insertOrReplace v
-    return $ (new_keys, to_be_deleted \\ new_keys)
+    return $ (new_keys, to_be_deleted L.\\ new_keys)
 
 
 -- | like insertOrUpdateWithList, but also delete untouched keys.
@@ -359,7 +343,7 @@ deleteWhereExcept ::
     -> m [Key val]
 deleteWhereExcept filters keeps = do
     ks <- selectKeysList filters []
-    let to_del = ks \\ keeps
+    let to_del = ks L.\\ keeps
     mapM_ delete to_del
     return to_del
 
@@ -389,12 +373,12 @@ cget ::
     => Key val
     -> CachedInMap val m (Maybe val)
 cget k = do
-    mv <- S.gets $ Map.lookup k
+    mv <- S.gets $ lookup k
     case mv of
         Just v -> return $ Just v
         Nothing -> do
             mv2 <- lift $ get k
-            maybe (return ()) (S.modify . Map.insert k) mv2
+            maybe (return ()) (S.modify . insertMap k) mv2
             return mv2
 
 cselectList ::
@@ -442,7 +426,7 @@ cput ::
 #endif
     ) =>
     Entity val -> CachedInMap val m ()
-cput (Entity k v) = S.modify $ Map.insert k v
+cput (Entity k v) = S.modify $ insertMap k v
 
 
 getFieldDBName :: PersistEntity a => EntityField a typ -> DBName
@@ -467,14 +451,14 @@ escEntityDBName :: (PersistEntity a, Monad m) =>
 escEntityDBName conn = connEscapeName conn . entityDB . entityDef
 
 
-sinkEntityAsMap :: Monad m => Sink (Entity a) m (Map (Key a) a)
-sinkEntityAsMap = go Map.empty
+sinkEntityAsMap :: (Monad m, Ord (Key a)) => Sink (Entity a) m (Map (Key a) a)
+sinkEntityAsMap = go mempty
     where
         go s = do
             mx <- await
             case mx of
                 Nothing             -> return s
-                Just (Entity k v)   -> go $ Map.insert k v s
+                Just (Entity k v)   -> go $ insertMap k v s
 
 
 -- | escape char that is considered as "special" in string with specified escape char
@@ -513,13 +497,13 @@ unsafeEscapeForSqlLike =
     addEscape unsafeSpecialsForSqlLike '\\'
 
 unsafeEscapeForSqlLikeT :: Text -> Text
-unsafeEscapeForSqlLikeT = T.pack . unsafeEscapeForSqlLike . T.unpack
+unsafeEscapeForSqlLikeT = pack . unsafeEscapeForSqlLike . unpack
 
 unsafeRemoveEscapeForSqlLike :: String -> String
 unsafeRemoveEscapeForSqlLike = removeEscape unsafeSpecialsForSqlLike '\\'
 
 unsafeRemoveEscapeForSqlLikeT :: Text -> Text
-unsafeRemoveEscapeForSqlLikeT = T.pack . unsafeRemoveEscapeForSqlLike . T.unpack
+unsafeRemoveEscapeForSqlLikeT = pack . unsafeRemoveEscapeForSqlLike . unpack
 
 contains :: EntityField v Text -> Text -> Filter v
 contains = contains2 id
@@ -530,3 +514,6 @@ contains2 :: (PersistField a) =>
 contains2 conv field val = Filter field
                         (Left $ conv $ mconcat ["%", unsafeEscapeForSqlLikeT val, "%"])
                         (BackendSpecificFilter " LIKE ")
+
+
+-- vim: set foldmethod=marker:
