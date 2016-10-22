@@ -26,6 +26,14 @@ class DBActionRunner a where
     runDBWith :: (MonadBaseControl IO m, MonadIO m) => a -> DBAction a m r -> m r
 
 
+-- | A little "generalized" version of 'liftPersist'
+runPersistEnvReaderT :: (MonadReader env m, HasPersistBackend env r)
+                     => ReaderT r m b -> m b
+runPersistEnvReaderT f = do
+  e <- ask
+  runReaderT f (persistBackend e)
+
+
 rnfEntity ::
     ( NFData a
 #if MIN_VERSION_persistent(2, 0, 0)
