@@ -43,7 +43,7 @@ runPager (PagerSettings npp pn_param) total_num = do
   current_route <- fromMaybe (error "getCurrentRoute failed") <$> getCurrentRoute
 
   url_render <- getUrlRenderParams
-  pn <- fmap (min 1 . fromMaybe 1) $ runInputGet $ iopt intField pn_param
+  pn <- fmap (max 1 . fromMaybe 1) $ runInputGet $ iopt intField pn_param
 
   let link_to_pn p = url_render current_route $ insertMap pn_param (tshow p) params
       first_page_url = link_to_pn (1 :: Int)
