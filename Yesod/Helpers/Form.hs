@@ -60,8 +60,13 @@ nameToFs :: Text -> FieldSettings site
 nameToFs name = FieldSettings "" Nothing Nothing (Just name) []
 
 
+{-# DEPRECATED setPlaceholder "use setPlaceholder instead" #-}
 setPlaceholder :: Text -> FieldSettings site -> FieldSettings site
-setPlaceholder t (fs@FieldSettings{ fsAttrs = attrs }) =
+setPlaceholder = fsSetPlaceholder
+
+
+fsSetPlaceholder :: Text -> FieldSettings site -> FieldSettings site
+fsSetPlaceholder t (fs@FieldSettings{ fsAttrs = attrs }) =
   fs { fsAttrs = insertMap "placeholder" t attrs }
 
 
