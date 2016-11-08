@@ -1,37 +1,16 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Yesod.Helpers.Logger  where
 
-import Prelude
+import ClassyPrelude
 
-import Data.Map.Strict                      (Map)
-import qualified Data.Map.Strict            as Map
-import qualified Data.HashMap.Strict        as HM
-import Data.HashMap.Strict                  (HashMap)
-import qualified Data.Vector                as V
-import Data.Vector                          (Vector)
-import qualified Data.Text                  as T
 import Data.Default                         (Default(..))
-import Control.Applicative
+import qualified Data.Text                  as T
 import Control.DeepSeq                      (force)
-import Data.IORef
 
-#if MIN_VERSION_base(4,8,0)
-import Control.Monad
-#else
-import Control.Monad hiding (forM)
-import Data.Monoid
-import Data.Traversable                     (traverse, forM)
-#endif
-
-import Data.String                          (fromString)
-import Data.List                            (stripPrefix)
-import Data.Maybe
 import Network.Wai.Logger                   (DateCacheGetter)
 import Yesod.Core.Types
-import System.FilePath                      ((</>), splitFileName, takeFileName)
+import System.FilePath                      (splitFileName, takeFileName)
 import System.Directory                     (renameFile)
-import System.IO                            (hPutStrLn, stderr)
-import System.IO.Error                      (catchIOError)
-import Data.Int                             (Int64)
 import qualified Text.Parsec.Number         as PN
 import Text.Parsec                          (parse, eof)
 import qualified Text.Parsec
@@ -41,7 +20,6 @@ import System.Posix.Files                   (getFileStatus, fileSize)
 import System.Posix.Types                   (COff(..))
 import Control.Monad.Trans.Resource         (runResourceT)
 import Control.Monad.Logger
-import Control.Monad.Reader                 (ask)
 import System.Log.FastLogger
 
 import Data.Aeson
@@ -74,7 +52,7 @@ type LogSourceLevelMap = Map LogSource (Maybe LogLevel)
 shouldLogByLogSourceLevelMap :: LogSourceLevelMap -> LogSource -> LogLevel -> Maybe Bool
 shouldLogByLogSourceLevelMap the_map source level = do
     fmap (fromMaybe False . fmap (level >=)) $
-        Map.lookup source the_map <|> Map.lookup "_" the_map
+        lookup source the_map <|> lookup "_" the_map
 
 
 -- | A helper for reading LogSourceLevelMap from YAML.
@@ -84,14 +62,14 @@ shouldLogByLogSourceLevelMap the_map source level = do
 --    _       : LevelDebug
 parseLogSourceLevelMap :: Value -> AT.Parser LogSourceLevelMap
 parseLogSourceLevelMap val = do
-    the_map <- parseJSON val
-    fmap Map.fromList $ forM (Map.toList the_map) $ \(k, v) -> do
+    the_map :: HashMap _ _ <- parseJSON val
+    fmap mapFromList $ forM (mapToList the_map) $ \(k, v) -> do
         let new_k = fromString k
         new_v <- nullValueToNothing v >>= traverse (parseTextByRead "LogLevel")
         return (new_k, new_v)
 
 
-logLevelFromText :: T.Text -> LogLevel
+logLevelFromText :: Text -> LogLevel
 logLevelFromText "debug"        = LevelDebug
 logLevelFromText "LevelDebug"   = LevelDebug
 
@@ -147,7 +125,7 @@ shoudLogBySrcLevelMap ::
     -> LogLevel
     -> Bool
 shoudLogBySrcLevelMap hm src level =
-    case HM.lookup src hm <|> HM.lookup "*" hm of
+    case lookup src hm <|> lookup "*" hm of
         Nothing         -> False
         Just req_level  -> shouldLogByLevel req_level level
 
@@ -190,13 +168,13 @@ renewLogFileAtMaxSize (LogFileAtMaxSize max_sz fp size_cnt ls) = do
                     else
                         writeIORef size_cnt fsize
 
-    renew `catchIOError` (\e -> do
-        hPutStrLn stderr $ "got exception when renewing log file: " ++ show e)
+    renew `catchIOError` annotateRethrowIOError "renewLogFileAtMaxSize" Nothing (Just fp)
 
 
 -- | create LogFileAtMaxSize
 newLogFileAtMaxSize :: Int64 -> BufSize -> FilePath -> IO LogFileAtMaxSize
-newLogFileAtMaxSize max_size buf_size fp = do
+newLogFileAtMaxSize max_size buf_size fp =
+  handle (annotateRethrowIOError "newLogFileAtMaxSize" Nothing (Just fp)) $ do
     logger_set <- newFileLoggerSet buf_size fp
     COff fsize <- fileSize <$> getFileStatus fp
 
@@ -222,7 +200,9 @@ parseSomeLogStoreObj m_bp o = do
             case m_sz of
                 Nothing -> do
                     return $ do
-                        liftM SomeLogStore $ newFileLoggerSet buf_size fp
+                        liftM SomeLogStore $
+                          newFileLoggerSet buf_size fp
+                            `catchIOError` annotateRethrowIOError "newFileLoggerSet" Nothing (Just fp)
 
                 Just sz -> do
                     return $ do
@@ -239,14 +219,14 @@ parseSomeLogStoreObj m_bp o = do
 
 parseSomeShouldLogPredObj :: Object -> AT.Parser (IO SomeShouldLogPredicator)
 parseSomeShouldLogPredObj obj = do
-    src_level_map <- obj .: "src-level" >>= parse_map
+    src_level_map :: HashMap _ _ <- obj .: "src-level" >>= parse_map
 
     return $ return $ SomeShouldLogPredicator src_level_map
 
     where
         parse_map = withObject "source-to-level-map" $ \o -> do
-                        liftM HM.fromList $
-                            forM (HM.toList o) $ \(k, v) -> do
+                        liftM mapFromList $
+                            forM (mapToList o) $ \(k, v) -> do
                                 lv <- withText "LogLevel" (return . logLevelFromText) v
                                 return (T.strip k, lv)
 
@@ -258,13 +238,13 @@ data LoggerConfig = LoggerConfig
                             -- ^ default value to use when no others handles the logs
 
 instance Default LoggerConfig where
-    def = LoggerConfig V.empty Nothing
+    def = LoggerConfig mempty Nothing
 
 instance FromJSON LoggerConfig where
     parseJSON = withObject "LoggerConfig" $ \obj -> do
         m_base_path <- obj .:? "base-path"
         LoggerConfig
-            <$> (fmap V.fromList $ obj .: "others" >>= parseSomeObjects "LoggerConfig others" (parse_obj m_base_path))
+            <$> (fmap fromList $ obj .: "others" >>= parseSomeObjects "LoggerConfig others" (parse_obj m_base_path))
             <*> (obj .:? "default" >>= traverse (parse_obj m_base_path))
         where
             parse_obj m_bp = \o -> do
@@ -280,7 +260,7 @@ data LogHandlerV = LogHandlerV
 
 newLogHandlerV :: DateCacheGetter -> LoggerConfig -> IO LogHandlerV
 newLogHandlerV getdate (LoggerConfig v m_def) = do
-    v2 <- V.forM v $ uncurry (liftM2 (,))
+    v2 <- forM v $ uncurry (liftM2 (,))
     m_def2 <- traverse (uncurry (liftM2 (,))) m_def
     return $ LogHandlerV getdate v2 m_def2
 
@@ -301,7 +281,7 @@ logFuncByHandlerV (LogHandlerV getdate v m_def) loc src level msg = do
                     return log_str
                 Just x -> return x
 
-    not_done <- liftM (V.null . V.filter isJust) $ V.forM v $
+    not_done <- liftM (null . filter isJust) $ forM v $
         \(SomeLogStore store, SomeShouldLogPredicator p) -> do
             should_log <- lxShouldLog p src level
             if should_log
@@ -332,7 +312,7 @@ chooseYesodLoggerBySrcLV :: LogHandlerV -> LogSource -> IO (Maybe Logger)
 chooseYesodLoggerBySrcLV (LogHandlerV getdate v _def_logger_set) src = do
     stores <-
         forM ([LevelDebug, LevelInfo, LevelWarn, LevelError, LevelOther ""]) $ \level -> do
-            liftM catMaybes $ forM (V.toList v) $
+            liftM catMaybes $ forM (toList v) $
                 \(store, SomeShouldLogPredicator p) -> do
                     should_log <- lxShouldLog p src level
                     return $ if should_log
@@ -406,6 +386,15 @@ cutLogFileThenArchive log_path = do
             return x
 
 
+-- | To catch IOError rethrow with better message
+annotateRethrowIOError :: String
+                       -> Maybe Handle
+                       -> Maybe FilePath
+                       -> IOError
+                       -> IO a
+annotateRethrowIOError loc m_handle m_fp ex =
+  throwIO $ annotateIOError ex loc m_handle m_fp
+
 -- | XXX: copied from source of yesod-core
 formatLogMessage :: DateCacheGetter
                  -> Loc
@@ -421,7 +410,7 @@ formatLogMessage getdate loc src level msg = do
         (case level of
             LevelOther t -> toLogStr t
             _ -> toLogStr $ drop 5 $ show level) `mappend`
-        (if T.null src
+        (if null src
             then mempty
             else "#" `mappend` toLogStr src) `mappend`
         "] " `mappend`
