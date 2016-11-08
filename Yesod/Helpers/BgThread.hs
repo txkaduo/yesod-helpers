@@ -6,6 +6,9 @@ import Control.Concurrent.STM               (check)
 import Control.Concurrent.Async             (Async, pollSTM, async)
 import Control.Monad.Logger
 import Control.Monad.Writer.Class           (MonadWriter(..))
+import Data.List.NonEmpty                   (NonEmpty(..), nonEmpty)
+import Network                              (PortID)
+import System.Timeout                       (timeout)
 
 
 -- | helper used in devel.hs and main.hs of yesod
@@ -66,3 +69,42 @@ startBgThreadW :: (MonadIO m, MonadWriter w m, IsSequence w, Element w ~ (Text, 
 startBgThreadW ident action = do
   liftIO (startBgThread ident action)
     >>= tell . singleton
+
+
+-- | 逐一尝试端口，直至列表结束或第一个成功
+-- 所执行的函数应该是个长期运行的服务器线程
+tryPortToRunAndCheck :: Show a
+                     => (LoggingT IO () -> IO())
+                     -> Int   -- ^ Seconds to wait to ensure working thread does not exit with exceptions
+                     -> NonEmpty a
+                     -> Text
+                     -> (a -> IO ())
+                              -- ^ real work, may never return
+                     -> IO ()
+tryPortToRunAndCheck run_logging make_sure_alive_seconds ports svc_name f = do
+  let report_port ex_mvar port = do
+        -- 等待若干秒，如果没收到异常，认为服务器线程成功启动
+        m_ex <- timeout (1000 * 1000 * make_sure_alive_seconds) $ readMVar ex_mvar
+        run_logging $
+          case m_ex of
+            Nothing -> do
+                $logInfo $ svc_name <> ": running on port: " <> tshow port
+            Just ex -> do
+                $logWarn $ svc_name <> ": failed to use port " <> tshow port
+                          <> ", error was: " <> tshow ex
+
+  let go (port :| other_ports) = do
+        ex_mvar <- newEmptyMVar
+        void $ fork $ report_port ex_mvar port
+        f port `catchIOError`
+          \ex -> do
+              putMVar ex_mvar ex
+              case nonEmpty other_ports of
+                Nothing -> do
+                  run_logging $
+                    $logError $ svc_name <> ": all ports failed."
+                  throwIO $ userError $ "Failed to run on any port: " <> unpack svc_name
+
+                Just ps -> go ps
+
+  go ports
