@@ -7,7 +7,6 @@ import Control.Concurrent.Async             (Async, pollSTM, async)
 import Control.Monad.Logger
 import Control.Monad.Writer.Class           (MonadWriter(..))
 import Data.List.NonEmpty                   (NonEmpty(..), nonEmpty)
-import Network                              (PortID)
 import System.Timeout                       (timeout)
 
 
