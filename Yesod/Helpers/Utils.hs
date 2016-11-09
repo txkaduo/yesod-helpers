@@ -123,6 +123,37 @@ writeChanWaitMVar ch mk_cmd = do
 
 
 -- | Run monadic computation forever, log and retry when exceptions occurs.
+-- Loop will stop when the following conditions are all true:
+-- 'block_check_exit' returns True
+-- 'f' returns False
+foreverLogExcWhen :: (MonadIO m, MonadLogger m, MonadBaseControl IO m)
+                  => IO Bool     -- ^ This function should be a blocking op,
+                              -- return True if the infinite loop should be aborted.
+                  -> Int      -- ^ ms
+                  -> m Bool
+                  -> m ()
+foreverLogExcWhen block_check_exit interval f = go False
+  where
+    go waiting_exit = do
+      need_more <- f `catchAny` h
+      m_b <- if waiting_exit
+                then return $ Just True
+                else liftIO (timeout interval block_check_exit)
+      case m_b of
+        Nothing -> go False
+        Just need_exit -> do
+          if need_exit && not need_more
+             then return ()
+             else go need_exit
+
+    h e = do
+        $(logError) $ "Got exception in loop: " <> tshow e
+        return True
+
+
+-- | Run monadic computation forever, log and retry when exceptions occurs.
+-- Loop will stop when the following conditions are all true:
+-- 'block_check_exit' returns True
 foreverLogExc :: (MonadIO m, MonadLogger m, MonadBaseControl IO m)
                 => IO Bool     -- ^ This function should be a blocking op,
                             -- return True if the infinite loop should be aborted.
