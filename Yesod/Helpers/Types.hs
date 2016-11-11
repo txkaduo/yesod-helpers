@@ -2,46 +2,28 @@
 {-# LANGUAGE StandaloneDeriving #-}
 module Yesod.Helpers.Types where
 
-import Prelude
+import ClassyPrelude.Yesod hiding (Proxy)
 import qualified Data.Aeson                 as A
 import qualified Data.ByteString.Base64.URL as B64U
 import qualified Data.ByteString.Char8      as C8
 import qualified Data.ByteString.Lazy       as LB
--- import qualified Data.Text                  as T
-import qualified Data.Text.Encoding         as TE
 import           Data.Proxy                 (Proxy(..))
-
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative                  ((<$>))
-#endif
 
 import Language.Haskell.TH.Lift             (deriveLift)
 import Data.Time                            (TimeZone, timeZoneOffsetString)
 #if MIN_VERSION_time(1,5,0)
-import Data.Time.Format                     (defaultTimeLocale)
 import Data.Time                            (parseTimeM)
 #else
 import System.Locale                        (defaultTimeLocale)
 import Data.Time                            (parseTime)
 #endif
 
-import Control.Monad                        (mzero, void)
-import Data.Foldable                        (asum)
-import Data.List                            (intersperse)
 import Data.SafeCopy
-import Data.String                          (fromString)
 import Data.Binary                          (Binary)
 import Data.Binary.Orphans                  ()
-import Data.Typeable                        (Typeable)
-import Data.Text                            (Text)
-import Database.Persist                     (PersistField(..), SqlType(SqlString))
 import Database.Persist.Sql                 (PersistFieldSql(..))
 import Control.DeepSeq                      (NFData(..))
 import Control.DeepSeq.Generics             (genericRnf)
-import GHC.Generics                         (Generic)
-import Yesod.Core                           (PathPiece(..), RedirectUrl(..))
-import Data.ByteString                      (ByteString)
-import Data.Aeson                           (FromJSON(..), ToJSON(..))
 import qualified System.FilePath.Glob       as G
 import qualified Data.Binary                as Binary
 import Text.Parsec
@@ -79,31 +61,24 @@ instance SimpleStringRep Gender where
     simpleEncode Female = "female"
 
     simpleParser = choice
-        [ try $ string "male" >> return Male
-        , try $ string "female" >> return Female
+        [ Text.Parsec.try $ string "male" >> return Male
+        , Text.Parsec.try $ string "female" >> return Female
         ]
 
 
 -- | A URL in Text.
 newtype UrlText = UrlText { unUrlText :: Text}
-  deriving (Show, Eq, Ord, Typeable, Generic, Binary, NFData)
+  deriving ( Show, Eq, Ord, Typeable, Generic, Binary, NFData
+           , Hashable, PersistField, PersistFieldSql
+           , FromJSON, ToJSON
+           )
 $(deriveLift ''UrlText)
-
-instance PersistField UrlText where
-    toPersistValue = toPersistValue . unUrlText
-    fromPersistValue = fmap UrlText . fromPersistValue
-
-instance PersistFieldSql UrlText where
-    sqlType _ = SqlString
 
 instance SafeCopy UrlText where
     getCopy             = contain $ UrlText <$> safeGet
     putCopy (UrlText x) = contain $ safePut x
     errorTypeName _     = "UrlText"
 
-instance FromJSON UrlText where parseJSON = fmap UrlText . parseJSON
-
-instance ToJSON UrlText where toJSON = toJSON . unUrlText
 
 instance RedirectUrl m UrlText where toTextUrl = toTextUrl . unUrlText
 
@@ -114,7 +89,7 @@ newtype XTimeZone = XTimeZone { unXTimeZone :: TimeZone }
 instance SimpleStringRep XTimeZone where
     simpleEncode = timeZoneOffsetString . unXTimeZone
     simpleParser = do
-        manyTill anyChar (eof <|> void space) >>=
+        manyTill anyChar (eof Text.Parsec.<|> void space) >>=
             maybe mzero (return . XTimeZone) .
 #if MIN_VERSION_time(1,5,0)
                 (parseTimeM False defaultTimeLocale "%z")
@@ -215,26 +190,26 @@ instance SimpleStringRep VerConstraint where
                                     , ")"
                                     ]
 
-    simpleParser = try (parens p) <|> p
+    simpleParser = Text.Parsec.try (parens p) Text.Parsec.<|> p
         where
             p = choice
-                [ try $ p_ord ">" (VerWithOrder GT)
-                , try $ p_ord "==" (VerWithOrder EQ)
-                , try $ p_ord "<" (VerWithOrder LT)
-                , try $ p_ord ">=" (VerWithOrderN LT)
-                , try $ p_ord "<=" (VerWithOrderN GT)
-                , try $ p_ord "/=" (VerWithOrderN EQ)
-                , try $ p_glob "==" VerWithGlob
-                , try $ p_glob "/=" VerWithGlobN
-                , try $ p_and
-                , try $ p_or
+                [ Text.Parsec.try $ p_ord ">" (VerWithOrder GT)
+                , Text.Parsec.try $ p_ord "==" (VerWithOrder EQ)
+                , Text.Parsec.try $ p_ord "<" (VerWithOrder LT)
+                , Text.Parsec.try $ p_ord ">=" (VerWithOrderN LT)
+                , Text.Parsec.try $ p_ord "<=" (VerWithOrderN GT)
+                , Text.Parsec.try $ p_ord "/=" (VerWithOrderN EQ)
+                , Text.Parsec.try $ p_glob "==" VerWithGlob
+                , Text.Parsec.try $ p_glob "/=" VerWithGlobN
+                , Text.Parsec.try $ p_and
+                , Text.Parsec.try $ p_or
                 ]
 
             p_ord sym ctor = symbol sym >> fmap ctor simpleParser
 
             p_glob sym ctor = do
                 _ <- symbol sym
-                s <- manyTill anyChar (eof <|> void space)
+                s <- manyTill anyChar (eof Text.Parsec.<|> void space)
                 either (const mzero) (return . ctor) $
                         G.tryCompileWith G.compDefault s
 
@@ -275,7 +250,7 @@ instance PathPiece B64UByteStringPathPiece where
         fromString $ C8.unpack $ B64U.encode bs
 
     fromPathPiece t = do
-        case B64U.decode (TE.encodeUtf8 t) of
+        case B64U.decode (encodeUtf8 t) of
             Left _ -> mzero
             Right bs -> return $ B64UByteStringPathPiece bs
 
@@ -297,7 +272,7 @@ instance Binary a => PathPiece (B64UByteString a) where
         fromString $ C8.unpack $ B64U.encode $ LB.toStrict $ Binary.encode bs
 
     fromPathPiece t = either (const Nothing) Just $ do
-        bs <- B64U.decode (TE.encodeUtf8 t)
+        bs <- B64U.decode (encodeUtf8 t)
         (left_bs, _, y) <- either (\(_, _, x) -> Left x) Right $ Binary.decodeOrFail $ LB.fromStrict bs
         if LB.null left_bs
             then return $ B64UByteString y
