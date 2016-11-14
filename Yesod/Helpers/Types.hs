@@ -293,6 +293,10 @@ instance PersistField a => PersistField (B64UByteString a) where
 instance PersistFieldSql a => PersistFieldSql (B64UByteString a) where
   sqlType _ = sqlType (Proxy :: Proxy a)
 
+instance Binary a => Binary (B64UByteString a) where
+  put = Binary.put . unB64UByteString
+  get = B64UByteString <$> Binary.get
+
 
 -- | A wrapper type to make it store as bytestring in DB, in JSON format.
 newtype JsonSerialized a =  JsonSerialized { unJsonSerialized :: a }
