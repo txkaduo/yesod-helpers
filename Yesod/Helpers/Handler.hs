@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Yesod.Helpers.Handler where
 
 -- {{{1 imports
@@ -24,7 +25,7 @@ import Yesod.Helpers.Form2
 import Yesod.Helpers.Form                   (jsonOrHtmlOutputForm')
 import Yesod.Helpers.Utils                  (nullToNothing)
 
-import Yesod.Helpers.JSend                  (provideRepJsendAndJsonp)
+import Yesod.Helpers.JSend                  (provideRepJsendAndJsonp, JSendMsg(JSendSuccess))
 -- }}}1
 
 
@@ -232,6 +233,26 @@ jsonOrHtmlOutputFormHandleResult show_page f result = do
         FormFailure errs    -> showf errs
         FormSuccess x       -> (lift $ f x) >>= either showf' return
 
+-- | 如果是普通页面输出，则，调用 setMessageI 并重定向至指定的 route
+-- 如果是 JSON 输出，则按操作成功的方式输出文字信息
+jsonOrRedirect ::
+    forall site message url.
+    (RenderMessage site message, RedirectUrl site url) =>
+    message -> url -> HandlerT site IO TypedContent
+jsonOrRedirect msg route = do
+    selectRep $ do
+        provideRepJsendAndJsonp $ do
+            msgRender <- getMessageRender
+            let tmsg = msgRender msg
+            turl <- toTextUrl route
+            let dat = object $ [( "url" .= turl ), ( "msg" .= tmsg )]
+            return $ JSendSuccess dat
+        provideRep $ html 
+        where
+            html :: HandlerT site IO Html
+            html = do
+                setMessageI $ msg
+                redirect route
 
 matchMimeType :: ContentType -> ContentType -> Bool
 matchMimeType expected actual =
