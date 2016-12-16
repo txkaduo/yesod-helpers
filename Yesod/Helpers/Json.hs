@@ -2,15 +2,20 @@
 module Yesod.Helpers.Json where
 
 import ClassyPrelude.Yesod
+import Control.Monad.Writer (Writer)
 import qualified Data.Text.Encoding         as TE
 import qualified Data.ByteString.Lazy       as LB
 import qualified Data.Aeson.Parser          as AP
 import qualified Data.Aeson                 as A
 import Data.Aeson.Types                     (Pair, parseEither)
 import Data.Attoparsec.ByteString           (parseOnly)
+import Data.Monoid (Endo)
+import Text.Julius (Javascript)
 
 
 import Yesod.Helpers.Handler                (lookupReqAccept, matchMimeType)
+import Yesod.Helpers.JSend
+
 
 jsonErrorOutput' :: (ToJSON a) => a -> [ (Text, Value) ]
 jsonErrorOutput' msg = [ "message" .= msg, "result" .= ("fail" :: Text) ]
@@ -103,6 +108,16 @@ redirectOrJson401 route = do
            sendResponseStatus unauthorized401 ()
         else
             redirect route
+
+
+provideRepRedirectOrJs401 :: forall m url. (MonadHandler m, RedirectUrl (HandlerSite m) url)
+                          => url
+                          -> Writer (Endo [ProvidedRep m]) ()
+provideRepRedirectOrJs401 url = do
+  provideRep $ (redirectOrJson401 url :: m JSendMsg)
+  provideRep $ (redirectOrJson401 url :: m Javascript)
+  provideRep $ (redirect url :: m Html)
+
 
 -- | 把一个 Key 用JSON字串表示
 jsonEncodeKey ::
