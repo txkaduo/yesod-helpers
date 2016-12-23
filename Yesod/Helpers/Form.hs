@@ -60,7 +60,7 @@ nameToFs :: Text -> FieldSettings site
 nameToFs name = FieldSettings "" Nothing Nothing (Just name) []
 
 
-{-# DEPRECATED setPlaceholder "use setPlaceholder instead" #-}
+{-# DEPRECATED setPlaceholder "use fsSetPlaceholder instead" #-}
 setPlaceholder :: Text -> FieldSettings site -> FieldSettings site
 setPlaceholder = fsSetPlaceholder
 
@@ -512,8 +512,51 @@ stripUpFront fd = fd { fieldParse = new_parse }
     where
         new_parse = fieldParse fd . map T.strip
 
+
+checkFieldDBUniqueId ::
+    ( YesodPersist site
+    , RenderMessage site msg
+#if MIN_VERSION_persistent(2, 0, 0)
+
+#if MIN_VERSION_persistent(2, 5, 0)
+    , PersistRecordBackend val (YesodPersistBackend site)
+#else
+    , PersistEntityBackend val ~ YesodPersistBackend site
+    , PersistEntity val
+#endif
+
+    , PersistUnique (YesodPersistBackend site)
+#else
+    , PersistUnique (YesodDB site)
+    , PersistMonadBackend (YesodDB site) ~ PersistEntityBackend val
+#endif
+    ) =>
+    (a -> Unique val)
+    -> msg
+    -> Maybe (Key val)
+        -- ^ Old value. Don't check DB if result is the same as this.
+    -> Field (HandlerT site IO) a
+    -> Field (HandlerT site IO) a
+-- {{{1
+checkFieldDBUniqueId mk_unique msg m_old_id = checkM chk
+  where
+    chk t = runDB $ runExceptT $ do
+      m_rec <- lift $ getBy (mk_unique t)
+
+      case m_rec of
+        Nothing -> return ()
+        Just (Entity rec_id _) -> do
+          case m_old_id of
+            Nothing     -> throwError msg
+            Just old_id -> unless (old_id == rec_id) $ throwError msg
+
+      return t
+-- }}}1
+
+
 -- | check the result by constructing a Unique key,
 -- if record matching that Unique key already exists, report the error message.
+{-# DEPRECATED checkFieldDBUnique2 "use setPlaceholder instead" #-}
 checkFieldDBUnique2 ::
     ( YesodPersist site
     , RenderMessage site msg
@@ -551,6 +594,7 @@ checkFieldDBUnique2 mk_unique msg m_old_val = checkMMap chk id
 -- }}}1
 
 
+{-# DEPRECATED checkFieldDBUnique "use setPlaceholder instead" #-}
 checkFieldDBUnique ::
     ( YesodPersist site
     , RenderMessage site msg
