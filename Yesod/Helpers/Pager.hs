@@ -2,6 +2,9 @@ module Yesod.Helpers.Pager where
 
 -- {{{1 imports
 import ClassyPrelude.Yesod
+
+import qualified Data.Conduit.Combinators as CC
+import qualified Data.Conduit.List        as CL
 -- }}}1
 
 
@@ -82,6 +85,28 @@ runPager (PagerSettings npp pn_param) pn total_num = do
     exclude_params = [ "_hasdata"  -- a special param name used in yesod internally
                       ]
 -- }}}1
+
+
+
+-- | 把输入的数据按分页的参数取出一小部分列表，并得到总数
+-- CAUTION: 这通常使用数据库 SQL 的分页参数是更好的替代做法．
+--          但这个做法的好处是:
+--          * 代码看上去简单些．使用 SQL 方法要么发起多一次 count(*) 的查询，
+--            要么要使用比较复杂的SQL语句（要使用rawSql）
+--          * 有时候数据源并不一句SQL语句得到，而是多个查询的组合，难以使用SQL方法分页
+sinkPagedListCount :: Monad m
+                   => Int
+                   -> Int
+                   -> Sink a m ([a], Int)
+-- {{{1
+sinkPagedListCount npp0 pn0 =
+  getZipSink $ (,) <$> ZipSink (CL.drop ((pn -1) * npp) >> CL.take npp)
+                   <*> ZipSink CC.length
+  where
+    pn = max 1 pn0
+    npp = max 1 npp0
+-- }}}1
+
 
 
 -- vim: set foldmethod=marker:
