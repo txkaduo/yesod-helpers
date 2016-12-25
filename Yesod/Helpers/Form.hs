@@ -22,6 +22,7 @@ import qualified Data.ByteString.Base16     as B16
 import qualified Data.ByteString.Base64     as B64
 import qualified Data.ByteString.Base64.URL as B64U
 import qualified Data.Aeson.Types           as A
+import qualified Data.Aeson                 as A
 import qualified Codec.Archive.Zip          as Zip
 import qualified Control.Monad.Trans.State.Strict as SS
 import qualified Data.Conduit.Attoparsec    as CA
@@ -783,6 +784,20 @@ renderBootstrapS' extra result = do
 
 smToForm :: Monad m => SMForm m a -> MForm m a
 smToForm = flip SS.evalStateT []
+
+
+jsonTextField :: (FromJSON a, ToJSON a
+                 , RenderMessage (HandlerSite m) FormMessage
+                 , Monad m
+                 )
+              => Field m a
+-- {{{1
+jsonTextField = checkMMap parse_json (toStrict . decodeUtf8 . A.encode) strippedTextField
+  where
+    parse_json t = case A.eitherDecodeStrict (encodeUtf8 t) of
+                     Left err -> return $ Left $ asText $ fromString err
+                     Right x -> return $ Right x
+-- }}}1
 
 
 yamlTextareaField ::
