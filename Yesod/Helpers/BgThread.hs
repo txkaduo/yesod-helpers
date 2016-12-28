@@ -70,6 +70,14 @@ startBgThreadW ident action = do
     >>= tell . singleton
 
 
+startBgThreadIdentW :: (MonadIO m, MonadWriter w m, IsSequence w, Element w ~ (Text, Async r))
+                    => Text
+                    -> (Text -> IO r)
+                    -> m ()
+startBgThreadIdentW ident action = do
+  liftIO (startBgThread ident (action ident)) >>= tell . singleton
+
+
 -- | 逐一尝试端口，直至列表结束或第一个成功
 -- 所执行的函数应该是个长期运行的服务器线程
 tryPortToRunAndCheck :: Show a

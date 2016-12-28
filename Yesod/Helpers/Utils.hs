@@ -132,7 +132,16 @@ foreverLogExcWhen :: (MonadIO m, MonadLogger m, MonadBaseControl IO m)
                   -> Int      -- ^ ms
                   -> m Bool
                   -> m ()
-foreverLogExcWhen block_check_exit interval f = go False
+foreverLogExcWhen = foreverLogExcIdentWhen ""
+
+foreverLogExcIdentWhen :: (MonadIO m, MonadLogger m, MonadBaseControl IO m)
+                       => Text
+                       -> IO Bool     -- ^ This function should be a blocking op,
+                                   -- return True if the infinite loop should be aborted.
+                       -> Int      -- ^ ms
+                       -> m Bool
+                       -> m ()
+foreverLogExcIdentWhen thr_ident block_check_exit interval f = go False
   where
     go waiting_exit = do
       need_more <- f `catchAny` h
@@ -147,7 +156,10 @@ foreverLogExcWhen block_check_exit interval f = go False
              else go need_exit
 
     h e = do
-        $(logError) $ "Got exception in loop: " <> tshow e
+        if null thr_ident
+           then $(logError) $ "Got exception in loop: " <> tshow e
+           else $(logError) $ thr_ident <> ": Got exception in loop: " <> tshow e
+
         return True
 
 
@@ -160,14 +172,26 @@ foreverLogExc :: (MonadIO m, MonadLogger m, MonadBaseControl IO m)
                 -> Int      -- ^ ms
                 -> m ()
                 -> m ()
-foreverLogExc block_check_exit interval f = go
+foreverLogExc = foreverLogExcIdent ""
+
+
+foreverLogExcIdent :: (MonadIO m, MonadLogger m, MonadBaseControl IO m)
+                   => Text
+                   -> IO Bool     -- ^ This function should be a blocking op,
+                               -- return True if the infinite loop should be aborted.
+                   -> Int      -- ^ ms
+                   -> m ()
+                   -> m ()
+foreverLogExcIdent thr_ident block_check_exit interval f = go
     where
         go = do
             f `catchAny` h
             liftIO (timeout interval block_check_exit)
                 >>= maybe go (const $ return ())
         h e = do
-            $(logError) $ "Got exception in loop: " <> tshow e
+            if null thr_ident
+               then $(logError) $ "Got exception in loop: " <> tshow e
+               else $(logError) $ thr_ident <> ": Got exception in loop: " <> tshow e
 
 
 urlUpdateQueryText :: (QueryText -> QueryText)
