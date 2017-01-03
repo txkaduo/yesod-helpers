@@ -68,7 +68,7 @@ getLoggedInUser :: forall u site.
     HandlerT site IO (Maybe (Entity u))
 getLoggedInUser = do
     let mu = Nothing :: Maybe u
-    maybe_key <- liftM (join . (fmap $ loginIdentToKey mu)) $ getLoggedInIdent mu
+    maybe_key <- getLoggedInId mu
     case maybe_key of
         Nothing -> return Nothing
         Just k -> runDB $ liftM (fmap $ Entity k) $ get k
@@ -77,6 +77,9 @@ getLoggedInIdent :: (LoginUser u, MonadHandler m, Monad n) => n u -> m (Maybe Te
 getLoggedInIdent mu = do
     let sk = loginIdentSK mu
     lookupSession sk
+
+getLoggedInId :: (LoginUser u, MonadHandler m, Monad n) => n u -> m (Maybe (Key u))
+getLoggedInId mu = liftM (join . (fmap $ loginIdentToKey mu)) $ getLoggedInIdent mu
 
 -- | 在 session 中标记某个用户为登录状态
 markLoggedIn :: forall u site . (LoginUser u) => Key u -> HandlerT site IO ()
