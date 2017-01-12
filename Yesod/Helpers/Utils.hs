@@ -23,6 +23,24 @@ import qualified Blaze.ByteString.Builder   as BBB
 import qualified Data.ByteString.UTF8       as UTF8
 
 
+
+-- | 用于隐藏用户名，昵称等名字
+-- 保留首尾字符，中间字符用*代替
+maskName :: String -> String
+-- {{{1
+maskName t = do
+  case t of
+    [] -> "*"
+    (x:xs) -> case reverse xs of
+                [] -> "*"
+                (y:ys) -> x : replicate (length ys) '*' <> [y]
+-- }}}1
+
+
+maskNameT :: Text -> Text
+maskNameT = pack . maskName . unpack
+
+
 toHalfWidthEnglishAlpha :: Char -> Char
 toHalfWidthEnglishAlpha ch
     | ch >= 'Ａ' && ch <= 'Ｚ'  = chr $ ord 'A' + ord ch - ord 'Ａ'
