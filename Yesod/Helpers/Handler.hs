@@ -29,6 +29,15 @@ import Yesod.Helpers.JSend                  (provideRepJsendAndJsonp, JSendMsg(J
 -- }}}1
 
 
+-- | Tell browser never cache this response
+-- See: http://stackoverflow.com/questions/49547/how-to-control-web-page-caching-across-all-browsers/2068407
+neverCache :: MonadHandler m => m ()
+neverCache = do
+  addHeader "Cache-Control" "no-cache, no-store, must-revalidate"
+  addHeader "Pragma" "no-cache"
+  addHeader "Expires" "0"
+
+
 setLastModified :: UTCTime -> HandlerT site IO ()
 setLastModified = addHeader "Last-Modified" . formatRFC1123
 
@@ -247,7 +256,7 @@ jsonOrRedirect msg route = do
             turl <- toTextUrl route
             let dat = object $ [( "url" .= turl ), ( "msg" .= tmsg )]
             return $ JSendSuccess dat
-        provideRep $ html 
+        provideRep $ html
         where
             html :: HandlerT site IO Html
             html = do
