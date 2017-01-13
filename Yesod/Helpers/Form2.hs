@@ -17,6 +17,8 @@ module Yesod.Helpers.Form2
     , addEMOverallError
     , renderBootstrapES
     , renderBootstrapES'
+    , renderBootstrap3ES
+    , renderBootstrap3ES'
     , jsendFormData
     ) where
 
@@ -308,6 +310,7 @@ semreqOpt :: (HandlerSite m ~ site, MonadHandler m, RenderMessage site FormMessa
 semreqOpt field settings initv = do
   fmap (fmap Just) $ semreq field settings (join initv)
 
+
 renderBootstrapES :: Monad m =>
                     Markup
                     -> FormResult a
@@ -326,6 +329,20 @@ renderBootstrapES extra result = do
 #endif
             aform extra
 
+
+#if MIN_VERSION_yesod_form(1, 3, 8)
+renderBootstrap3ES :: Monad m
+                   => BootstrapFormLayout
+                   -> Markup
+                   -> FormResult a
+                   -> SEMForm m (FormResult a, WidgetT (HandlerSite m) IO ())
+renderBootstrap3ES layout extra result = do
+    views <- liftM reverse $ SS.get
+    let aform = formToAForm $ return (result, views)
+    lift $ lift $ renderBootstrap3 layout aform extra
+#endif
+
+
 -- | combines renderBootstrapS and runSEMForm, smToForm
 renderBootstrapES' :: Monad m =>
     Markup
@@ -333,6 +350,18 @@ renderBootstrapES' :: Monad m =>
     -> EMForm m (FormResult a, WidgetT (HandlerSite m) IO ())
 renderBootstrapES' extra result = do
     runSEMForm $ result >>= renderBootstrapES extra
+
+
+#if MIN_VERSION_yesod_form(1, 3, 8)
+renderBootstrap3ES' :: Monad m
+                    => BootstrapFormLayout
+                    -> Markup
+                    -> SEMForm m (FormResult a)
+                    -> EMForm m (FormResult a, WidgetT (HandlerSite m) IO ())
+renderBootstrap3ES' layout extra result = do
+  runSEMForm $ result >>= renderBootstrap3ES layout extra
+#endif
+
 
 runSEMForm :: Monad m => SEMForm m a -> EMForm m a
 runSEMForm = flip SS.evalStateT []

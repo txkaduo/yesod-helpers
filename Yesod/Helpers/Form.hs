@@ -774,6 +774,20 @@ renderBootstrapS extra result = do
 #endif
             aform extra
 
+
+#if MIN_VERSION_yesod_form(1, 3, 8)
+renderBootstrap3S :: Monad m
+                  => BootstrapFormLayout
+                  -> Markup
+                  -> FormResult a
+                  -> SMForm m (FormResult a, WidgetT (HandlerSite m) IO ())
+renderBootstrap3S layout extra result = do
+    views <- liftM reverse $ SS.get
+    let aform = formToAForm $ return (result, views)
+    lift $ renderBootstrap3 layout aform extra
+#endif
+
+
 -- | combines renderBootstrapS and smToForm
 renderBootstrapS' :: Monad m =>
     Markup
@@ -781,6 +795,18 @@ renderBootstrapS' :: Monad m =>
     -> MForm m (FormResult a, WidgetT (HandlerSite m) IO ())
 renderBootstrapS' extra result = do
     smToForm $ result >>= renderBootstrapS extra
+
+
+#if MIN_VERSION_yesod_form(1, 3, 8)
+renderBootstrap3S' :: Monad m
+                   => BootstrapFormLayout
+                   -> Markup
+                   -> SMForm m (FormResult a)
+                   -> MForm m (FormResult a, WidgetT (HandlerSite m) IO ())
+renderBootstrap3S' layout extra result = do
+  smToForm $ result >>= renderBootstrap3S layout extra
+#endif
+
 
 smToForm :: Monad m => SMForm m a -> MForm m a
 smToForm = flip SS.evalStateT []
