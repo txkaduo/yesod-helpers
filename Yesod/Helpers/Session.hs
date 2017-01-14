@@ -1,10 +1,6 @@
 module Yesod.Helpers.Session where
 
-import Prelude
-import Yesod
-import Data.String                          (fromString)
-import Data.ByteString                      (ByteString)
-import qualified Data.ByteString            as B
+import ClassyPrelude.Yesod
 import qualified Web.ClientSession          as CS
 import Data.Aeson                           (withObject, (.:?))
 import Data.Time                            (DiffTime)
@@ -32,13 +28,13 @@ amendSessionCookie :: SessionCookieSettings -> SetCookie -> SetCookie
 amendSessionCookie settings = add_domain . add_name . add_path . add_max_age
     where
         add_domain ck = case sessCookieSettingsDomain settings of
-                            Just n | not (B.null n)   -> ck { setCookieDomain = Just n }
+                            Just n | not (null n)   -> ck { setCookieDomain = Just n }
                             _                       -> ck
         add_name ck = case sessCookieSettingsName settings of
-                            Just n | not (B.null n)   -> ck { setCookieName = n }
+                            Just n | not (null n)   -> ck { setCookieName = n }
                             _                       -> ck
         add_path ck = case sessCookieSettingsPath settings of
-                            Just n | not (B.null n)   -> ck { setCookiePath = Just n }
+                            Just n | not (null n)   -> ck { setCookiePath = Just n }
                             _                       -> ck
         add_max_age ck = case sessCookieSettingsMaxAge settings of
                             Just dt | dt > 0    -> ck { setCookieMaxAge = Just dt }
