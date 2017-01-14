@@ -1,6 +1,9 @@
 module Yesod.Helpers.Session where
 
 import ClassyPrelude.Yesod
+import qualified Data.Binary                as Bin
+import qualified Data.Binary.Put            as Bin
+import qualified Data.Binary.Get            as Bin
 import qualified Data.Serialize             as SL
 import qualified Web.ClientSession          as CS
 import Data.Aeson                           (withObject, (.:?))
@@ -81,3 +84,28 @@ lookupSessionCereal n = do
                        return Nothing
 
         Right x -> return x
+
+
+-- | set session data with Data.Binary interface
+setSessionBinary :: (MonadHandler m, Bin.Binary a)
+                 => Text
+                 -> a
+                 -> m ()
+setSessionBinary n x = setSessionBS n (toStrict $ Bin.runPut $ Bin.put x)
+
+
+-- | lookup session data with Data.Binary interface
+lookupSessionBinary :: (MonadHandler m, MonadLogger m, Bin.Binary a)
+                    => Text
+                    -> m (Maybe a)
+lookupSessionBinary n = do
+  m_bs <- lookupSessionBS n
+  case m_bs of
+    Nothing -> return Nothing
+    Just bs -> do
+      case Bin.runGetOrFail Bin.get (fromStrict bs) of
+        Left (_, _, err) -> do $logError $ "Cannot deserialize session data of key '" <> n
+                                  <> "' : " <> fromString err
+                               return Nothing
+
+        Right (_, _, x)  -> return x
