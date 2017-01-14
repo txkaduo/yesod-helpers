@@ -8,6 +8,7 @@ import qualified Data.ByteString.Base64.URL as B64U
 import qualified Data.ByteString.Char8      as C8
 import qualified Data.ByteString.Lazy       as LB
 import           Data.Proxy                 (Proxy(..))
+import qualified Data.Serialize             as SL
 
 import Language.Haskell.TH.Lift             (deriveLift)
 import Data.Time                            (TimeZone, timeZoneOffsetString)
@@ -310,6 +311,17 @@ instance (ToJSON a, FromJSON a) => PersistField (JsonSerialized a) where
 
 instance (ToJSON a, FromJSON a) => PersistFieldSql (JsonSerialized a) where
   sqlType _ = sqlType (Proxy :: Proxy ByteString)
+
+
+-- | CAUTION: Put length (32bit, little-endian) before json encoded strings
+instance (ToJSON a, FromJSON a) => SL.Serialize (JsonSerialized a) where
+  put (JsonSerialized x) = do SL.putWord32le (fromIntegral $ length lbs)
+                              SL.putLazyByteString lbs
+                           where lbs = A.encode x
+
+  get = do len <- SL.getWord32le
+           lbs <- SL.getLazyByteString (fromIntegral len)
+           either fail return $ fmap JsonSerialized $ A.eitherDecode lbs
 
 
 -- | used in URL, represent a url piece

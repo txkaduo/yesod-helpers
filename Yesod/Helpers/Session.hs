@@ -1,6 +1,7 @@
 module Yesod.Helpers.Session where
 
 import ClassyPrelude.Yesod
+import qualified Data.Serialize             as SL
 import qualified Web.ClientSession          as CS
 import Data.Aeson                           (withObject, (.:?))
 import Data.Time                            (DiffTime)
@@ -56,3 +57,27 @@ defaultClientSessionBackendCkName minutes fp ck_name = do
       sbLoadSession = loadClientSession key getCachedDate ck_name
     }
 
+
+-- | set session data with cereal's Data.Serialize interface
+setSessionCereal :: (MonadHandler m, SL.Serialize a)
+                 => Text
+                 -> a
+                 -> m ()
+setSessionCereal n x = setSessionBS n (SL.runPut $ SL.put x)
+
+
+-- | lookup session data with Data.Serialize interface
+lookupSessionCereal :: (MonadHandler m, MonadLogger m, SL.Serialize a)
+                    => Text
+                    -> m (Maybe a)
+lookupSessionCereal n = do
+  m_bs <- lookupSessionBS n
+  case m_bs of
+    Nothing -> return Nothing
+    Just bs -> do
+      case SL.runGet SL.get bs of
+        Left err -> do $logError $ "Cannot deserialize session data of key '" <> n
+                         <> "' : " <> fromString err
+                       return Nothing
+
+        Right x -> return x
