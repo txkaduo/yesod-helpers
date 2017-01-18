@@ -557,7 +557,7 @@ checkFieldDBUniqueId mk_unique msg m_old_id = checkM chk
 
 -- | check the result by constructing a Unique key,
 -- if record matching that Unique key already exists, report the error message.
-{-# DEPRECATED checkFieldDBUnique2 "use setPlaceholder instead" #-}
+{-# DEPRECATED checkFieldDBUnique2 "use checkFieldDBUniqueId instead" #-}
 checkFieldDBUnique2 ::
     ( YesodPersist site
     , RenderMessage site msg
@@ -595,7 +595,7 @@ checkFieldDBUnique2 mk_unique msg m_old_val = checkMMap chk id
 -- }}}1
 
 
-{-# DEPRECATED checkFieldDBUnique "use setPlaceholder instead" #-}
+{-# DEPRECATED checkFieldDBUnique "use checkFieldDBUniqueId instead" #-}
 checkFieldDBUnique ::
     ( YesodPersist site
     , RenderMessage site msg
