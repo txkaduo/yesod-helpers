@@ -197,16 +197,14 @@ neverMissingField :: Monad m
 neverMissingField val_when_missing field =
   field { fieldParse = fp2, fieldView = fv2 }
   where
-    fp2 x y = if null x
-                 then return $ Right $ Just val_when_missing
-                 else fmap (right Just) $ (fieldParse field) x y
+    fp2 x y = fmap (right $ Just . maybe val_when_missing Just) $ fieldParse field x y
 
     fv = fieldView field
     fv2 tid name attrs t_or_res is_req =
       fv tid name attrs t_or_res' is_req
       where
         t_or_res' = case t_or_res of
-                      Right Nothing   -> Left ""
+                      Right Nothing   -> Left "" -- should never reach here
                       Right (Just x)  -> Right x
                       Left t          -> Left t
 -- }}}1
