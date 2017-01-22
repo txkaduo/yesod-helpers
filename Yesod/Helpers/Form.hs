@@ -189,21 +189,28 @@ traverseFormResult _ FormMissing        = pure (FormMissing :: FormResult b)
 -- | Construct a new field that will never fail because of missing value.
 -- Useful when user want to control more what should do on missing value.
 -- Like report missing value base on other conditions.
-neverMissingField :: Functor m => Text -> Field m a -> Field m (Maybe a)
+neverMissingField :: Monad m
+                  => Maybe a    -- ^ put this in result when form value is missing
+                  -> Field m a
+                  -> Field m (Maybe a)
 -- {{{1
-neverMissingField missing_msg field =
+neverMissingField val_when_missing field =
   field { fieldParse = fp2, fieldView = fv2 }
   where
-    fp2 x y = fmap (right Just) $ (fieldParse field) x y
+    fp2 x y = if null x
+                 then return $ Right $ Just val_when_missing
+                 else fmap (right Just) $ (fieldParse field) x y
+
     fv = fieldView field
     fv2 tid name attrs t_or_res is_req =
       fv tid name attrs t_or_res' is_req
       where
         t_or_res' = case t_or_res of
-                      Right Nothing   -> Left missing_msg
+                      Right Nothing   -> Left ""
                       Right (Just x)  -> Right x
                       Left t          -> Left t
 -- }}}1
+
 
 
 {-# DEPRECATED simpleWrappedField "use convertField instead" #-}
