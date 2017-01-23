@@ -9,11 +9,11 @@ import Control.DeepSeq                      (NFData(..), deepseq)
 #else
 import Database.Persist.Sql                 (MonadSqlPersist, Connection)
 #endif
-import Database.Persist.Sql                 (transactionUndo
-                                            , connEscapeName)
+import Database.Persist.Sql                 (transactionUndo, connEscapeName, PersistFieldSql(..))
 
 import Control.Monad.Except                 (ExceptT, MonadError(..))
 
+import qualified Data.Aeson                 as A
 import qualified Data.List                  as L
 
 import Control.Monad.State.Strict           (StateT)
@@ -522,6 +522,34 @@ contains2 :: (PersistField a) =>
 contains2 conv field val = Filter field
                         (Left $ conv $ mconcat ["%", unsafeEscapeForSqlLikeT val, "%"])
                         (BackendSpecificFilter " LIKE ")
+
+
+-- | Store data as native 'json' data type of DB engine
+-- supported DB engines: PostgreSQL, MySQL
+newtype PersistJson = PersistJson { unPersistJson :: Value }
+  deriving (Show, Eq)
+
+instance PersistFieldSql PersistJson where
+  sqlType _ = SqlOther "JSON"
+
+instance PersistField PersistJson where
+  toPersistValue = PersistDbSpecific . toStrict . A.encode . unPersistJson
+
+  fromPersistValue (PersistDbSpecific bs) = case A.eitherDecode' $ fromStrict bs of
+                                              Left err -> Left $ fromString err
+                                              Right x  -> Right $ PersistJson x
+
+  fromPersistValue x = Left $ "PersistJson must be converted from PersistDbSpecific, but got " <> tshow x
+
+
+toPersistJson :: ToJSON a => a -> PersistJson
+toPersistJson = PersistJson . toJSON
+
+
+fromPersistJson :: FromJSON a => PersistJson -> Either String a
+fromPersistJson (PersistJson v) = case A.fromJSON v of
+                                    A.Error err -> Left err
+                                    A.Success x -> Right x
 
 
 -- vim: set foldmethod=marker:
