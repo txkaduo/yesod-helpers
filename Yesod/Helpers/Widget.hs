@@ -40,5 +40,7 @@ $maybe err_msg <- m_err_msg
     <li>_{fsLabel fs}: #{intercalate ";" errs}
 <form method=post action="@{action}" enctype=#{formEnctype}>
   ^{formWidget}
-  <input .btn .btn-primary type=submit value=_{MsgSubmitForm}>
+  <div .form-group>
+    <div .submit-btn-container>
+      <input .btn .btn-primary type=submit value=_{MsgSubmitForm}>
   |]
