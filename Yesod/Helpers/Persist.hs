@@ -539,6 +539,10 @@ instance PersistField PersistJson where
                                               Left err -> Left $ fromString err
                                               Right x  -> Right $ PersistJson x
 
+  fromPersistValue (PersistByteString bs) = case A.eitherDecode' $ fromStrict bs of
+                                              Left err -> Left $ fromString err
+                                              Right x  -> Right $ PersistJson x
+
   fromPersistValue x = Left $ "PersistJson must be converted from PersistDbSpecific, but got " <> tshow x
 
 
