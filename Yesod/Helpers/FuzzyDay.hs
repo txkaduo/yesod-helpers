@@ -37,11 +37,12 @@ $(derivePathPieceS "FuzzyDay")
 
 $(deriveSafeCopySimpleEncoded ''FuzzyDay)
 
-instance SimpleStringRep FuzzyDay where
+instance SimpleEncode FuzzyDay where
     simpleEncode (FuzzyDayY y)          = show y
     simpleEncode (FuzzyDayYM y m)       = mconcat [ show y, "-", show m ]
     simpleEncode (FuzzyDayYMD y m d)    = mconcat [ show y, "-", show m, "-", show d ]
 
+instance SimpleStringRep FuzzyDay where
     simpleParser = choice
         [ try $ p_ymd, try $ p_ym, try $ p_y ]
         where

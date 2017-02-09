@@ -80,7 +80,7 @@ putCopyAnyId = contain . putCopySafeCopyInside
 getCopyAnyId :: PersistField (Key val) => Contained (Get (Key val))
 getCopyAnyId = contain $ getCopySafeCopyInside
 
-putCopySimpleEncoded :: SimpleStringRep a => a -> Contained Put
+putCopySimpleEncoded :: SimpleEncode a => a -> Contained Put
 putCopySimpleEncoded = contain . put . simpleEncode
 
 getCopySimpleEncodedInside :: SimpleStringRep a => Get a

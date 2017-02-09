@@ -397,12 +397,12 @@ simpleEncodedListTextareaField sep_inf mk_msg =
 
 
 simpleEncodedOptionList ::
-    (SimpleStringRep a, Enum a, Bounded a) =>
+    (SimpleEncode a, Enum a, Bounded a) =>
     (a -> Text)     -- ^ to render value to display
     -> OptionList a
 simpleEncodedOptionList render = simpleEncodedOptionList' render [minBound .. maxBound]
 
-simpleEncodedOptionList' :: (SimpleStringRep a)
+simpleEncodedOptionList' :: (SimpleEncode a)
                         => (a -> Text)     -- ^ to render value to display
                         -> [a]
                         -> OptionList a

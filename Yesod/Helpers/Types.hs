@@ -50,6 +50,7 @@ instance NFData Gender where rnf = genericRnf
 
 $(derivePersistFieldS "Gender")
 $(deriveJsonS "Gender")
+$(deriveSimpleStringRepEnumBounded "Gender")
 
 #ifdef USE_SIMPLE_ENCODED_SAFECOPY
 $(deriveSafeCopySimpleEncoded ''Gender)
@@ -57,14 +58,10 @@ $(deriveSafeCopySimpleEncoded ''Gender)
 $(deriveSafeCopy 0 'base ''Gender)
 #endif
 
-instance SimpleStringRep Gender where
+instance SimpleEncode Gender where
     simpleEncode Male   = "male"
     simpleEncode Female = "female"
 
-    simpleParser = choice
-        [ Text.Parsec.try $ string "male" >> return Male
-        , Text.Parsec.try $ string "female" >> return Female
-        ]
 
 
 -- | A URL in Text.
@@ -87,8 +84,10 @@ instance RedirectUrl m UrlText where toTextUrl = toTextUrl . unUrlText
 newtype XTimeZone = XTimeZone { unXTimeZone :: TimeZone }
                     deriving (Show, Read, Eq, Ord, Typeable, Generic, Binary)
 
-instance SimpleStringRep XTimeZone where
+instance SimpleEncode XTimeZone where
     simpleEncode = timeZoneOffsetString . unXTimeZone
+
+instance SimpleStringRep XTimeZone where
     simpleParser = do
         manyTill anyChar (eof Text.Parsec.<|> void space) >>=
             maybe mzero (return . XTimeZone) .
@@ -115,9 +114,10 @@ instance NFData SimpleVersion
 $(derivePersistFieldS "SimpleVersion")
 $(deriveJsonS "SimpleVersion")
 
-instance SimpleStringRep SimpleVersion where
+instance SimpleEncode SimpleVersion where
     simpleEncode (SimpleVersion vs) = concat $ intersperse "." $ map show vs
 
+instance SimpleStringRep SimpleVersion where
     simpleParser = fmap (SimpleVersion . map fromIntegral) $ natural `sepBy1` string "."
 
 instance SafeCopy SimpleVersion where
@@ -148,7 +148,7 @@ instance SafeCopy VerConstraint where
     getCopy = getCopySimpleEncoded
     putCopy = putCopySimpleEncoded
 
-instance SimpleStringRep VerConstraint where
+instance SimpleEncode VerConstraint where
     simpleEncode (VerWithOrder GT ver) =
                                 concat $ intersperse " " $ [ ">" , simpleEncode ver ]
 
@@ -191,6 +191,7 @@ instance SimpleStringRep VerConstraint where
                                     , ")"
                                     ]
 
+instance SimpleStringRep VerConstraint where
     simpleParser = Text.Parsec.try (parens p) Text.Parsec.<|> p
         where
             p = choice
