@@ -212,6 +212,7 @@ test-suite test
     ghc-options:       -Wall
 
     build-depends: base
+                 , classy-prelude
                  , network
                  , bytestring
                  , base16-bytestring

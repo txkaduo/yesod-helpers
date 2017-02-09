@@ -8,18 +8,17 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import Prelude
+import ClassyPrelude
 import System.Exit
 import Text.Parsec
-import Control.Applicative
-import Control.Monad
 import Database.Persist
 import Database.Persist.TH
 import Database.Persist.Sql
 import Data.ByteString.Base16               as B16
-import qualified Data.ByteString.Char8      as C8
 import Data.Time
 
 import Network                              (PortID(..))
@@ -27,7 +26,6 @@ import Network                              (PortID(..))
 import Yesod.Helpers.Types
 import Yesod.Helpers.Parsec
 import Yesod.Helpers.FuzzyDay
-import Yesod.Helpers.Form
 import Yesod.Helpers.Utils
 
 import Data.SafeCopy
@@ -39,8 +37,8 @@ testVerValidate :: VerConstraint -> SimpleVersion -> Bool -> IO ()
 testVerValidate c v b = do
     if validateSimpleVersion c v /= b
         then do
-            putStrLn $ "constaint '" ++ show c ++ "' validate version '" ++ show v
-                        ++ "' does not get expected result: " ++ show b
+            putStrLn $ "constaint '" <> tshow c <> "' validate version '" <> tshow v
+                        <> "' does not get expected result: " <> tshow b
             exitFailure
         else return ()
 
@@ -48,23 +46,23 @@ tryVerConstraintParse :: String -> IO VerConstraint
 tryVerConstraintParse s = do
     case parse simpleParser "" s of
         Left err -> do
-            putStrLn $ "failed to parse " ++ show s ++ ": " ++ show err
+            putStrLn $ "failed to parse " <> tshow s <> ": " <> tshow err
             exitFailure
         Right x -> return x
 
-testAnyCharParser :: (Eq a, Show a) => CharParser a -> String -> a -> IO ()
+testAnyCharParser :: (Eq a, Show a) => ParsecT String () Identity a -> String -> a -> IO ()
 testAnyCharParser p s expected = do
     case parse p "" s of
         Left err -> do
-            putStrLn $ "failed to parse " ++ show s ++ ": " ++ show err
+            putStrLn $ "failed to parse " <> tshow s <> ": " <> tshow err
             exitFailure
         Right x -> do
             if x == expected
                 then return ()
                 else do
-                    putStrLn $ "failed to parse " ++ show s ++ "to expected result"
-                    putStrLn $ "expected: " ++ show expected
-                    putStrLn $ "actual: " ++ show x
+                    putStrLn $ "failed to parse " <> tshow s <> "to expected result"
+                    putStrLn $ "expected: " <> tshow expected
+                    putStrLn $ "actual: " <> tshow x
                     exitFailure
 
 
@@ -85,7 +83,7 @@ testVerConstraint = do
 
 test_parseFileOrNetworkPath :: IO ()
 test_parseFileOrNetworkPath = do
-    let f = testAnyCharParser parseFileOrNetworkPath
+    let f = testAnyCharParser parseFileOrConnectPath
     f "/path/to/some" $ Left "/path/to/some"
     -- f ":/path/to/some" $ Right ("localhost", UnixSocket "/path/to/some")
     f "127.0.0.1:80" $ Right ("127.0.0.1", PortNumber (fromIntegral (80::Int)))
@@ -113,20 +111,20 @@ test_parseIntGrouping = do
 testAnySafeCopy :: (SafeCopy a, Eq a, Show a) => a -> IO ()
 testAnySafeCopy x = do
     let bs = runPut $ safePut x
-    putStrLn $ C8.unpack $ B16.encode bs
-    putStrLn $ show x
+    putStrLn $ decodeUtf8 $ B16.encode bs
+    putStrLn $ tshow x
     case runGet safeGet bs of
         Left err -> do
-                    putStrLn $ "FAIL: safeGet failed: " ++ err
-                    putStrLn $ "      original value: " ++ show x
+                    putStrLn $ "FAIL: safeGet failed: " <> fromString err
+                    putStrLn $ "      original value: " <> tshow x
                     exitFailure
         Right x2 -> do
                     if x == x2
                         then
-                            putStrLn $ "OK: "  ++ show x2
+                            putStrLn $ "OK: "  <> tshow x2
                         else do
-                            putStrLn $ "FAIL: safeGet return different value: " ++ show x2
-                            putStrLn $ "      original value: " ++ show x
+                            putStrLn $ "FAIL: safeGet return different value: " <> tshow x2
+                            putStrLn $ "      original value: " <> tshow x
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 Dummy
@@ -155,28 +153,31 @@ testParseGroups = do
     test_it (p_double newline) "1.0\n2.0\n3.0" [1.0,2.0,3.0]
 
     where
-        p_ints :: CharParser a -> CharParser [Int]
+        p_ints :: ParsecT String () Identity a
+               -> ParsecT String () Identity [Int]
         p_ints sep = manySepEndBy sep simpleParser <* eof
 
-        p_double :: CharParser a -> CharParser [Double]
+        p_double :: ParsecT String () Identity a
+                 -> ParsecT String () Identity [Double]
         p_double sep = manySepEndBy sep simpleParser <* eof
 
+        test_it :: (Eq a, Show a) => ParsecT String () Identity a -> String -> a -> IO ()
         test_it p t expected = do
             case parse p "" t of
                 Left err -> do
                     putStrLn $
                         "FAIL: testParseGroups failed, parse error: "
-                            ++ show err
-                            ++ " text was: " ++ show t
+                            <> tshow err
+                            <> " text was: " <> tshow t
                     exitFailure
                 Right xs -> do
                     if xs /= expected
                         then do
                             putStrLn $
                                 "FAIL: testParseGroups failed, not expected: "
-                                        ++ show xs
-                                        ++ ", expect " ++ show expected
-                                        ++ ", text was: " ++ show t
+                                        <> tshow xs
+                                        <> ", expect " <> tshow expected
+                                        <> ", text was: " <> tshow t
                             exitFailure
                         else return ()
 
@@ -200,19 +201,19 @@ humanParseUTCTimeIt :: TimeZone -> String -> [String] -> IO ()
 humanParseUTCTimeIt tz std_string strs = do
     utc_t0 <- case humanParseUTCTime tz std_string of
         Nothing -> do
-            putStrLn $ "cannot parse time string: " ++ std_string
+            putStrLn $ "cannot parse time string: " <> fromString std_string
             exitFailure
         Just x -> return x
 
     forM_ strs $ \s -> do
         case humanParseUTCTime tz s of
             Nothing -> do
-                putStrLn $ "cannot parse time string: " ++ s
+                putStrLn $ "cannot parse time string: " <> fromString s
                 exitFailure
             Just utc_t -> do
                 when (utc_t0 /= utc_t) $ do
-                    putStrLn $ "time parsed to: " ++ show utc_t ++
-                                "\ndoes not equal to expected: " ++ show utc_t0
+                    putStrLn $ "time parsed to: " <> tshow utc_t <>
+                                "\ndoes not equal to expected: " <> tshow utc_t0
                     exitFailure
 
 test_humanParseUTCTime :: IO ()
