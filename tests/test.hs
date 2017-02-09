@@ -10,11 +10,13 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Main where
 
 import ClassyPrelude
 import System.Exit
 import Text.Parsec
+import Data.Proxy
 import Database.Persist
 import Database.Persist.TH
 import Database.Persist.Sql
@@ -64,6 +66,14 @@ testAnyCharParser p s expected = do
                     putStrLn $ "expected: " <> tshow expected
                     putStrLn $ "actual: " <> tshow x
                     exitFailure
+
+
+testSimpleStringRepEnumBounded :: forall a. (Eq a, Show a, Enum a, Bounded a, SimpleStringRep a)
+                               => Proxy a
+                               -> IO ()
+testSimpleStringRepEnumBounded _ =
+  forM_ [minBound .. maxBound] $ \ (v :: a) -> do
+    testAnyCharParser simpleParser (simpleEncode v) v
 
 
 testVerConstraint :: IO ()
@@ -235,3 +245,4 @@ main = do
     testParseGroups
     test_humanParseFuzzyDay
     test_humanParseUTCTime
+    testSimpleStringRepEnumBounded (Proxy :: Proxy Gender)
