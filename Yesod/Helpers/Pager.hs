@@ -47,6 +47,10 @@ pagerGetCurrentPageNumPost (PagerSettings { pagerPageNumParam = pn_param }) =
 pagerGetOffset :: PagerSettings -> Int -> Int
 pagerGetOffset (PagerSettings { pagerNumPerPage = npp } ) pn = (pn -1) * npp
 
+pagerSelectOpts :: PagerSettings -> Int -> [SelectOpt a]
+pagerSelectOpts ps pn = [ OffsetBy (pagerGetOffset ps pn), LimitTo (pagerNumPerPage ps) ]
+
+
 runPager :: (MonadHandler m)
          => PagerSettings
          -> Int
