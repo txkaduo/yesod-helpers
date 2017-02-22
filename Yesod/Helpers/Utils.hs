@@ -5,7 +5,10 @@ import Data.Char
 import Data.List                            ((!!))
 import Data.Time                            ( localTimeToUTC, zonedTimeToUTC, TimeZone, ParseTime
                                             , LocalTime(..), midnight, TimeOfDay, addDays
+                                            , NominalDiffTime
                                             )
+import Data.Time.Clock.POSIX                ( posixSecondsToUTCTime
+                                            , utcTimeToPOSIXSeconds)
 #if MIN_VERSION_time(1,5,0)
 import Data.Time                            (parseTimeM)
 #else
@@ -98,6 +101,13 @@ humanParseUTCTime tz s =
         parse_day fmt = do
             d <- parse_t fmt
             return $ localTimeToUTC tz $ LocalTime d midnight
+
+
+epochIntToUtcTime :: Int64 -> UTCTime
+epochIntToUtcTime = posixSecondsToUTCTime . (realToFrac :: Int64 -> NominalDiffTime)
+
+utcTimeToEpochInt :: UTCTime -> Int64
+utcTimeToEpochInt = round . utcTimeToPOSIXSeconds
 
 
 randomPick :: MonadIO m => [a] -> m a
