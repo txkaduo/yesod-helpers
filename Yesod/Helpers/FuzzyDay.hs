@@ -153,10 +153,9 @@ fromFuzzyDay fd = fromGregorian (fromIntegral y) m d
                         FuzzyDayYM a b -> (a, b, 15)
                         FuzzyDayYMD a b c -> (a, b, c)
 
-fuzzyDayTimeRange :: TimeZone
-                    -> FuzzyDay
-                    -> (UTCTime, UTCTime)   -- ^ [begin, end)
-fuzzyDayTimeRange tz fd = (to_utc *** to_utc) $
+fuzzyDayDayRange :: FuzzyDay
+                 -> (Day, Day)
+fuzzyDayDayRange fd =
     case fd of
         FuzzyDayY y     -> (to_day y 1 1, to_day (y + 1) 1 1)
         FuzzyDayYM y m  ->  let (y', m') = next_month y m
@@ -164,11 +163,16 @@ fuzzyDayTimeRange tz fd = (to_utc *** to_utc) $
         FuzzyDayYMD y m d -> let day1 = to_day y m d
                              in (day1, addDays 1 day1)
     where
-        to_utc = localTimeToUTC tz . (\x -> LocalTime x midnight)
         to_day y m d = fromGregorian (fromIntegral y) m d
         next_month y m = if m >= 12
                             then (y + 1, 1)
                             else (y, m + 1)
+
+fuzzyDayTimeRange :: TimeZone
+                  -> FuzzyDay
+                  -> (UTCTime, UTCTime)   -- ^ [begin, end)
+fuzzyDayTimeRange tz fd = (to_utc *** to_utc) $ fuzzyDayDayRange fd
+    where to_utc = localTimeToUTC tz . (\x -> LocalTime x midnight)
 
 data FuzzyAge = FuzzyAgeY Int
                 | FuzzyAgeYM Int Int
