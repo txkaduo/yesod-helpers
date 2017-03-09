@@ -68,11 +68,16 @@ clientOriginalIp = do
   req <- waiRequest
   let headers = requestHeaders req
 
-  let f1 = lookup "X-Real-IP" headers
-      f2 = do
-            h <- lookup "X-Forwarded-For" headers
-            listToMaybe $ map (encodeUtf8 . T.strip) $ T.splitOn "," $ decodeUtf8 h
-      f3 = lookup "Remote-Addr" headers
+  let first_ip_in_header hn = do
+        h <- lookup hn headers
+        listToMaybe $ filter (not . null) . map (encodeUtf8 . T.strip) $ T.splitOn "," $ decodeUtf8 h
+
+  -- Normally, only x-forwarded-for may contain multiple IPs.
+  -- But 'http-reverse-proxy' may make x-real-ip to contain multiple ip (possibly a bug).
+  -- So we always prepare for multiple IPs.
+  let f1 = first_ip_in_header "X-Real-IP"
+      f2 = first_ip_in_header "X-Forwarded-For"
+      f3 = first_ip_in_header "Remote-Addr"
 
   return $ f1 <|> f2 <|> f3
 
