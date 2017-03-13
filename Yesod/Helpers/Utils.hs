@@ -16,7 +16,9 @@ import Data.Time                            (parseTime)
 #endif
 import Control.Monad.Logger
 import System.Random                        (randomIO)
+#if !MIN_VERSION_classy_prelude(1, 0, 0)
 import Control.Monad.Trans.Control          (MonadBaseControl)
+#endif
 import System.Timeout                       (timeout)
 import Network.HTTP.Types                   (parseQueryText, renderQueryText, QueryText)
 import Network.URI                          (parseURIReference, uriQuery, uriToString
@@ -154,7 +156,13 @@ writeChanWaitMVar ch mk_cmd = do
 -- Loop will stop when the following conditions are all true:
 -- 'block_check_exit' returns True
 -- 'f' returns False
-foreverLogExcWhen :: (MonadIO m, MonadLogger m, MonadBaseControl IO m)
+foreverLogExcWhen :: ( MonadIO m, MonadLogger m
+#if MIN_VERSION_classy_prelude(1, 0, 0)
+                     , MonadCatch m
+#else
+                     , MonadBaseControl IO m
+#endif
+                     )
                   => IO Bool     -- ^ This function should be a blocking op,
                               -- return True if the infinite loop should be aborted.
                   -> Int      -- ^ ms
@@ -162,7 +170,13 @@ foreverLogExcWhen :: (MonadIO m, MonadLogger m, MonadBaseControl IO m)
                   -> m ()
 foreverLogExcWhen = foreverLogExcIdentWhen ""
 
-foreverLogExcIdentWhen :: (MonadIO m, MonadLogger m, MonadBaseControl IO m)
+foreverLogExcIdentWhen :: (MonadIO m, MonadLogger m
+#if MIN_VERSION_classy_prelude(1, 0, 0)
+                          , MonadCatch m
+#else
+                          , MonadBaseControl IO m
+#endif
+                          )
                        => Text
                        -> IO Bool     -- ^ This function should be a blocking op,
                                    -- return True if the infinite loop should be aborted.
@@ -194,7 +208,13 @@ foreverLogExcIdentWhen thr_ident block_check_exit interval f = go False
 -- | Run monadic computation forever, log and retry when exceptions occurs.
 -- Loop will stop when the following conditions are all true:
 -- 'block_check_exit' returns True
-foreverLogExc :: (MonadIO m, MonadLogger m, MonadBaseControl IO m)
+foreverLogExc :: ( MonadIO m, MonadLogger m
+#if MIN_VERSION_classy_prelude(1, 0, 0)
+                 , MonadCatch m
+#else
+                 , MonadBaseControl IO m
+#endif
+                 )
                 => IO Bool     -- ^ This function should be a blocking op,
                             -- return True if the infinite loop should be aborted.
                 -> Int      -- ^ ms
@@ -203,7 +223,13 @@ foreverLogExc :: (MonadIO m, MonadLogger m, MonadBaseControl IO m)
 foreverLogExc = foreverLogExcIdent ""
 
 
-foreverLogExcIdent :: (MonadIO m, MonadLogger m, MonadBaseControl IO m)
+foreverLogExcIdent :: (MonadIO m, MonadLogger m
+#if MIN_VERSION_classy_prelude(1, 0, 0)
+                      , MonadCatch m
+#else
+                      , MonadBaseControl IO m
+#endif
+                      )
                    => Text
                    -> IO Bool     -- ^ This function should be a blocking op,
                                -- return True if the infinite loop should be aborted.
@@ -255,7 +281,14 @@ extractHostFromAbsUrl uri = do
 
 
 -- | Prepend a dot on a domain unless it already begins with a dot.
-domainPrependDot :: (IsString s, EqSequence s) => s -> s
+domainPrependDot :: ( IsString s
+#if MIN_VERSION_mono_traversable(1, 0, 0)
+                    , Eq (Element s), IsSequence s, Semigroup s
+#else
+                    , EqSequence s
+#endif
+                    )
+                 => s -> s
 domainPrependDot d = if isPrefixOf "." d
                         then d
                         else "." <> d

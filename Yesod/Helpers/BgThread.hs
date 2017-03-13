@@ -3,7 +3,10 @@ module Yesod.Helpers.BgThread where
 import ClassyPrelude
 
 import Control.Concurrent.STM               (check)
-import Control.Concurrent.Async             (Async, pollSTM, async)
+#if !MIN_VERSION_classy_prelude(1, 0, 0)
+import Control.Concurrent.Async             (async)
+#endif
+import Control.Concurrent.Async             (Async, pollSTM)
 import Control.Monad.Logger
 import Control.Monad.Writer.Class           (MonadWriter(..))
 import Data.List.NonEmpty                   (NonEmpty(..), nonEmpty)

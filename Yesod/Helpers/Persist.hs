@@ -27,7 +27,13 @@ class DBActionRunner a where
 
 
 -- | A little "generalized" version of 'liftPersist'
-runPersistEnvReaderT :: (MonadReader env m, HasPersistBackend env r)
+runPersistEnvReaderT :: ( MonadReader env m
+#if MIN_VERSION_persistent(2, 6, 0)
+                        , HasPersistBackend env, BaseBackend env ~ r
+#else
+                        , HasPersistBackend env r
+#endif
+                        )
                      => ReaderT r m b -> m b
 runPersistEnvReaderT f = do
   e <- ask

@@ -1,7 +1,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Yesod.Helpers.About where
 
+#if MIN_VERSION_classy_prelude(1, 0, 0)
+import ClassyPrelude hiding (init)
+#else
 import ClassyPrelude
+#endif
 import Data.List                            (init)
 import Language.Haskell.TH
 import System.Process                       (readProcessWithExitCode)
