@@ -1,16 +1,12 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Yesod.Helpers.LoginUser where
 
-import Prelude
-import Yesod
+import ClassyPrelude.Yesod hiding (Proxy)
 import qualified Network.HTTP.Types         as H
-
+import Data.Proxy
 import Data.Typeable                        (Typeable)
-import Data.Text                            (Text)
 import Data.Time                            (TimeZone)
-import Control.Monad                        (liftM, join)
 import Control.Monad.Catch                  (MonadThrow)
-import Data.Maybe                           (fromMaybe)
 
 import Yesod.Helpers.Json                   (jsonDecodeKey, jsonEncodeKey)
 import Yesod.Helpers.Form                   (nameToFs)
@@ -30,26 +26,26 @@ class
     , ToJSON (BackendKey (PersistEntityBackend u))
     , ToBackendKey (PersistEntityBackend u) u
 #endif
-    ) => LoginUser u where
+    ) => LoginUser site u where
 
     -- | 对应此种用户的 session key
-    loginIdentSK :: Monad m =>
-        m u
-        -> Text
+    loginIdentSK :: site
+                 -> Proxy u
+                 -> Text
 
-    loginIdentToKey :: Monad m =>
-        m u
-        -> Text       -- ^ 在 session 中保存的用户标识字串
-        -> Maybe (Key u)
-    loginIdentToKey _ ident = either (const Nothing) Just $ jsonDecodeKey ident
+    loginIdentToKey :: site
+                    -> Proxy u
+                    -> Text       -- ^ 在 session 中保存的用户标识字串
+                    -> Maybe (Key u)
+    loginIdentToKey _ _ ident = either (const Nothing) Just $ jsonDecodeKey ident
 
     -- | we often need time-zone to display date/time
-    loginUserTimeZone :: u -> TimeZone
+    loginUserTimeZone :: site -> u -> TimeZone
 
 
 
 getLoggedInUser :: forall u site.
-    ( LoginUser u
+    ( LoginUser site u
 #if MIN_VERSION_persistent(2, 0, 0)
 
 #if MIN_VERSION_persistent(2, 5, 0)
@@ -67,29 +63,42 @@ getLoggedInUser :: forall u site.
     ) =>
     HandlerT site IO (Maybe (Entity u))
 getLoggedInUser = do
-    let mu = Nothing :: Maybe u
+    let mu = Proxy :: Proxy u
     maybe_key <- getLoggedInId mu
     case maybe_key of
         Nothing -> return Nothing
         Just k -> runDB $ liftM (fmap $ Entity k) $ get k
 
-getLoggedInIdent :: (LoginUser u, MonadHandler m, Monad n) => n u -> m (Maybe Text)
+getLoggedInIdent :: (LoginUser site u, MonadHandler m, HandlerSite m ~ site)
+                 => Proxy u
+                 -> m (Maybe Text)
 getLoggedInIdent mu = do
-    let sk = loginIdentSK mu
+    foundation <- getYesod
+    let sk = loginIdentSK foundation mu
+
     lookupSession sk
 
-getLoggedInId :: (LoginUser u, MonadHandler m, Monad n) => n u -> m (Maybe (Key u))
-getLoggedInId mu = liftM (join . (fmap $ loginIdentToKey mu)) $ getLoggedInIdent mu
+
+getLoggedInId :: (LoginUser site u, MonadHandler m, HandlerSite m ~ site)
+              => Proxy u -> m (Maybe (Key u))
+getLoggedInId mu = do
+  foundation <- getYesod
+  liftM (join . (fmap $ loginIdentToKey foundation mu)) $ getLoggedInIdent mu
+
 
 -- | 在 session 中标记某个用户为登录状态
-markLoggedIn :: forall u site . (LoginUser u) => Key u -> HandlerT site IO ()
+markLoggedIn :: forall u site . (LoginUser site u)
+             => Key u -> HandlerT site IO ()
 markLoggedIn uid = do
-    let sk = loginIdentSK ([] :: [u])
+    foundation <- getYesod
+    let sk = loginIdentSK foundation (Proxy :: Proxy u)
     setSession sk $ jsonEncodeKey uid
 
-markLoggedOut :: (LoginUser u, Monad n) => n u -> HandlerT site IO ()
+
+markLoggedOut :: (LoginUser site u) => Proxy u -> HandlerT site IO ()
 markLoggedOut mu = do
-    let sk = loginIdentSK mu
+    foundation <- getYesod
+    let sk = loginIdentSK foundation mu
     deleteSession sk
 
 
@@ -102,7 +111,7 @@ data LoggedInHandler u site m a =
                     -- the real handler function
 
 runLoggedInHandler ::
-    ( LoginUser u
+    ( LoginUser site u
     , RenderMessage site message
 #if MIN_VERSION_persistent(2, 0, 0)
 
