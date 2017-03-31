@@ -6,7 +6,6 @@ import System.Exit
 import Data.Aeson
 import Data.Aeson.Types
 import Data.Yaml                        (decodeEither)
-import Control.Monad.Trans              (lift)
 import qualified Data.Text              as T
 
 import Yesod.Helpers.Aeson
