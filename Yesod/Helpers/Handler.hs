@@ -106,7 +106,9 @@ type MkForm site m a = Markup -> MForm (HandlerT site m) (FormResult a, WidgetT 
 type MkEMForm site m a = Markup -> EMForm (HandlerT site m) (FormResult a, WidgetT site IO ())
 
 type FormHandlerT site m a = R.ReaderT (WidgetT site IO (), Enctype) (HandlerT site m) a
-type EFormHandlerT site m a = R.ReaderT (((WidgetT site IO (), Enctype), Html), FieldErrors site) (HandlerT site m) a
+
+type GenFormData site = ((WidgetT site IO (), Enctype), Html)
+type EFormHandlerT site m a = R.ReaderT (GenFormData site, FieldErrors site) (HandlerT site m) a
 
 -- ^
 -- Typical Usage:

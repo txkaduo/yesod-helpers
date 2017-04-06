@@ -4,6 +4,7 @@ import ClassyPrelude.Yesod
 
 import Yesod.Helpers.Message
 import Yesod.Helpers.Form2
+import Yesod.Helpers.Handler
 
 
 -- | construct page title by merging pieces of texts, separated by MsgPageTitleSep
@@ -20,17 +21,17 @@ mergePageTitles parts = do
 
 
 -- | A simple widget to show a html form
-simpleFormPageWidget :: (MonadIO m, MonadThrow m, ToWidget master w
+simpleFormPageWidget :: (MonadIO m, MonadThrow m
                         , MonadBaseControl IO m
                         , RenderMessage master a
                         , RenderMessage master YHCommonMessage
                         )
-                     => (w, Enctype)
+                     => GenFormData master
                      -> Route master  -- ^ action url
                      -> Maybe a       -- ^ any global error message
                      -> FieldErrors master  -- ^ error messages for form fields
                      -> WidgetT master m ()
-simpleFormPageWidget (formWidget, formEnctype) action m_err_msg form_errs = do
+simpleFormPageWidget ((formWidget, formEnctype), extra) action m_err_msg form_errs = do
   [whamlet|
 $maybe err_msg <- m_err_msg
    <div .form-group>
@@ -39,6 +40,7 @@ $maybe err_msg <- m_err_msg
   $forall ((_name, fs), errs) <- fieldErrorsToList form_errs
     <li>_{fsLabel fs}: #{intercalate ";" errs}
 <form method=post action="@{action}" enctype=#{formEnctype}>
+  ^{extra}
   ^{formWidget}
   <div .form-group>
     <div .submit-btn-container>
