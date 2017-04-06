@@ -16,7 +16,7 @@ import Yesod.Core                           (runFakeHandler)
 import qualified Data.Map.Strict            as Map
 import Control.Monad.Trans.Maybe
 
-import Network.Wai                          (requestHeaders, rawQueryString)
+import Network.Wai                          (requestHeaders, rawQueryString, requestMethod)
 import Text.Blaze                           (Markup)
 import Data.List                            (findIndex)
 import Data.Aeson.Types                     (Pair)
@@ -109,6 +109,49 @@ type FormHandlerT site m a = R.ReaderT (WidgetT site IO (), Enctype) (HandlerT s
 
 type GenFormData site = ((WidgetT site IO (), Enctype), Html)
 type EFormHandlerT site m a = R.ReaderT (GenFormData site, FieldErrors site) (HandlerT site m) a
+
+
+handleGetPostEMFormTc :: (Yesod site, RenderMessage site FormMessage)
+                      => MkEMForm site IO a
+                      -> (Maybe Text -> EFormHandlerT site IO Html)
+                      -> ((Maybe Text -> HandlerT site IO TypedContent) -> a -> HandlerT site IO TypedContent)
+                      -> HandlerT site IO TypedContent
+-- {{{1
+handleGetPostEMFormTc form show_form handle_form_data = do
+  handleGetPostEMForm form show_form' handle_form_data
+  where
+    show_form' = jsonOrHtmlOutputFormEX [] . show_form
+-- }}}1
+
+
+handleGetPostEMForm :: (Yesod site, RenderMessage site FormMessage)
+                    => MkEMForm site IO a
+                    -> (Maybe Text -> EFormHandlerT site IO c)
+                    -> ((Maybe Text -> HandlerT site IO c) -> a -> HandlerT site IO c)
+                    -> HandlerT site IO c
+-- {{{1
+handleGetPostEMForm form show_form handle_form_data = do
+  req_method <- requestMethod <$> waiRequest
+  case req_method of
+    "GET" -> do
+      generateEMFormPost form >>= runReaderT ((show_form Nothing))
+
+    "POST" -> do
+      ((((result, formWidget), formEnctype), extra), form_errs) <- runEMFormPost form
+      let showf merr = do
+              m_add_err <- liftM (fromMaybe mempty) $ forM merr $ \err -> do
+                              return $ overallFieldError err
+              flip runReaderT (((formWidget, formEnctype), extra), form_errs <> m_add_err) $ do
+                  show_form merr
+
+      case result of
+          FormMissing     -> showf Nothing
+          FormFailure _   -> showf Nothing
+          FormSuccess form_data -> handle_form_data showf form_data
+
+    _ -> sendResponseStatus methodNotAllowed405 (asText "Method Not Allowed!")
+-- }}}1
+
 
 -- ^
 -- Typical Usage:
