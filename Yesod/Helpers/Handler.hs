@@ -107,7 +107,7 @@ type MkEMForm site m a = Markup -> EMForm (HandlerT site m) (FormResult a, Widge
 
 type FormHandlerT site m a = R.ReaderT (WidgetT site IO (), Enctype) (HandlerT site m) a
 
-type GenFormData site = ((WidgetT site IO (), Enctype), Html)
+type GenFormData site = (WidgetT site IO (), Enctype)
 type EFormHandlerT site m a = R.ReaderT (GenFormData site, FieldErrors site) (HandlerT site m) a
 
 
@@ -137,11 +137,11 @@ handleGetPostEMForm form show_form handle_form_data = do
       generateEMFormPost form >>= runReaderT ((show_form Nothing))
 
     "POST" -> do
-      ((((result, formWidget), formEnctype), extra), form_errs) <- runEMFormPost form
+      (((result, formWidget), formEnctype), form_errs) <- runEMFormPost form
       let showf merr = do
               m_add_err <- liftM (fromMaybe mempty) $ forM merr $ \err -> do
                               return $ overallFieldError err
-              flip runReaderT (((formWidget, formEnctype), extra), form_errs <> m_add_err) $ do
+              flip runReaderT ((formWidget, formEnctype), form_errs <> m_add_err) $ do
                   show_form merr
 
       case result of
@@ -267,7 +267,7 @@ jsonOrHtmlOutputFormEX :: (Yesod site, MonadIO m, MonadThrow m, MonadBaseControl
                             -- ^ provide HTML content
                         -> EFormHandlerT site m TypedContent
 jsonOrHtmlOutputFormEX extra_js_fields show_form = do
-    r@(((formWidget, _formEnctype), _token), field_errs) <- R.ask
+    r@((formWidget, _formEnctype), field_errs) <- R.ask
     lift $ do
         render_msg <- getMessageRender
         selectRep $ do

@@ -31,7 +31,7 @@ simpleFormPageWidget :: (MonadIO m, MonadThrow m
                      -> Maybe a       -- ^ any global error message
                      -> FieldErrors master  -- ^ error messages for form fields
                      -> WidgetT master m ()
-simpleFormPageWidget ((formWidget, formEnctype), extra) action m_err_msg form_errs = do
+simpleFormPageWidget (formWidget, formEnctype) action m_err_msg form_errs = do
   [whamlet|
 $maybe err_msg <- m_err_msg
    <div .form-group>
@@ -40,7 +40,6 @@ $maybe err_msg <- m_err_msg
   $forall ((_name, fs), errs) <- fieldErrorsToList form_errs
     <li>_{fsLabel fs}: #{intercalate ";" errs}
 <form method=post action="@{action}" enctype=#{formEnctype}>
-  ^{extra}
   ^{formWidget}
   <div .form-group>
     <div .submit-btn-container>
