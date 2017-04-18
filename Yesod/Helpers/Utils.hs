@@ -25,8 +25,11 @@ import Network.HTTP.Types                   (parseQueryText, renderQueryText, Qu
 import Network.URI                          (parseURIReference, uriQuery, uriToString
                                             , parseAbsoluteURI, uriAuthority, uriRegName
                                             )
+import Yesod.Core.Types                     (ContentType)
 import qualified Blaze.ByteString.Builder   as BBB
 import qualified Data.ByteString.UTF8       as UTF8
+import qualified Data.ByteString.Lazy       as LB
+import qualified Data.ByteString.Base64.Lazy as LB64
 -- }}}1
 
 
@@ -307,6 +310,17 @@ mkLocalTimeSince d m_tod = LocalTime d (fromMaybe midnight m_tod)
 mkLocalTimeTill :: Day -> Maybe TimeOfDay -> LocalTime
 mkLocalTimeTill d Nothing    = LocalTime (addDays 1 d) midnight
 mkLocalTimeTill d (Just tod) = LocalTime d tod
+
+
+base64DataURI :: ContentType -> LB.ByteString -> LB.ByteString
+base64DataURI ct lbs =
+  mconcat [ "data:"
+          , fromStrict ct
+          , ";base64"
+          , ","
+          , LB64.encode lbs
+          ]
+
 
 
 -- vim: set foldmethod=marker:
