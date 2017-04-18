@@ -1,5 +1,6 @@
 module Yesod.Helpers.Utils where
 
+-- {{{1
 import ClassyPrelude
 import Data.Char
 import Data.List                            ((!!))
@@ -26,6 +27,7 @@ import Network.URI                          (parseURIReference, uriQuery, uriToS
                                             )
 import qualified Blaze.ByteString.Builder   as BBB
 import qualified Data.ByteString.UTF8       as UTF8
+-- }}}1
 
 
 
@@ -307,3 +309,4 @@ mkLocalTimeTill d Nothing    = LocalTime (addDays 1 d) midnight
 mkLocalTimeTill d (Just tod) = LocalTime d tod
 
 
+-- vim: set foldmethod=marker:
