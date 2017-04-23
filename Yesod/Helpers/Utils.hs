@@ -4,6 +4,7 @@ module Yesod.Helpers.Utils where
 import ClassyPrelude
 import Data.Char
 import Data.List                            ((!!))
+import Data.Proxy
 import Data.Time                            ( localTimeToUTC, zonedTimeToUTC, TimeZone, ParseTime
                                             , LocalTime(..), midnight, TimeOfDay, addDays
                                             , NominalDiffTime
@@ -321,6 +322,9 @@ base64DataURI ct lbs =
           , LB64.encode lbs
           ]
 
+
+proxyOf :: a -> Proxy a
+proxyOf _ = Proxy
 
 
 -- vim: set foldmethod=marker:
