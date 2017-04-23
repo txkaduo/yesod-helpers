@@ -55,6 +55,7 @@ library
                        Yesod.Helpers.FuzzyDay
                        Yesod.Helpers.Yaml
                        Yesod.Helpers.Persist
+                       Yesod.Helpers.Persist.Postgres
                        Yesod.Helpers.Upload
                        Yesod.Helpers.SafeCopy
                        Yesod.Helpers.Acid
