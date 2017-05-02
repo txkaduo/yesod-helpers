@@ -37,7 +37,6 @@ import Control.Arrow                        (right)
 import Data.Conduit.Binary                  (sourceLbs, sinkLbs)
 
 import Data.List                            (nub)
-import Data.Char                            (isDigit)
 import Text.Blaze.Renderer.Utf8             (renderMarkup)
 import Text.Blaze.Internal                  (MarkupM(Empty))
 import Control.Monad.Catch                  (catch)
@@ -49,6 +48,7 @@ import Data.Yaml                            (decodeEither)
 import qualified Codec.Archive.Smooth.All as AS
 
 import Yesod.Helpers.Parsec
+import Yesod.Helpers.Utils                  (normalizeChineseMobileNum)
 -- }}}1
 
 
@@ -1167,24 +1167,7 @@ chineseMobileField :: (RenderMessage (HandlerSite m) msg
 -- {{{1
 chineseMobileField err_msg = checkM chk_mobile strippedTextField
     where
-        chk_mobile_raw t = do
-            let t' = T.filter (/= '-') t
-            unless (T.all isDigit t' && T.length t' == 11 && T.isPrefixOf "1" t') mzero
-            return t'
-
-        -- handle +86
-        chk_mobile_plus t = do
-            T.stripPrefix "+" t >>= chk_mobile_cn
-
-        chk_mobile_cn t = do
-            T.stripPrefix "86" t >>= chk_mobile_raw
-
-        chk_mobile_maybe t = catMaybes  [ chk_mobile_cn t
-                                        , chk_mobile_plus t
-                                        , chk_mobile_raw t
-                                        ]
-
-        chk_mobile t = return $ maybe (Left err_msg) Right $ listToMaybe $ chk_mobile_maybe t
+        chk_mobile t = return $ maybe (Left err_msg) Right $ normalizeChineseMobileNum t
 -- }}}1
 
 

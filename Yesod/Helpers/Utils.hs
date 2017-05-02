@@ -5,6 +5,7 @@ import ClassyPrelude
 import Data.Char
 import Data.List                            ((!!))
 import Data.Proxy
+import qualified Data.Text                  as T
 import Data.Time                            ( localTimeToUTC, zonedTimeToUTC, TimeZone, ParseTime
                                             , LocalTime(..), midnight, TimeOfDay, addDays
                                             , NominalDiffTime
@@ -325,6 +326,30 @@ base64DataURI ct lbs =
 
 proxyOf :: a -> Proxy a
 proxyOf _ = Proxy
+
+
+-- | 检查字串是否是合法的中国手机号，并去除多余的前缀如+86等，去除中间的减号
+normalizeChineseMobileNum :: Text -> Maybe Text
+-- {{{1
+normalizeChineseMobileNum = listToMaybe . chk_mobile_maybe
+  where
+    chk_mobile_raw t = do
+        let t' = T.filter (/= '-') t
+        unless (T.all isDigit t' && T.length t' == 11 && T.isPrefixOf "1" t') mzero
+        return t'
+
+    -- handle +86
+    chk_mobile_plus t = do
+        T.stripPrefix "+" t >>= chk_mobile_cn
+
+    chk_mobile_cn t = do
+        T.stripPrefix "86" t >>= chk_mobile_raw
+
+    chk_mobile_maybe t = catMaybes  [ chk_mobile_cn t
+                                    , chk_mobile_plus t
+                                    , chk_mobile_raw t
+                                    ]
+-- }}}1
 
 
 -- vim: set foldmethod=marker:
