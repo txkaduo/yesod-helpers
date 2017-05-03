@@ -18,6 +18,7 @@ import Text.Parsec
 import Yesod.Helpers.Parsec
 import Yesod.Helpers.Aeson                  (parseTextByParsec)
 import Yesod.Helpers.SafeCopy
+import Yesod.Helpers.Form
 -- }}}1
 
 
@@ -187,6 +188,23 @@ fuzzyDayTimeRange :: TimeZone
 -- {{{1
 fuzzyDayTimeRange tz fd = (to_utc *** to_utc) $ fuzzyDayDayRange fd
     where to_utc = localTimeToUTC tz . (\x -> LocalTime x midnight)
+-- }}}1
+
+
+fuzzyDayField :: ( RenderMessage (HandlerSite m) FormMessage
+                 , RenderMessage (HandlerSite m) msg
+                 , Monad m
+                 )
+              => msg
+              -> Field m FuzzyDay
+-- {{{1
+fuzzyDayField err_msg = checkMMap from_str to_str strippedTextField
+  where
+    to_str = fromString . simpleEncode
+    from_str t =
+      case parse (humanParseFuzzyDay <* eof) "" t of
+        Left _ -> return $ Left $ err_msg
+        Right x -> return $ Right x
 -- }}}1
 
 
