@@ -1,27 +1,24 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Yesod.Helpers.FuzzyDay where
 
-import Prelude
+-- {{{1 imports
+import ClassyPrelude.Yesod hiding (try, (<|>), optional)
 
-import Control.Monad
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative                  ((<$>))
-import Data.Monoid                          (mconcat)
-#endif
 import qualified Data.Aeson                 as A
 import qualified Text.Parsec.Number         as PN
 import Data.Aeson.Types                     (Parser, typeMismatch)
 import Data.Scientific                      (floatingOrInteger)
 import Data.Time
-import Data.Maybe                           (fromMaybe)
 import Control.Arrow                        ((***))
 import Control.DeepSeq                      (NFData(..))
 import Control.DeepSeq.Generics             (genericRnf)
 import GHC.Generics                         (Generic)
+import Text.Parsec
+
 import Yesod.Helpers.Parsec
 import Yesod.Helpers.Aeson                  (parseTextByParsec)
 import Yesod.Helpers.SafeCopy
-import Text.Parsec
+-- }}}1
 
 
 data FuzzyDay = FuzzyDayY Int
@@ -29,6 +26,7 @@ data FuzzyDay = FuzzyDayY Int
                 | FuzzyDayYMD Int Int Int
                 deriving (Show, Read, Eq, Generic)
 
+-- {{{1 instances
 instance NFData FuzzyDay where rnf = genericRnf
 
 $(derivePersistFieldS "FuzzyDay")
@@ -63,19 +61,23 @@ instance SimpleStringRep FuzzyDay where
             p_y = do
                 y <- natural
                 return $ FuzzyDayY (fromIntegral y)
+-- }}}1
 
 
 parseFuzzyDayFromJson :: A.Value -> Parser FuzzyDay
+-- {{{1
 parseFuzzyDayFromJson (A.String t)   = parseTextByParsec humanParseFuzzyDay t
 parseFuzzyDayFromJson (A.Number num) = do
     case floatingOrInteger num of
         Left ( _ :: Double) -> fail "expecting a integer, but got a floating"
         Right x             -> return $ FuzzyDayY x
 parseFuzzyDayFromJson v              = typeMismatch "integer" v
+-- }}}1
 
 
 -- | Parse human-readable string, output a FuzzyDay
 humanParseFuzzyDay :: Stream s m Char => ParsecT s u m FuzzyDay
+-- {{{1
 humanParseFuzzyDay = do
     y <- p_year
     month_res <- optionMaybe $ try $ do
@@ -128,33 +130,42 @@ humanParseFuzzyDay = do
         cmp_sep (Left x) (Left y)   = x == y
         cmp_sep (Right _) (Right _) = True
         cmp_sep _ _                 = False
+-- }}}1
 
 
 -- | Parse human-readable string
 humanParseFuzzyDayRange :: Stream s m Char => ParsecT s u m (FuzzyDay, FuzzyDay)
+-- {{{1
 humanParseFuzzyDayRange = do
     d1 <- humanParseFuzzyDay
     optional $ (try $ spaces >> string "--" >> spaces)
                 <|> (try $ spaces >> string "-" >> spaces)
     d2 <- humanParseFuzzyDay
     return (d1, d2)
+-- }}}1
 
 
 toFuzzyDay :: Day -> FuzzyDay
+-- {{{1
 toFuzzyDay x = FuzzyDayYMD (fromIntegral y) m d
     where
         (y, m, d) = toGregorian x
+-- }}}1
 
 fromFuzzyDay :: FuzzyDay -> Day
+-- {{{1
 fromFuzzyDay fd = fromGregorian (fromIntegral y) m d
     where
         (y, m, d) = case fd of
                         FuzzyDayY a -> (a, 6, 31)
                         FuzzyDayYM a b -> (a, b, 15)
                         FuzzyDayYMD a b c -> (a, b, c)
+-- }}}1
+
 
 fuzzyDayDayRange :: FuzzyDay
                  -> (Day, Day)
+-- {{{1
 fuzzyDayDayRange fd =
     case fd of
         FuzzyDayY y     -> (to_day y 1 1, to_day (y + 1) 1 1)
@@ -167,12 +178,17 @@ fuzzyDayDayRange fd =
         next_month y m = if m >= 12
                             then (y + 1, 1)
                             else (y, m + 1)
+-- }}}1
+
 
 fuzzyDayTimeRange :: TimeZone
                   -> FuzzyDay
                   -> (UTCTime, UTCTime)   -- ^ [begin, end)
+-- {{{1
 fuzzyDayTimeRange tz fd = (to_utc *** to_utc) $ fuzzyDayDayRange fd
     where to_utc = localTimeToUTC tz . (\x -> LocalTime x midnight)
+-- }}}1
+
 
 data FuzzyAge = FuzzyAgeY Int
                 | FuzzyAgeYM Int Int
@@ -180,6 +196,7 @@ data FuzzyAge = FuzzyAgeY Int
                 deriving (Show, Read, Eq)
 
 fuzzyDayDiff :: FuzzyDay -> FuzzyDay -> FuzzyAge
+-- {{{1
 fuzzyDayDiff fd1 fd2 =
     case min (level fd1) (level fd2) of
         1 -> FuzzyAgeY df_y
@@ -194,9 +211,15 @@ fuzzyDayDiff fd1 fd2 =
         df_y = fromIntegral $ df `quot` 365
         df_m = fromIntegral $ df `rem` 365 `quot` 30
         df_d = fromIntegral $ df `rem` 365 `rem` 30
+-- }}}1
 
 
 fuzzyAgeYear :: FuzzyAge -> Int
+-- {{{1
 fuzzyAgeYear (FuzzyAgeY y)          = y
 fuzzyAgeYear (FuzzyAgeYM y _)       = y
 fuzzyAgeYear (FuzzyAgeYMD y _ _)    = y
+-- }}}1
+
+
+-- vim: set foldmethod=marker:
