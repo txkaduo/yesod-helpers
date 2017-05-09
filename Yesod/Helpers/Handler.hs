@@ -153,6 +153,48 @@ handleGetPostEMForm form show_form handle_form_data = do
 -- }}}1
 
 
+handleGetPostEMFormNoTokenTc :: (Yesod site, RenderMessage site FormMessage)
+                             => MkEMForm site IO a
+                             -> (Maybe Text -> EFormHandlerT site IO Html)
+                             -> ((Maybe Text -> HandlerT site IO TypedContent) -> a -> HandlerT site IO TypedContent)
+                             -> HandlerT site IO TypedContent
+-- {{{1
+handleGetPostEMFormNoTokenTc form show_form handle_form_data = do
+  handleGetPostEMFormNoToken form show_form' handle_form_data
+  where
+    show_form' = jsonOrHtmlOutputFormEX [] . show_form
+-- }}}1
+
+
+handleGetPostEMFormNoToken :: (Yesod site, RenderMessage site FormMessage)
+                           => MkEMForm site IO a
+                           -> (Maybe Text -> EFormHandlerT site IO c)
+                           -> ((Maybe Text -> HandlerT site IO c) -> a -> HandlerT site IO c)
+                           -> HandlerT site IO c
+-- {{{1
+handleGetPostEMFormNoToken form show_form handle_form_data = do
+  req_method <- requestMethod <$> waiRequest
+  case req_method of
+    "GET" -> do
+      generateEMFormPost form >>= runReaderT ((show_form Nothing))
+
+    "POST" -> do
+      (((result, formWidget), formEnctype), form_errs) <- runEMFormPostNoToken form
+      let showf merr = do
+              m_add_err <- liftM (fromMaybe mempty) $ forM merr $ \err -> do
+                              return $ overallFieldError err
+              flip runReaderT ((formWidget, formEnctype), form_errs <> m_add_err) $ do
+                  show_form merr
+
+      case result of
+          FormMissing     -> showf Nothing
+          FormFailure _   -> showf Nothing
+          FormSuccess form_data -> handle_form_data showf form_data
+
+    _ -> sendResponseStatus methodNotAllowed405 (asText "Method Not Allowed!")
+-- }}}1
+
+
 -- ^
 -- Typical Usage:
 --
