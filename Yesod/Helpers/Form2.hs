@@ -22,6 +22,7 @@ module Yesod.Helpers.Form2
     , jsendFormData
     ) where
 
+-- {{{1 imports
 import ClassyPrelude.Yesod
 import qualified Data.Text.Encoding         as TE
 import qualified Control.Monad.Trans.State.Strict as SS
@@ -43,6 +44,7 @@ import Yesod.Form.Bootstrap3                ( renderBootstrap3
                                             , BootstrapFormLayout(BootstrapBasicForm)
                                             )
 #endif
+-- }}}1
 
 
 newtype WrappedFieldSettings master = WrappedFieldSettings
@@ -139,24 +141,29 @@ type SEMForm m a = SS.StateT [FieldView (HandlerSite m)]
 -- the form submit to a POST page. In such a case, both the GET and POST
 -- handlers should use 'runFormPost'.
 runEMFormPost :: (RenderMessage (HandlerSite m) FormMessage, MonadResource m, MonadHandler m)
-            => (Html -> EMForm m (FormResult a, xml))
-            -> m (((FormResult a, xml), Enctype), FieldErrors (HandlerSite m))
+              => (Html -> EMForm m (FormResult a, xml))
+              -> m (((FormResult a, xml), Enctype), FieldErrors (HandlerSite m))
+-- {{{1
 runEMFormPost form = do
     env <- postEnv
     postHelper form env
+-- }}}1
 
 runEMFormPostNoToken :: MonadHandler m
-                   => (Html -> EMForm m a)
-                   -> m ((a, Enctype), FieldErrors (HandlerSite m))
+                     => (Html -> EMForm m a)
+                     -> m ((a, Enctype), FieldErrors (HandlerSite m))
+-- {{{1
 runEMFormPostNoToken form = do
     langs <- languages
     m <- getYesod
     env <- postEnv
     runEMFormGeneric (form mempty) m langs env
+-- }}}1
 
 runEMFormGet :: MonadHandler m
-           => (Html -> EMForm m a)
-           -> m ((a, Enctype), FieldErrors (HandlerSite m))
+             => (Html -> EMForm m a)
+             -> m ((a, Enctype), FieldErrors (HandlerSite m))
+-- {{{1
 runEMFormGet form = do
     gets <- liftM reqGetParams getRequest
     let env =
@@ -164,6 +171,7 @@ runEMFormGet form = do
                 Nothing -> Nothing
                 Just _ -> Just (unionsWith (++) $ map (\(x, y) -> singletonMap x [y]) gets, mempty)
     getHelper form env
+-- }}}1
 
 -- | Similar to 'runFormPost', except it always ignores the currently available
 -- environment. This is necessary in cases like a wizard UI, where a single
@@ -191,12 +199,14 @@ runEMFormGeneric :: Monad m
                -> [Text]
                -> Maybe (Env, FileEnv)
                -> m ((a, Enctype), FieldErrors (HandlerSite m))
+-- {{{1
 runEMFormGeneric form site langs env = do
     ((res, err_fields), enctype) <- evalRWST (runWriterT form) (env, site, langs) (IntSingle 0)
     return ((res, enctype), err_fields)
+-- }}}1
 
-postEnv :: (MonadHandler m)
-        => m (Maybe (Env, FileEnv))
+postEnv :: (MonadHandler m) => m (Maybe (Env, FileEnv))
+-- {{{1
 postEnv = do
     req <- getRequest
     if requestMethod (reqWaiRequest req) == "GET"
@@ -205,11 +215,13 @@ postEnv = do
             (p, f) <- runRequestBody
             let p' = unionsWith (++) $ map (\(x, y) -> singletonMap x [y]) p
             return $ Just (p', unionsWith (++) $ map (\(k, v) -> singletonMap k [v]) f)
+-- }}}1
 
 postHelper  :: (MonadHandler m, RenderMessage (HandlerSite m) FormMessage)
             => (Html -> EMForm m (FormResult a, xml))
             -> Maybe (Env, FileEnv)
             -> m (((FormResult a, xml), Enctype), FieldErrors (HandlerSite m))
+-- {{{1
 postHelper form env = do
     req <- getRequest
     let tokenKey = asText "_token"
@@ -235,6 +247,7 @@ postHelper form env = do
                 _ -> return (res, err_fields)
 
     return (((res', xml), enctype), err_fields')
+-- }}}1
 
 
 -- | Converts a form field into monadic form. This field requires a value
@@ -316,6 +329,7 @@ renderBootstrapES :: Monad m =>
                     Markup
                     -> FormResult a
                     -> SEMForm m (FormResult a, WidgetT (HandlerSite m) IO ())
+-- {{{1
 renderBootstrapES extra result = do
     views <- liftM reverse $ SS.get
     let aform = formToAForm $ return (result, views)
@@ -329,6 +343,7 @@ renderBootstrapES extra result = do
         renderBootstrap
 #endif
             aform extra
+-- }}}1
 
 
 #if MIN_VERSION_yesod_form(1, 3, 8)
@@ -377,6 +392,7 @@ jsendFormData :: (SomeMessage master -> Text)
                 -> FieldErrors master
                 -> [Pair]
                 -> JSendMsg
+-- {{{1
 jsendFormData render_msg m_form_html field_errs extra_fields =
     if nullFieldErrors field_errs
         then JSendSuccess dat
@@ -390,6 +406,8 @@ jsendFormData render_msg m_form_html field_errs extra_fields =
                                 ]
                                 )
                 ] ++ extra_fields
+-- }}}1
+
 
 mhelper :: (site ~ HandlerSite m, MonadHandler m)
         => Field m a
@@ -399,7 +417,7 @@ mhelper :: (site ~ HandlerSite m, MonadHandler m)
         -> (a -> FormResult b) -- ^ on success
         -> Bool -- ^ is it required?
         -> EMForm m (FormResult b, FieldView site)
-
+-- {{{1
 mhelper Field {..} fs@(FieldSettings {..}) mdef onMissing onFound isReq = do
     lift $ tell fieldEnctype
     mp <- lift $ askParams
@@ -437,6 +455,7 @@ mhelper Field {..} fs@(FieldSettings {..}) mdef onMissing onFound isReq = do
                 _ -> Nothing
         , fvRequired = isReq
         })
+-- }}}1
 
 getKey :: Text
 getKey = "_hasdata"
@@ -445,8 +464,13 @@ getHelper :: MonadHandler m
           => (Html -> EMForm m a)
           -> Maybe (Env, FileEnv)
           -> m ((a, Enctype), FieldErrors (HandlerSite m))
+-- {{{1
 getHelper form env = do
     let fragment = [shamlet|<input type=hidden name=#{getKey}>|]
     langs <- languages
     m <- getYesod
     runEMFormGeneric (form fragment) m langs env
+-- }}}1
+
+
+-- vim: set foldmethod=marker:
