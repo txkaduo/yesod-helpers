@@ -20,6 +20,8 @@ module Yesod.Helpers.Form2
     , renderBootstrap3ES
     , renderBootstrap3ES'
     , jsendFormData
+    , optTimeRangeEndpointField
+    , reqTimeRangeEndpointField
     ) where
 
 -- {{{1 imports
@@ -31,6 +33,7 @@ import Control.Monad.Trans.RWS              (RWST, tell, evalRWST)
 import Control.Monad.Trans.Writer           (runWriterT, WriterT(..))
 import qualified Control.Monad.Trans.Writer as W
 import Data.Byteable                        (constEqBytes)
+import Data.Time
 import Network.Wai                          (requestMethod)
 import Text.Blaze                           (Markup)
 import Text.Blaze.Html.Renderer.Text        (renderHtml)
@@ -38,7 +41,7 @@ import Data.Aeson.Types                     (Pair)
 
 import Yesod.Helpers.JSend
 
--- import Yesod.Form
+import           Yesod.Form.Jquery
 #if MIN_VERSION_yesod_form(1, 3, 8)
 import Yesod.Form.Bootstrap3                ( renderBootstrap3
                                             , BootstrapFormLayout(BootstrapBasicForm)
@@ -470,6 +473,74 @@ getHelper form env = do
     langs <- languages
     m <- getYesod
     runEMFormGeneric (form fragment) m langs env
+-- }}}1
+
+
+-- | 用一个 Day 和 TimeOfDay 的输入，合成一个时间范围的端点（开始或结束）
+optTimeRangeEndpointField :: (RenderMessage site FormMessage, YesodJquery site)
+                          => TimeZone
+                          -> Bool
+                          -> FieldSettings site
+                          -> FieldSettings site
+                          -> Maybe UTCTime
+                          -> SEMForm (HandlerT site IO) (FormResult (Maybe UTCTime))
+-- {{{1
+optTimeRangeEndpointField tz is_start day_fs tod_fs old = do
+  day <- semopt (jqueryDayField def) day_fs
+            (Just $ fmap (localDay . utcToLocalTime tz) $ old)
+
+  tod <- semopt timeFieldTypeTime tod_fs
+            (Just $ fmap (localTimeOfDay . utcToLocalTime tz) $ old)
+
+  compose_utc_time_field_result day tod
+
+  where
+    compose_utc_time Nothing (Just _)   = Left $ asText "需先指定日期"
+    compose_utc_time Nothing Nothing    = Right Nothing
+    compose_utc_time (Just d) m_tod = Right $ Just $
+      localTimeToUTC tz $
+        LocalTime d $
+          case m_tod of
+            Nothing -> if is_start
+                          then midnight
+                          else TimeOfDay 23 59 59.9999999
+
+            Just tod -> tod
+
+
+    compose_utc_time_field_result (FormSuccess d) (FormSuccess tod)   = case compose_utc_time d tod of
+                                                                          Left err ->
+                                                                            lift (addEMOverallError err) >> return FormMissing
+                                                                          Right x -> return $ FormSuccess x
+
+    compose_utc_time_field_result _               _                   = return FormMissing -- 每个参数的错误已被单独收集，这里不用处理
+-- }}}1
+
+
+-- | 用一个 Day 和 TimeOfDay 的输入，合成一个时间范围的端点（开始或结束）
+reqTimeRangeEndpointField :: (RenderMessage site FormMessage, YesodJquery site)
+                          => TimeZone
+                          -> Bool
+                          -> FieldSettings site
+                          -> FieldSettings site
+                          -> Maybe UTCTime
+                          -> SEMForm (HandlerT site IO) (FormResult UTCTime)
+-- {{{1
+reqTimeRangeEndpointField tz is_start day_fs tod_fs old_time = do
+  day <- semreq (jqueryDayField def) day_fs
+            (fmap (localDay . utcToLocalTime tz) old_time)
+
+  tod <- semopt timeFieldTypeTime tod_fs
+            (Just $ fmap (localTimeOfDay . utcToLocalTime tz) old_time)
+
+  return $ compose_utc_time <$> day <*> tod
+
+  where
+    compose_utc_time d (Just t) = localTimeToUTC tz $ LocalTime d t
+    compose_utc_time d Nothing = localTimeToUTC tz $ LocalTime d $
+                                  if is_start
+                                     then midnight
+                                     else TimeOfDay 23 59 59.9999999
 -- }}}1
 
 
