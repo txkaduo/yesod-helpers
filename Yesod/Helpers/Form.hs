@@ -47,6 +47,7 @@ import Data.Yaml                            (decodeEither)
 
 import qualified Codec.Archive.Smooth.All as AS
 
+import Yesod.Helpers.Message
 import Yesod.Helpers.Parsec
 import Yesod.Helpers.Utils                  (normalizeChineseMobileNum)
 -- }}}1
@@ -1174,6 +1175,18 @@ chineseMobileField err_msg = checkM chk_mobile strippedTextField
 nonNullTextToBoolField :: (Monad m, RenderMessage (HandlerSite m) FormMessage)
                        => Field m Bool
 nonNullTextToBoolField = convertField (not . null . T.strip) (\ b -> if b then "1" else "") textField
+
+
+mustBePositive :: (Num a, Ord a, RenderMessage (HandlerSite m) YHCommonMessage, Monad m)
+               => Field m a
+               -> Field m a
+mustBePositive = checkBool (> 0) MsgFormMsgMustBePositive
+
+
+mustNotBeNegative :: (Num a, Ord a, RenderMessage (HandlerSite m) YHCommonMessage, Monad m)
+                  => Field m a
+                  -> Field m a
+mustNotBeNegative = checkBool (> 0) MsgFormMsgMustBePositive
 
 
 -- vim: set foldmethod=marker:

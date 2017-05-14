@@ -19,3 +19,5 @@ FormMsgInvalidBool t@Text: 无效的布尔值: #{t}
 FormMsgBoolYes: 是
 FormMsgBoolNo: 否
 FormMsgDelete: 删除?
+FormMsgMustBePositive: 必须为正数.
+FormMsgMustNotBeNegative: 不能为负数

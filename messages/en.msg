@@ -19,3 +19,5 @@ FormMsgInvalidBool t@Text: Invalid boolean: #{t}
 FormMsgBoolYes: Yes
 FormMsgBoolNo: No
 FormMsgDelete: Delete?
+FormMsgMustBePositive: Must be positive.
+FormMsgMustNotBeNegative: Must not be negative.
