@@ -1171,5 +1171,9 @@ chineseMobileField err_msg = checkM chk_mobile strippedTextField
 -- }}}1
 
 
+nonNullTextToBoolField :: (Monad m, RenderMessage (HandlerSite m) FormMessage)
+                       => Field m Bool
+nonNullTextToBoolField = convertField (not . null . T.strip) (\ b -> if b then "1" else "") textField
+
 
 -- vim: set foldmethod=marker:
