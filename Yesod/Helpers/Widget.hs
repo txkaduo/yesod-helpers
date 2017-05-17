@@ -39,7 +39,7 @@ $maybe err_msg <- m_err_msg
 <ul>
   $forall ((_name, fs), errs) <- fieldErrorsToList form_errs
     <li>_{fsLabel fs}: #{intercalate ";" errs}
-<form method=post action="@{action}" enctype=#{formEnctype}>
+<form method=post action="@{action}" enctype=#{formEnctype} .form-horizontal>
   ^{formWidget}
   <div .form-group>
     <div .submit-btn-container>
