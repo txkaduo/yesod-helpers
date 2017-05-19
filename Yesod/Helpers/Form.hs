@@ -67,14 +67,16 @@ setPlaceholder :: Text -> FieldSettings site -> FieldSettings site
 setPlaceholder = fsSetPlaceholder
 
 
+fsSetAttr :: Text -> Text -> FieldSettings site -> FieldSettings site
+fsSetAttr attr_name attr_val (fs@FieldSettings{ fsAttrs = attrs }) =
+  fs { fsAttrs = insertMap attr_name attr_val attrs }
+
 fsSetPlaceholder :: Text -> FieldSettings site -> FieldSettings site
-fsSetPlaceholder t (fs@FieldSettings{ fsAttrs = attrs }) =
-  fs { fsAttrs = insertMap "placeholder" t attrs }
+fsSetPlaceholder = fsSetAttr "placeholder"
 
 
 fsSetReadOnly :: FieldSettings site -> FieldSettings site
-fsSetReadOnly (fs@FieldSettings{ fsAttrs = attrs }) =
-  fs { fsAttrs = insertMap "readonly" "readonly" attrs }
+fsSetReadOnly = fsSetAttr "readonly" "readonly"
 
 
 labelNameToFs :: RenderMessage site message => message -> Text -> FieldSettings site
