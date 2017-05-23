@@ -164,6 +164,22 @@ fromFuzzyDay fd = fromGregorian (fromIntegral y) m d
 -- }}}1
 
 
+-- | FuzzyDay所指范围的最后一日
+fromFuzzyDayEnd :: FuzzyDay -> Day
+-- {{{1
+fromFuzzyDayEnd fd = addDays delta $ fromGregorian (fromIntegral y) m d
+  where
+    ((y, m, d), delta) = case fd of
+                           FuzzyDayY a -> ((a, 12, 31), 0)
+
+                           FuzzyDayYM a b -> case b of
+                                               12 -> ((a, b, 31), 0)
+                                               _ -> ((a, b + 1, 1), -1)
+
+                           FuzzyDayYMD a b c -> ((a, b, c), 0)
+-- }}}1
+
+
 fuzzyDayDayRange :: FuzzyDay
                  -> (Day, Day)
 -- {{{1
