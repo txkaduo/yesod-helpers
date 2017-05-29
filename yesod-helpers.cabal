@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                yesod-helpers
-version:             0.19.5
+version:             0.20
 -- synopsis:            
 -- description:         
 license:             BSD3
@@ -54,8 +54,6 @@ library
                        Yesod.Helpers.Aeson
                        Yesod.Helpers.FuzzyDay
                        Yesod.Helpers.Yaml
-                       Yesod.Helpers.Persist
-                       Yesod.Helpers.Persist.Postgres
                        Yesod.Helpers.Upload
                        Yesod.Helpers.SafeCopy
                        Yesod.Helpers.Acid

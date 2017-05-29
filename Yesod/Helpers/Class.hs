@@ -6,7 +6,6 @@ import Database.Persist
 import Data.Time
 import Data.Text (Text)
 
-import Yesod.Helpers.Persist
 
 -- | 更新时间
 class HasUpdatedTime a where
@@ -35,32 +34,6 @@ class HasDeleted a where
 instance HasDeleted a => HasDeleted (Entity  a) where
   isDeleted = isDeleted . entityVal
   markDeleted b (Entity k v) = Entity k (markDeleted b v)
-
-
--- | 含有 deleted 字段的 PersistEntity
-class PersistEntity a => HasEntityFieldDeleted a where
-  entityFieldDeleted :: EntityField a Bool
-
-
-selectListWithDeleted :: ( HasEntityFieldDeleted a, PersistQueryMonad backend n m
-                         , IsPersistMonadOf backend n m a
-                         )
-                      => Bool
-                      -> [ Filter a ]
-                      -> [ SelectOpt a ]
-                      -> m [Entity a]
-selectListWithDeleted is_deleted filters opts =
-  selectList ((entityFieldDeleted ==. is_deleted) : filters) opts
-
-selectKeysListWithDeleted :: ( HasEntityFieldDeleted a, PersistQueryMonad backend n m
-                             , IsPersistMonadOf backend n m a
-                             )
-                          => Bool
-                          -> [ Filter a ]
-                          -> [ SelectOpt a ]
-                          -> m [Key a]
-selectKeysListWithDeleted is_deleted filters opts =
-  selectKeysList ((entityFieldDeleted ==. is_deleted) : filters) opts
 
 
 -- | 很多对象都有个用于显示的字串值
