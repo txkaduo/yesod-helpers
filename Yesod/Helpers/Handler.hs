@@ -139,9 +139,7 @@ handleGetPostEMForm form show_form handle_form_data = do
     "POST" -> do
       (((result, formWidget), formEnctype), form_errs) <- runEMFormPost form
       let showf merr = do
-              m_add_err <- liftM (fromMaybe mempty) $ forM merr $ \err -> do
-                              return $ overallFieldError err
-              flip runReaderT ((formWidget, formEnctype), form_errs <> m_add_err) $ do
+              flip runReaderT ((formWidget, formEnctype), form_errs) $ do
                   show_form merr
 
       case result of
