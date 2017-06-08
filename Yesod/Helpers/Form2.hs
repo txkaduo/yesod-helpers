@@ -11,8 +11,8 @@ module Yesod.Helpers.Form2
     , generateEMFormPost
     , generateEMFormGet'
     , generateEMFormGet
-    , emreq, emopt
-    , semreq, semopt, semreqOpt
+    , emreq, emopt, emstatic
+    , semreq, semopt, semreqOpt, semstatic
     , addEMFieldError
     , addEMOverallError
     , renderBootstrapES
@@ -280,6 +280,25 @@ emopt field fs mdef = mhelper field fs
                         (join mdef) (const $ const $ const $ return $ FormSuccess Nothing)
                         (FormSuccess . Just) False
 
+emstatic :: (site ~ HandlerSite m, MonadHandler m)
+    => FieldSettings site
+    -> a
+    -> Text
+    -> EMForm m (FormResult a, FieldView site)
+emstatic fs@(FieldSettings {..}) v text = do
+    theId <- lift $ lift $ maybe newIdent return fsId
+    (_, site, langs) <- lift $ ask
+    let mr2 = renderMessage site langs
+    return (FormSuccess v, FieldView
+        { fvLabel = toHtml $ mr2 fsLabel
+        , fvTooltip = fmap toHtml $ fmap mr2 fsTooltip
+        , fvId = theId
+        , fvInput = toWidget
+            [shamlet|<p id="#{theId}" *{fsAttrs} .form-control-static>#{text}|]
+        , fvErrors = Nothing
+        , fvRequired = False
+        })
+
 addEMFieldError :: (MonadHandler m, RenderMessage (HandlerSite m) msg)
                 => Text
                 -> FieldSettings (HandlerSite m)
@@ -316,6 +335,16 @@ semopt field settings initv = do
     (res, view) <- lift $ emopt field settings initv
     SS.modify ( view : )
     return res
+
+semstatic :: (HandlerSite m ~ site, MonadHandler m)
+    => FieldSettings site
+    -> a
+    -> Text
+    -> SEMForm m (FormResult a)
+semstatic settings v text = do
+  (res, view) <- lift $ emstatic settings v text
+  SS.modify ( view : )
+  return res
 
 -- | Use `semreq` internally, but make the signature like `semopt`.
 -- Useful when whether some fields is required depends on other conditions.
