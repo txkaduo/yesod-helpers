@@ -376,6 +376,8 @@ lookupReqAccept lst = do
 -- | runFormGet needs a special parameter "_hasdata",
 -- if it does not exist, runFormGet consider no form data input at all.
 -- Use this function to workaround this.
+-- XXX: getHelper auto add _hasdata to the form.
+-- It'd better to add to params by yourself if submit by AJAX.
 withHasDataGetParam :: HandlerT site m a -> HandlerT site m a
 withHasDataGetParam f = withAlteredYesodRequest add_has_data_req f
     where
