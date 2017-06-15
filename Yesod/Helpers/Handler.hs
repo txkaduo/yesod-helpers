@@ -113,8 +113,8 @@ type EFormHandlerT site m a = R.ReaderT (GenFormData site, FieldErrors site) (Ha
 
 handleGetPostEMFormTc :: (Yesod site, RenderMessage site FormMessage)
                       => MkEMForm site IO a
-                      -> (Maybe Text -> EFormHandlerT site IO Html)
-                      -> ((Maybe Text -> HandlerT site IO TypedContent) -> a -> HandlerT site IO TypedContent)
+                      -> (Maybe e -> EFormHandlerT site IO Html)
+                      -> ((Maybe e -> HandlerT site IO TypedContent) -> a -> HandlerT site IO TypedContent)
                       -> HandlerT site IO TypedContent
 -- {{{1
 handleGetPostEMFormTc form show_form handle_form_data = do
@@ -126,8 +126,8 @@ handleGetPostEMFormTc form show_form handle_form_data = do
 
 handleGetPostEMForm :: (Yesod site, RenderMessage site FormMessage)
                     => MkEMForm site IO a
-                    -> (Maybe Text -> EFormHandlerT site IO c)
-                    -> ((Maybe Text -> HandlerT site IO c) -> a -> HandlerT site IO c)
+                    -> (Maybe e -> EFormHandlerT site IO c)
+                    -> ((Maybe e -> HandlerT site IO c) -> a -> HandlerT site IO c)
                     -> HandlerT site IO c
 -- {{{1
 handleGetPostEMForm form show_form handle_form_data = do
