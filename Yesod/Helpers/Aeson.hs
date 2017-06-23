@@ -1,7 +1,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Yesod.Helpers.Aeson where
 
-import Prelude
+-- {{{1
+import ClassyPrelude
+import Prelude (ReadS, readsPrec)
 import Data.Aeson
 import qualified Data.Text              as T
 import qualified Data.Vector            as V
@@ -13,25 +15,17 @@ import qualified Data.ByteString        as B
 import qualified Data.ByteString.Char8  as C8
 import qualified Text.Parsec            as PC
 import qualified Control.Monad.Trans.State as S
-import Control.Monad.Trans              (lift)
-import Control.Monad                    (when)
-import Data.List                        (intersperse, sortBy)
-import Data.Ord                         (comparing)
 
 import Text.Parsec.Text                 ()
-import Data.Text                        (Text)
-import Data.Text.Encoding               (encodeUtf8)
 import Data.Aeson.Types                 (Parser, typeMismatch, modifyFailure)
-import Data.List                        (find)
-import Data.ByteString                  (ByteString)
 import Text.Parsec                      (ParsecT)
 import Data.Functor.Identity            (Identity)
-import Data.Maybe                       (fromMaybe, listToMaybe)
 import Data.Scientific                  (floatingOrInteger)
 import Text.ParserCombinators.ReadP     (ReadP, readP_to_S)
 
 import Yesod.Helpers.Parsec             (splitByParsec)
 import Yesod.Helpers.Utils              (nullToNothing)
+-- }}}1
 
 nullValueToNothing :: FromJSON a => Maybe Value -> Parser (Maybe a)
 nullValueToNothing Nothing     = return Nothing
@@ -295,7 +289,7 @@ parseTextByReadS type_name rs t = do
                                 else fail $ "faied to parse as type " ++ type_name
                                     ++ ": unexpected extra string " ++ show left
     where
-        sort_result = sortBy (comparing $ length . snd)
+        sort_result = sortWith (length . snd)
         t' = T.unpack t
 
 -- | use a ReadP to parse text value
@@ -364,3 +358,6 @@ optStripNonEmptyText obj name = do
         return x
 
 
+
+
+-- vim: set foldmethod=marker:
