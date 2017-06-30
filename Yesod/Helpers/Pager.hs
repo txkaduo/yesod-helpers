@@ -50,6 +50,24 @@ pagerGetOffset (PagerSettings { pagerNumPerPage = npp } ) pn = (pn -1) * npp
 pagerSelectOpts :: PagerSettings -> Int -> [SelectOpt a]
 pagerSelectOpts ps pn = [ OffsetBy (pagerGetOffset ps pn), LimitTo (pagerNumPerPage ps) ]
 
+pagerWidget :: (MonadIO m, MonadThrow m, MonadBaseControl IO m)
+            => PagedResult -> Int -> WidgetT site m ()
+pagerWidget paged total_num = [whamlet|$newline never
+  <div>
+    #{tshow $ pagedCurrentPageNum paged}/#{tshow $ pagedLastPageNum paged}页, 共#{tshow total_num}条记录
+  $if pagedLastPageNum paged > 1
+    <ul .pager>
+      <li>
+        <a href="#{pagedFirstPageUrl paged}">首页
+      $maybe url <- pagedPrevPageUrl paged
+        <li>
+          <a href="#{url}">前一页
+      $maybe url <- pagedNextPageUrl paged
+        <li>
+          <a href="#{url}">后一页
+      <li>
+        <a href="#{pagedLastPageUrl paged}">末页
+          |]
 
 runPager :: (MonadHandler m)
          => PagerSettings
@@ -86,7 +104,8 @@ runPager (PagerSettings npp pn_param) pn total_num = do
             link_to_pn
 
   where
-    exclude_params = [ "_hasdata"  -- a special param name used in yesod internally
+    exclude_params = [-- "_hasdata"  -- a special param name used in yesod internally
+                      -- _hasdata 表示当前参数属于某GET表单，移除的话该表单将不能工作
                       ]
 -- }}}1
 
