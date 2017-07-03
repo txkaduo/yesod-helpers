@@ -21,3 +21,10 @@ FormMsgBoolNo: No
 FormMsgDelete: Delete?
 FormMsgMustBePositive: Must be positive.
 FormMsgMustNotBeNegative: Must not be negative.
+Monday: Monday
+Tuesday: Tuesday
+Wednesday: Wednesday
+Thursday: Thursday
+Friday: Friday
+Saturday: Saturday
+Sunday: Sunday

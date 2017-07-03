@@ -21,3 +21,10 @@ FormMsgBoolNo: 否
 FormMsgDelete: 删除?
 FormMsgMustBePositive: 必须为正数.
 FormMsgMustNotBeNegative: 不能为负数
+Monday: 周一
+Tuesday: 周二
+Wednesday: 周三
+Thursday: 周四
+Friday: 周五
+Saturday: 周六
+Sunday: 周日
