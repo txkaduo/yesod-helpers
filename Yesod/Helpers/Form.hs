@@ -1191,4 +1191,36 @@ mustNotBeNegative :: (Num a, Ord a, RenderMessage (HandlerSite m) YHCommonMessag
 mustNotBeNegative = checkBool (> 0) MsgFormMsgMustBePositive
 
 
+weekDaySelectField :: (RenderMessage site FormMessage, RenderMessage site YHCommonMessage)
+                   => Field (HandlerT site IO) Int
+-- {{{1
+weekDaySelectField =
+  selectFieldList
+    [ (MsgMonday, 1)
+    , (MsgTuesday, 2)
+    , (MsgWednesday, 3)
+    , (MsgThursday, 4)
+    , (MsgFriday, 5)
+    , (MsgSaturday, 6)
+    , (MsgSunday, 7)
+    ]
+-- }}}1
+
+
+weekDayMultiSelectField :: (RenderMessage site FormMessage, RenderMessage site YHCommonMessage)
+                   => Field (HandlerT site IO) [Int]
+-- {{{1
+weekDayMultiSelectField =
+  multiSelectFieldList
+    [ (MsgMonday, 1)
+    , (MsgTuesday, 2)
+    , (MsgWednesday, 3)
+    , (MsgThursday, 4)
+    , (MsgFriday, 5)
+    , (MsgSaturday, 6)
+    , (MsgSunday, 7)
+    ]
+-- }}}1
+
+
 -- vim: set foldmethod=marker:
