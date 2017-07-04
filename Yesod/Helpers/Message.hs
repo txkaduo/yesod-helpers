@@ -66,3 +66,15 @@ renderFormMessageByYHCommonMessage all_langs@(lang:langs) fm =
     _    -> renderFormMessageByYHCommonMessage langs fm
 
   where main_locale = fst $ T.breakOn "-" lang
+
+
+weekDayMessage :: Int -> Maybe YHCommonMessage
+weekDayMessage 1 = Just MsgMonday
+weekDayMessage 2 = Just MsgTuesday
+weekDayMessage 3 = Just MsgWednesday
+weekDayMessage 4 = Just MsgThursday
+weekDayMessage 5 = Just MsgFriday
+weekDayMessage 6 = Just MsgSaturday
+weekDayMessage 7 = Just MsgSunday
+weekDayMessage _ = Nothing
+
