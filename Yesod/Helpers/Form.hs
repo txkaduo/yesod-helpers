@@ -386,6 +386,13 @@ moptDefault :: (site ~ HandlerSite m, MonadHandler m)
 moptDefault def_v f fs mv = first (fmap $ fromMaybe def_v) <$> mopt f fs (fmap Just mv)
 
 
+-- | Keep all text input, don't parse it.
+-- Use case: create a dummy select input, fill options with JS.
+--           Validate result by 'checkM' or 'checkMMap'
+anyTextOptionList :: OptionList Text
+anyTextOptionList = OptionList [] (Just . id)
+
+
 -- | parse the content in textarea, into a list of values
 -- using methods of SimpleStringRep
 simpleEncodedListTextareaField :: (SimpleStringRep a, Monad m
