@@ -663,6 +663,17 @@ caseFormResult x _ (FormFailure _)  = x
 caseFormResult _ f (FormSuccess r)  = f r
 
 
+-- | 'join' for FormResult.
+-- Should be more handly than caseFormResult
+joinFormResult :: FormResult (FormResult a) -> FormResult a
+-- {{{1
+joinFormResult r = case r of
+                     FormSuccess x -> x
+                     FormMissing   -> FormMissing
+                     FormFailure x -> FormFailure x
+-- }}}1
+
+
 -- | whether a FormResult is success and contains expected value.
 ifFormResult ::
     (a -> Bool)      -- ^ check value is expected
