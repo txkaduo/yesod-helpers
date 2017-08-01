@@ -346,6 +346,13 @@ semstatic settings v text = do
   SS.modify ( view : )
   return res
 
+semstatic' :: (HandlerSite m ~ site, MonadHandler m)
+    => Text
+    -> FieldSettings site
+    -> a
+    -> SEMForm m (FormResult a)
+semstatic' = flip $ flip . semstatic
+
 -- | Use `semreq` internally, but make the signature like `semopt`.
 -- Useful when whether some fields is required depends on other conditions.
 semreqOpt :: (HandlerSite m ~ site, MonadHandler m, RenderMessage site FormMessage)
