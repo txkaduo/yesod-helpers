@@ -63,6 +63,17 @@ class TypeaheadCdnUrl a where
   urlTypeaheadBundleJs :: a -> Text
 
 
+-- | For video.js
+class VideoJsCdnUrl a where
+  urlVideoJs :: a -> Text
+  urlVideoJsCss :: a -> Text
+
+-- | For video.js plugin: videojs-overlay
+class VideoJsOverlayCdnUrl a where
+  urlVideoJsOverlay :: a -> Text
+  urlVideoJsOverlayCss :: a -> Text
+
+
 -- | To offload static files to CDN. See urlRenderOverride
 urlRenderOverrideStatic :: (Yesod site, Foldable t, RenderRoute a)
                         => site
@@ -166,3 +177,26 @@ instance TypeaheadCdnUrl BootcssCdn where
     if min_ver
        then "//cdn.bootcss.com/typeahead.js/0.11.1/typeahead.bundle.min.js"
        else "//cdn.bootcss.com/typeahead.js/0.11.1/typeahead.bundle.js"
+
+
+instance VideoJsCdnUrl BootcssCdn where
+  urlVideoJs (BootcssCdn min_ver) =
+    if min_ver
+       then "//cdn.bootcss.com/video.js/6.2.6/video.min.js"
+       else "//cdn.bootcss.com/video.js/6.2.6/video.js"
+
+  urlVideoJsCss (BootcssCdn min_ver) =
+    if min_ver
+       then "//cdn.bootcss.com/video.js/6.2.6/video-js.min.css"
+       else "//cdn.bootcss.com/video.js/6.2.6/video-js.css"
+
+
+instance VideoJsOverlayCdnUrl BootcssCdn where
+  urlVideoJsOverlay (BootcssCdn min_ver) =
+    if min_ver
+       then "//cdn.bootcss.com/videojs-overlay/1.1.4/videojs-overlay.min.js"
+       else "//cdn.bootcss.com/videojs-overlay/1.1.4/videojs-overlay.js"
+
+  urlVideoJsOverlayCss (BootcssCdn _min_ver) =
+    "//cdn.bootcss.com/videojs-overlay/1.1.4/videojs-overlay.css"
+
