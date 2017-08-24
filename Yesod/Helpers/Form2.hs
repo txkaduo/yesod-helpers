@@ -12,7 +12,7 @@ module Yesod.Helpers.Form2
     , generateEMFormGet'
     , generateEMFormGet
     , emreq, emopt, emstatic
-    , semreq, semopt, semreqOpt, semstatic
+    , semreq, semopt, semreqOpt, semstatic, semstatic'
     , addEMFieldError
     , addEMOverallError
     , renderBootstrapES
@@ -285,7 +285,7 @@ emstatic :: (site ~ HandlerSite m, MonadHandler m)
     -> a
     -> Text
     -> EMForm m (FormResult a, FieldView site)
-emstatic fs@(FieldSettings {..}) v text = do
+emstatic (FieldSettings {..}) v text = do
     theId <- lift $ lift $ maybe newIdent return fsId
     (_, site, langs) <- lift $ ask
     let mr2 = renderMessage site langs
