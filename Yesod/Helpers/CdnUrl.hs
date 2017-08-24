@@ -74,6 +74,11 @@ class VideoJsOverlayCdnUrl a where
   urlVideoJsOverlayCss :: a -> Text
 
 
+-- | clipboard.js
+class ClipboardJsCdnUrl a where
+  urlClipboardJs :: a -> Text
+
+
 -- | To offload static files to CDN. See urlRenderOverride
 urlRenderOverrideStatic :: (Yesod site, Foldable t, RenderRoute a)
                         => site
@@ -199,4 +204,11 @@ instance VideoJsOverlayCdnUrl BootcssCdn where
 
   urlVideoJsOverlayCss (BootcssCdn _min_ver) =
     "//cdn.bootcss.com/videojs-overlay/1.1.4/videojs-overlay.css"
+
+
+instance ClipboardJsCdnUrl BootcssCdn where
+  urlClipboardJs (BootcssCdn min_ver) =
+    if min_ver
+       then "//cdn.bootcss.com/clipboard.js/1.7.1/clipboard.min.js"
+       else "//cdn.bootcss.com/clipboard.js/1.7.1/clipboard.js"
 
