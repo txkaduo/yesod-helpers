@@ -103,112 +103,112 @@ data BootcssCdn = BootcssCdn Bool
 instance JqueryCdnUrl BootcssCdn where
     urlJqueryJsText (BootcssCdn min_ver) =
         if min_ver
-            then "//cdn.bootcss.com/jquery/1.12.4/jquery.min.js"
-            else "//cdn.bootcss.com/jquery/1.12.4/jquery.js"
+            then "https://cdn.bootcss.com/jquery/1.12.4/jquery.min.js"
+            else "https://cdn.bootcss.com/jquery/1.12.4/jquery.js"
 
     urlJqueryUiJsText (BootcssCdn min_ver) =
         if min_ver
-            then "//cdn.bootcss.com/jqueryui/1.12.1/jquery-ui.min.js"
-            else "//cdn.bootcss.com/jqueryui/1.12.1/jquery-ui.js"
+            then "https://cdn.bootcss.com/jqueryui/1.12.1/jquery-ui.min.js"
+            else "https://cdn.bootcss.com/jqueryui/1.12.1/jquery-ui.js"
 
     urlJqueryUiCssText (BootcssCdn min_ver) =
         if min_ver
-            then "//cdn.bootcss.com/jqueryui/1.12.1/jquery-ui.min.css"
-            else "//cdn.bootcss.com/jqueryui/1.12.1/jquery-ui.css"
+            then "https://cdn.bootcss.com/jqueryui/1.12.1/jquery-ui.min.css"
+            else "https://cdn.bootcss.com/jqueryui/1.12.1/jquery-ui.css"
 
 instance JqueryFormCdnUrl BootcssCdn where
     urlJqueryFormJsText (BootcssCdn min_ver) =
         if min_ver
-            then "//cdn.bootcss.com/jquery.form/4.2.1/jquery.form.min.js"
-            else "//cdn.bootcss.com/jquery.form/4.2.1/jquery.form.js"
+            then "https://cdn.bootcss.com/jquery.form/4.2.1/jquery.form.min.js"
+            else "https://cdn.bootcss.com/jquery.form/4.2.1/jquery.form.js"
 
 instance BootstrapCdnUrl BootcssCdn where
     urlBootstrapCssText (BootcssCdn min_ver) =
         if min_ver
-            then "//cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css"
-            else "//cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.css"
+            then "https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css"
+            else "https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.css"
 
     urlBootstrapJsText (BootcssCdn min_ver) =
         if min_ver
-            then "//cdn.bootcss.com/bootstrap/3.3.7/js/bootstrap.min.js"
-            else "//cdn.bootcss.com/bootstrap/3.3.7/js/bootstrap.js"
+            then "https://cdn.bootcss.com/bootstrap/3.3.7/js/bootstrap.min.js"
+            else "https://cdn.bootcss.com/bootstrap/3.3.7/js/bootstrap.js"
 
 instance FontAwesomeCdnUrl BootcssCdn where
     urlFontAwesomeCssText (BootcssCdn min_ver) =
         if min_ver
-            then "//cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css"
-            else "//cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.css"
+            then "https://cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css"
+            else "https://cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.css"
 
     urlFontAwesomeWebFontText _ =
-        "//cdn.bootcss.com/font-awesome/4.7.0/fonts/fontawesome-webfont.svg"
+        "https://cdn.bootcss.com/font-awesome/4.7.0/fonts/fontawesome-webfont.svg"
 
 instance HandlebarsCdnUrl BootcssCdn where
     urlHandlebarsJsText (BootcssCdn min_ver) =
         if min_ver
-            then "//cdn.bootcss.com/handlebars.js/4.0.8/handlebars.min.js"
-            else "//cdn.bootcss.com/handlebars.js/4.0.8/handlebars.min.js"
+            then "https://cdn.bootcss.com/handlebars.js/4.0.8/handlebars.min.js"
+            else "https://cdn.bootcss.com/handlebars.js/4.0.8/handlebars.min.js"
 
     urlHandlebarsRuntimeJsText (BootcssCdn min_ver) =
         if min_ver
-            then "//cdn.bootcss.com/handlebars.js/4.0.8/handlebars.runtime.min.js"
-            else "//cdn.bootcss.com/handlebars.js/4.0.8/handlebars.runtime.js"
+            then "https://cdn.bootcss.com/handlebars.js/4.0.8/handlebars.runtime.min.js"
+            else "https://cdn.bootcss.com/handlebars.js/4.0.8/handlebars.runtime.js"
 
 instance ZeptoCdnUrl BootcssCdn where
     urlZeptoJsText (BootcssCdn min_ver) =
         if min_ver
-            then "//cdn.bootcss.com/zepto/1.1.7/zepto.min.js"
-            else "//cdn.bootcss.com/zepto/1.1.7/zepto.js"
+            then "https://cdn.bootcss.com/zepto/1.1.7/zepto.min.js"
+            else "https://cdn.bootcss.com/zepto/1.1.7/zepto.js"
 
 instance OnePageScrollCssCdnUrl BootcssCdn where
     urlOnePageScrollCssText (BootcssCdn min_ver) =
         if min_ver
-            then "//cdn.bootcss.com/onepage-scroll/1.3.1/onepage-scroll.min.css"
-            else "//cdn.bootcss.com/onepage-scroll/1.3.1/onepage-scroll.css"
+            then "https://cdn.bootcss.com/onepage-scroll/1.3.1/onepage-scroll.min.css"
+            else "https://cdn.bootcss.com/onepage-scroll/1.3.1/onepage-scroll.css"
 
 instance OnePageScrollJsJqueryCdnUrl BootcssCdn where
     urlOnePageScrollJsJqueryText (BootcssCdn min_ver) =
         if min_ver
-            then "//cdn.bootcss.com/onepage-scroll/1.3.1/jquery.onepage-scroll.min.js"
-            else "//cdn.bootcss.com/onepage-scroll/1.3.1/jquery.onepage-scroll.js"
+            then "https://cdn.bootcss.com/onepage-scroll/1.3.1/jquery.onepage-scroll.min.js"
+            else "https://cdn.bootcss.com/onepage-scroll/1.3.1/jquery.onepage-scroll.js"
 
 instance JsCookieCdnUrl BootcssCdn where
     urlJsCookieJsText (BootcssCdn min_ver) =
         if min_ver
-            then "//cdn.bootcss.com/js-cookie/2.1.4/js.cookie.min.js"
-            else "//cdn.bootcss.com/js-cookie/2.1.4/js.cookie.js"
+            then "https://cdn.bootcss.com/js-cookie/2.1.4/js.cookie.min.js"
+            else "https://cdn.bootcss.com/js-cookie/2.1.4/js.cookie.js"
 
 instance TypeaheadCdnUrl BootcssCdn where
   urlTypeaheadBundleJs (BootcssCdn min_ver) =
     if min_ver
-       then "//cdn.bootcss.com/typeahead.js/0.11.1/typeahead.bundle.min.js"
-       else "//cdn.bootcss.com/typeahead.js/0.11.1/typeahead.bundle.js"
+       then "https://cdn.bootcss.com/typeahead.js/0.11.1/typeahead.bundle.min.js"
+       else "https://cdn.bootcss.com/typeahead.js/0.11.1/typeahead.bundle.js"
 
 
 instance VideoJsCdnUrl BootcssCdn where
   urlVideoJs (BootcssCdn min_ver) =
     if min_ver
-       then "//cdn.bootcss.com/video.js/6.2.6/video.min.js"
-       else "//cdn.bootcss.com/video.js/6.2.6/video.js"
+       then "https://cdn.bootcss.com/video.js/6.2.6/video.min.js"
+       else "https://cdn.bootcss.com/video.js/6.2.6/video.js"
 
   urlVideoJsCss (BootcssCdn min_ver) =
     if min_ver
-       then "//cdn.bootcss.com/video.js/6.2.6/video-js.min.css"
-       else "//cdn.bootcss.com/video.js/6.2.6/video-js.css"
+       then "https://cdn.bootcss.com/video.js/6.2.6/video-js.min.css"
+       else "https://cdn.bootcss.com/video.js/6.2.6/video-js.css"
 
 
 instance VideoJsOverlayCdnUrl BootcssCdn where
   urlVideoJsOverlay (BootcssCdn min_ver) =
     if min_ver
-       then "//cdn.bootcss.com/videojs-overlay/1.1.4/videojs-overlay.min.js"
-       else "//cdn.bootcss.com/videojs-overlay/1.1.4/videojs-overlay.js"
+       then "https://cdn.bootcss.com/videojs-overlay/1.1.4/videojs-overlay.min.js"
+       else "https://cdn.bootcss.com/videojs-overlay/1.1.4/videojs-overlay.js"
 
   urlVideoJsOverlayCss (BootcssCdn _min_ver) =
-    "//cdn.bootcss.com/videojs-overlay/1.1.4/videojs-overlay.css"
+    "https://cdn.bootcss.com/videojs-overlay/1.1.4/videojs-overlay.css"
 
 
 instance ClipboardJsCdnUrl BootcssCdn where
   urlClipboardJs (BootcssCdn min_ver) =
     if min_ver
-       then "//cdn.bootcss.com/clipboard.js/1.7.1/clipboard.min.js"
-       else "//cdn.bootcss.com/clipboard.js/1.7.1/clipboard.js"
+       then "https://cdn.bootcss.com/clipboard.js/1.7.1/clipboard.min.js"
+       else "https://cdn.bootcss.com/clipboard.js/1.7.1/clipboard.js"
 
