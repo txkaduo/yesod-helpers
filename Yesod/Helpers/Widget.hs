@@ -21,6 +21,37 @@ mergePageTitles parts = do
 
 
 -- | A simple widget to show a html form
+simpleFormPageWidgetEither :: ( MonadIO m, MonadThrow m
+                              , MonadBaseControl IO m
+                              , RenderMessage master a
+                              , RenderMessage master YHCommonMessage
+                              )
+                           => GenFormData master
+                           -> Either (Route master) Text  -- ^ action url
+                           -> Maybe a       -- ^ any global error message
+                           -> FieldErrors master  -- ^ error messages for form fields
+                           -> WidgetT master m ()
+simpleFormPageWidgetEither (formWidget, formEnctype) action' m_err_msg form_errs = do
+  action <- case action' of
+                  Right x -> return x
+                  Left r -> do
+                    url_render <- getUrlRender
+                    return $ url_render r
+  [whamlet|
+$maybe err_msg <- m_err_msg
+   <div .form-group>
+     <span .err_msg>_{err_msg}
+<ul>
+  $forall ((_name, fs), errs) <- fieldErrorsToList form_errs
+    <li>_{fsLabel fs}: #{intercalate ";" errs}
+<form method=post action="#{action}" enctype=#{formEnctype} .form-horizontal>
+  ^{formWidget}
+  <div .form-group>
+    <div .submit-btn-container>
+      <input .btn .btn-primary type=submit value=_{MsgSubmitForm}>
+  |]
+
+
 simpleFormPageWidget :: (MonadIO m, MonadThrow m
                         , MonadBaseControl IO m
                         , RenderMessage master a
@@ -31,17 +62,5 @@ simpleFormPageWidget :: (MonadIO m, MonadThrow m
                      -> Maybe a       -- ^ any global error message
                      -> FieldErrors master  -- ^ error messages for form fields
                      -> WidgetT master m ()
-simpleFormPageWidget (formWidget, formEnctype) action m_err_msg form_errs = do
-  [whamlet|
-$maybe err_msg <- m_err_msg
-   <div .form-group>
-     <span .err_msg>_{err_msg}
-<ul>
-  $forall ((_name, fs), errs) <- fieldErrorsToList form_errs
-    <li>_{fsLabel fs}: #{intercalate ";" errs}
-<form method=post action="@{action}" enctype=#{formEnctype} .form-horizontal>
-  ^{formWidget}
-  <div .form-group>
-    <div .submit-btn-container>
-      <input .btn .btn-primary type=submit value=_{MsgSubmitForm}>
-  |]
+simpleFormPageWidget (formWidget, formEnctype) action m_err_msg form_errs =
+  simpleFormPageWidgetEither (formWidget, formEnctype) (Left action) m_err_msg form_errs
