@@ -1241,4 +1241,20 @@ weekDayMultiSelectField =
 -- }}}1
 
 
+-- | 这段代码从 yesod 中截取出来．
+-- 其结果是一个可以因 CSRF 而设的token，用于手写 form 时，插入到form内部去
+formTokenWidget :: (MonadBaseControl IO m, MonadThrow m, MonadIO m)
+                => WidgetT site m ()
+-- {{{1
+formTokenWidget = do
+  req <- handlerToWidget getRequest
+  let tokenKey = asText "_token"
+
+  toWidget $
+    case reqToken req of
+      Nothing -> mempty
+      Just n -> [shamlet|<input type=hidden name=#{tokenKey} value=#{n}>|]
+-- }}}1
+
+
 -- vim: set foldmethod=marker:
