@@ -130,6 +130,9 @@ sinkPagedListCount npp0 pn0 =
     npp = max 1 npp0
 -- }}}1
 
+class NumPerPage a where
+  numPerPage :: a -> Int
+
 
 
 -- vim: set foldmethod=marker:

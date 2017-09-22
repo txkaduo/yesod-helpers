@@ -24,6 +24,7 @@ import Data.Aeson.Types                     (Pair)
 import Yesod.Helpers.Form2
 import Yesod.Helpers.Form                   (jsonOrHtmlOutputForm')
 import Yesod.Helpers.Utils                  (nullToNothing)
+import Yesod.Helpers.Pager
 
 import Yesod.Helpers.JSend                  (provideRepJsendAndJsonp, JSendMsg(JSendSuccess))
 -- }}}1
@@ -540,6 +541,49 @@ defaultLangs def_lang = do
 defaultZhCnLangs :: MonadHandler m
                 => m [Lang]
 defaultZhCnLangs = defaultLangs "zh-CN"
+
+type PagedPage site a = Maybe Text
+                     -> PagedResult
+                     -> a
+                     -> Int
+                     -> EFormHandlerT site IO Html
+
+handlerPagedPageWithForm :: (NumPerPage so, Yesod site, RenderMessage site FormMessage)
+                         => so
+                         -> MkEMForm site IO so
+                         -> (so -> Int -> Int -> HandlerT site IO ((a, Value), Int))
+                         -> PagedPage site a
+                         -> HandlerT site IO TypedContent
+-- {{{1
+handlerPagedPageWithForm def_so form get_data show_html = do
+  (((result, formWidget), formEnctype), form_errs) <- runEMFormGet form
+
+  let so = case result of
+            FormSuccess x -> x
+            _ -> def_so
+
+  let npp = numPerPage so
+      pn_param = "p"
+
+  let pager_settings = PagerSettings npp pn_param
+  pn <- pagerGetCurrentPageNumGet pager_settings
+
+  ((result_list, json), total_num) <- get_data so npp pn
+  paged <- runPager pager_settings pn total_num
+
+  let showf merr results = do
+          m_add_err <- liftM (fromMaybe mempty) $ forM merr $ \err -> do
+                          return $ overallFieldError err
+          flip runReaderT ((formWidget, formEnctype), form_errs <> m_add_err) $ do
+            show_html merr paged results total_num
+
+  selectRep $ do
+    provideRep $ do
+      showf Nothing result_list
+
+    provideRepJsendAndJsonp $ do
+      return $ JSendSuccess json
+-- }}}1
 
 
 
