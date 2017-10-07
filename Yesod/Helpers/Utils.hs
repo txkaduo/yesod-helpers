@@ -8,7 +8,7 @@ import Data.Proxy
 import qualified Data.Text                  as T
 import Data.Time                            ( localTimeToUTC, zonedTimeToUTC, TimeZone, ParseTime
                                             , LocalTime(..), midnight, TimeOfDay, addDays
-                                            , NominalDiffTime
+                                            , NominalDiffTime, TimeLocale(..), TimeZone(..)
                                             )
 import Data.Time.Clock.POSIX                ( posixSecondsToUTCTime
                                             , utcTimeToPOSIXSeconds)
@@ -130,6 +130,41 @@ randomPick choices = do
 
 randomString :: MonadIO m => Int -> [Char] -> m [Char]
 randomString len chars = replicateM len (randomPick chars)
+
+
+zhCnTimeLocale :: TimeLocale
+-- {{{1
+zhCnTimeLocale =
+  TimeLocale
+    [ ("星期日", "周日")
+    , ("星期一", "周一")
+    , ("星期二", "周二")
+    , ("星期三", "周三")
+    , ("星期四", "周四")
+    , ("星期五", "周五")
+    , ("星期六", "周六")
+    ]
+    [ ("一月", "一月")
+    , ("二月", "二月")
+    , ("三月", "三月")
+    , ("四月", "四月")
+    , ("五月", "五月")
+    , ("六月", "六月")
+    , ("七月", "七月")
+    , ("八月", "八月")
+    , ("九月", "九月")
+    , ("十月", "十月")
+    , ("十一月", "十一月")
+    , ("十二月", "十二月")
+    ]
+    ("上午", "下午")
+    "%Y-%m-%d %H:%M:%S"  -- dateTimeFmt
+    "%Y-%m-%d"  -- dateFmt
+    "%H:%M:%S"  -- timeFmt
+    "%I:%M:%S"  -- time12Fmt
+    [ TimeZone 480 False "北京"
+    ]
+-- }}}1
 
 
 -- | generate random string with 'safe' characters:
