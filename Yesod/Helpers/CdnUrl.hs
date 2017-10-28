@@ -79,6 +79,17 @@ class ClipboardJsCdnUrl a where
   urlClipboardJs :: a -> Text
 
 
+-- | FileSaver.js
+class FileSaverCdnUrl a where
+  urlFileSaverJs :: a -> Text
+
+
+-- | TableExport
+class TableExportCdlUrl a where
+  urlTableExportJs ::  a -> Text
+  urlTableExportCss ::  a -> Text
+
+
 -- | To offload static files to CDN. See urlRenderOverride
 urlRenderOverrideStatic :: (Yesod site, Foldable t, RenderRoute a)
                         => site
@@ -212,3 +223,21 @@ instance ClipboardJsCdnUrl BootcssCdn where
        then "https://cdn.bootcss.com/clipboard.js/1.7.1/clipboard.min.js"
        else "https://cdn.bootcss.com/clipboard.js/1.7.1/clipboard.js"
 
+
+instance FileSaverCdnUrl BootcssCdn where
+  urlFileSaverJs (BootcssCdn min_ver) =
+    if min_ver
+       then "https://cdn.bootcss.com/FileSaver.js/1.3.3/FileSaver.min.js"
+       else "https://cdn.bootcss.com/FileSaver.js/1.3.3/FileSaver.js"
+
+
+instance TableExportCdlUrl BootcssCdn where
+  urlTableExportJs (BootcssCdn min_ver) =
+    if min_ver
+       then "https://cdn.bootcss.com/TableExport/4.0.11/js/tableexport.min.js"
+       else "https://cdn.bootcss.com/TableExport/4.0.11/js/tableexport.js"
+
+  urlTableExportCss (BootcssCdn min_ver) =
+    if min_ver
+       then "https://cdn.bootcss.com/TableExport/4.0.11/css/tableexport.min.css"
+       else "https://cdn.bootcss.com/TableExport/4.0.11/css/tableexport.css"
