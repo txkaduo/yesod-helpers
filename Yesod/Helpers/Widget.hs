@@ -47,7 +47,7 @@ $maybe err_msg <- m_err_msg
 <form method=post action="#{action}" enctype=#{formEnctype} .form-horizontal>
   ^{formWidget}
   <div .form-group>
-    <div .submit-btn-container>
+    <div .submit-btn-container .col-xs-offset-3 .col-xs-9>
       <input .btn .btn-primary type=submit value=_{MsgSubmitForm}>
   |]
 
