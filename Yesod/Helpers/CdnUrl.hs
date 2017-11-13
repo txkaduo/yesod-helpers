@@ -92,6 +92,10 @@ class TableExportCdlUrl a where
   urlTableExportJs ::  a -> Text
   urlTableExportCss ::  a -> Text
 
+-- | Moment
+class MomentCdnUrl a where
+  urlMoment :: a -> Text
+  urlMomentWithAllLocale :: a -> Text
 
 -- | To offload static files to CDN. See urlRenderOverride
 urlRenderOverrideStatic :: (Yesod site, Foldable t, RenderRoute a)
@@ -252,3 +256,14 @@ instance TableExportCdlUrl BootcssCdn where
     if min_ver
        then "https://cdn.bootcss.com/TableExport/4.0.11/css/tableexport.min.css"
        else "https://cdn.bootcss.com/TableExport/4.0.11/css/tableexport.css"
+
+instance MomentCdnUrl BootcssCdn where
+  urlMoment (BootcssCdn min_ver) =
+    if min_ver
+       then "https://cdn.bootcss.com/moment.js/2.19.0/moment.min.js"
+       else "https://cdn.bootcss.com/moment.js/2.19.0/moment.js"
+
+  urlMomentWithAllLocale (BootcssCdn min_ver) =
+    if min_ver
+       then "https://cdn.bootcss.com/moment.js/2.19.0/moment-with-locales.min.js"
+       else "https://cdn.bootcss.com/moment.js/2.19.0/moment-with-locales.js"
