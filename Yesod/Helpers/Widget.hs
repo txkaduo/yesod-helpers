@@ -24,7 +24,7 @@ mergePageTitles parts = do
 -- }}}1
 
 
--- | A simple widget to show a html form
+-- | A simple widget to show a html POST form
 simpleFormPageWidgetEither :: ( MonadIO m, MonadThrow m
                               , MonadBaseControl IO m
                               , RenderMessage master a
@@ -36,7 +36,24 @@ simpleFormPageWidgetEither :: ( MonadIO m, MonadThrow m
                            -> FieldErrors master  -- ^ error messages for form fields
                            -> WidgetT master m ()
 -- {{{1
-simpleFormPageWidgetEither (formWidget, formEnctype) action' m_err_msg form_errs = do
+simpleFormPageWidgetEither = simpleFormPageWidgetEither' "POST"
+-- }}}1
+
+
+-- | A simple widget to show a html form
+simpleFormPageWidgetEither' :: ( MonadIO m, MonadThrow m
+                              , MonadBaseControl IO m
+                              , RenderMessage master a
+                              , RenderMessage master YHCommonMessage
+                              )
+                            => ByteString   -- ^ method
+                            -> GenFormData master
+                            -> Either (Route master) Text  -- ^ action url
+                            -> Maybe a       -- ^ any global error message
+                            -> FieldErrors master  -- ^ error messages for form fields
+                            -> WidgetT master m ()
+-- {{{1
+simpleFormPageWidgetEither' method (formWidget, formEnctype) action' m_err_msg form_errs = do
   action <- case action' of
                   Right x -> return x
                   Left r -> do
@@ -49,7 +66,7 @@ $maybe err_msg <- m_err_msg
 <ul>
   $forall ((_name, fs), errs) <- fieldErrorsToList form_errs
     <li>_{fsLabel fs}: #{intercalate ";" errs}
-<form method=post action="#{action}" enctype=#{formEnctype} .form-horizontal>
+<form method=#{decodeUtf8 method} action="#{action}" enctype=#{formEnctype} .form-horizontal>
   ^{formWidget}
   <div .form-group>
     <div .submit-btn-container .col-xs-offset-3 .col-xs-9>
