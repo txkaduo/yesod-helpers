@@ -194,6 +194,34 @@ handleGetPostEMFormNoToken form show_form handle_form_data = do
 -- }}}1
 
 
+-- | Handler a GET form
+-- If form failed/missing, abort processing and output empty widget (except the form widget)
+handleGetEMForm :: (ToTypedContent b, MonadHandler m, w ~ WidgetT site IO ())
+                => (Html -> EMForm m (FormResult a, w))
+                -- ^ 'MkEMForm a', the form function
+                -> ((w, Enctype) -> FieldErrors (HandlerSite m) -> Maybe Text -> Maybe w -> m b)
+                -- ^ a function to make some output.
+                -- Maybe Text param: an error message
+                -- first 'w': form widget
+                -- second 'w': extra content. If form failed/missing, this is mempty, otherwise, it is the output of function in next param.
+                -> (a -> m w)
+                -- ^ use the form result
+                -> m b
+-- {{{1
+handleGetEMForm form show_widget f = do
+  (((form_result, form_widget), form_enc), form_errs) <- runEMFormGet form
+  let show_empty_form_page m_err = do
+        show_widget (form_widget, form_enc) form_errs m_err Nothing
+
+  case form_result of
+    FormMissing -> show_empty_form_page Nothing >>= sendResponse
+    FormFailure errs -> show_empty_form_page (Just $ intercalate "," errs) >>= sendResponse
+    FormSuccess result -> do
+      f result >>= show_widget (form_widget, form_enc) mempty Nothing . Just
+-- }}}1
+
+
+
 -- ^
 -- Typical Usage:
 --
