@@ -23,7 +23,7 @@ import Data.Aeson.Types                     (Pair)
 
 import Yesod.Helpers.Form2
 import Yesod.Helpers.Form                   (jsonOrHtmlOutputForm')
-import Yesod.Helpers.Utils                  (nullToNothing)
+import Yesod.Helpers.Utils                  (nullToNothing, encodeUtf8Rfc5987)
 import Yesod.Helpers.Pager
 
 import Yesod.Helpers.JSend                  (provideRepJsendAndJsonp, JSendMsg(JSendSuccess))
@@ -41,6 +41,12 @@ neverCache = do
 
 setLastModified :: UTCTime -> HandlerT site IO ()
 setLastModified = addHeader "Last-Modified" . formatRFC1123
+
+
+asAttachment :: MonadHandler m => Maybe Text -> m ()
+asAttachment Nothing = addHeader "Content-Disposition" "attachment"
+asAttachment (Just fn) = addHeader "Content-Disposition" $ "attachment; filename*=" <> decodeUtf8 (encodeUtf8Rfc5987 fn)
+
 
 {-# DEPRECATED isXHR "use acceptsJson instead" #-}
 isXHR :: (MonadHandler m) => m Bool

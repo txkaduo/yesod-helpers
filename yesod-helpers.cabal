@@ -143,6 +143,7 @@ library
                      , mono-traversable
                      , semigroups
                      , http-types
+                     , mime-types
                      , vault
                      , parsec-tx-utils         >= 0.3.1
 

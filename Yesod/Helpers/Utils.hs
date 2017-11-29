@@ -23,7 +23,8 @@ import System.Random                        (randomIO)
 import Control.Monad.Trans.Control          (MonadBaseControl)
 #endif
 import System.Timeout                       (timeout)
-import Network.HTTP.Types                   (parseQueryText, renderQueryText, QueryText)
+import Network.HTTP.Types                   (parseQueryText, renderQueryText, QueryText, urlEncode)
+import qualified Network.Mime               as MM
 import Network.URI                          (parseURIReference, uriQuery, uriToString
                                             , parseAbsoluteURI, uriAuthority, uriRegName
                                             )
@@ -385,6 +386,16 @@ normalizeChineseMobileNum = listToMaybe . chk_mobile_maybe
                                     , chk_mobile_raw t
                                     ]
 -- }}}1
+
+
+-- | RFC5987 encoding, with utf-8, no language tag
+encodeUtf8Rfc5987 :: (Utf8 textual ByteString) => textual -> ByteString
+encodeUtf8Rfc5987 t = "UTF-8''" <> urlEncode False (encodeUtf8 t)
+
+
+-- | Lookup file extension for a MIME
+defaultExtensionOfMime :: MM.MimeType -> Maybe MM.Extension
+defaultExtensionOfMime mt = fmap fst $ find ((== mt) . snd) (mapToList MM.defaultMimeMap)
 
 
 -- vim: set foldmethod=marker:
