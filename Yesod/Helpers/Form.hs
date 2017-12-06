@@ -1209,11 +1209,9 @@ mustNotBeNegative :: (Num a, Ord a, RenderMessage (HandlerSite m) YHCommonMessag
 mustNotBeNegative = checkBool (>= 0) MsgFormMsgMustBePositive
 
 
-weekDaySelectField :: (RenderMessage site FormMessage, RenderMessage site YHCommonMessage)
-                   => Field (HandlerT site IO) Int
+weekDateMsgList :: [(YHCommonMessage, Int)]
 -- {{{1
-weekDaySelectField =
-  selectFieldList
+weekDateMsgList =
     [ (MsgMonday, 1)
     , (MsgTuesday, 2)
     , (MsgWednesday, 3)
@@ -1225,20 +1223,14 @@ weekDaySelectField =
 -- }}}1
 
 
-weekDayMultiSelectField :: (RenderMessage site FormMessage, RenderMessage site YHCommonMessage)
-                   => Field (HandlerT site IO) [Int]
--- {{{1
-weekDayMultiSelectField =
-  multiSelectFieldList
-    [ (MsgMonday, 1)
-    , (MsgTuesday, 2)
-    , (MsgWednesday, 3)
-    , (MsgThursday, 4)
-    , (MsgFriday, 5)
-    , (MsgSaturday, 6)
-    , (MsgSunday, 7)
-    ]
--- }}}1
+weekDateSelectField :: (RenderMessage site FormMessage, RenderMessage site YHCommonMessage)
+                    => Field (HandlerT site IO) Int
+weekDateSelectField = selectFieldList weekDateMsgList
+
+
+weekDateMultiSelectField :: (RenderMessage site FormMessage, RenderMessage site YHCommonMessage)
+                         => Field (HandlerT site IO) [Int]
+weekDateMultiSelectField = multiSelectFieldList weekDateMsgList
 
 
 -- | 这段代码从 yesod 中截取出来．
