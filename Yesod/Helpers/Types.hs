@@ -2,6 +2,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 module Yesod.Helpers.Types where
 
+import Prelude                              (Read(..))
 import ClassyPrelude.Yesod hiding (Proxy)
 import qualified Data.Aeson                 as A
 import qualified Data.ByteString.Base64.URL as B64U
@@ -267,18 +268,34 @@ instance ToJSON B64UByteStringPathPiece where
 
 -- | A wrapper type to make some instances using base64-url-encoding
 newtype B64UByteString a = B64UByteString { unB64UByteString :: a }
-                                deriving (Eq, Ord, Show, Read)
+                                deriving (Eq, Ord)
 
-instance Binary a => PathPiece (B64UByteString a) where
-    toPathPiece (B64UByteString bs) =
-        fromString $ C8.unpack $ B64U.encode $ LB.toStrict $ Binary.encode bs
+instance Binary a => Show (B64UByteString a) where
+  show (B64UByteString bs) = C8.unpack $ B64U.encode $ LB.toStrict $ Binary.encode bs
 
-    fromPathPiece t = either (const Nothing) Just $ do
-        bs <- B64U.decode (encodeUtf8 t)
+instance Binary a => Read (B64UByteString a) where
+  readsPrec d r =
+    catMaybes $ map (merge . first dec) $ readsPrec d r
+    where
+      merge (Left _, _) = Nothing
+      merge (Right x, y) = Just (x, y)
+
+      dec s = do
+        bs <- B64U.decode s
         (left_bs, _, y) <- either (\(_, _, x) -> Left x) Right $ Binary.decodeOrFail $ LB.fromStrict bs
         if LB.null left_bs
             then return $ B64UByteString y
             else Left "not all input consumed"
+
+instance Binary a => PathPiece (B64UByteString a) where
+  toPathPiece = fromString . show
+
+  fromPathPiece t = either (const Nothing) Just $ do
+      bs <- B64U.decode (encodeUtf8 t)
+      (left_bs, _, y) <- either (\(_, _, x) -> Left x) Right $ Binary.decodeOrFail $ LB.fromStrict bs
+      if LB.null left_bs
+          then return $ B64UByteString y
+          else Left "not all input consumed"
 
 instance Binary a => FromJSON (B64UByteString a) where
     parseJSON v = do
