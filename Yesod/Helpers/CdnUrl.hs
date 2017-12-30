@@ -97,6 +97,13 @@ class MomentCdnUrl a where
   urlMoment :: a -> Text
   urlMomentWithAllLocale :: a -> Text
 
+
+class SummerNoteCdnUrl a where
+  urlSummerNoteJs :: a -> Text
+  urlSummerNoteJsZhCn :: a -> Text
+  urlSummerNoteCss :: a -> Text
+
+
 -- | To offload static files to CDN. See urlRenderOverride
 urlRenderOverrideStatic :: (Yesod site, Foldable t, RenderRoute a)
                         => site
@@ -267,3 +274,21 @@ instance MomentCdnUrl BootcssCdn where
     if min_ver
        then "https://cdn.bootcss.com/moment.js/2.19.0/moment-with-locales.min.js"
        else "https://cdn.bootcss.com/moment.js/2.19.0/moment-with-locales.js"
+
+
+instance SummerNoteCdnUrl BootcssCdn where
+  urlSummerNoteJs (BootcssCdn min_ver) =
+    if min_ver
+       then "https://cdn.bootcss.com/summernote/0.8.8/summernote.min.js"
+       else "https://cdn.bootcss.com/summernote/0.8.8/summernote.js"
+
+  urlSummerNoteJsZhCn (BootcssCdn min_ver) =
+    if min_ver
+       then "https://cdn.bootcss.com/summernote/0.8.8/lang/summernote-zh-CN.min.js"
+       else "https://cdn.bootcss.com/summernote/0.8.8/lang/summernote-zh-CN.js"
+
+  urlSummerNoteCss (BootcssCdn min_ver) =
+    if min_ver
+       then "https://cdn.bootcss.com/summernote/0.8.8/summernote.min.css"
+       else "https://cdn.bootcss.com/summernote/0.8.8/summernote.css"
+
