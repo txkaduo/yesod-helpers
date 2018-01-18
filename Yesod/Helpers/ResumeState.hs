@@ -17,7 +17,9 @@ import Control.DeepSeq                      (NFData(..), ($!!))
 import Data.Aeson
 import Data.Time
 import Data.Text                            (Text)
+#if defined(VERSION_acid_state)
 import Data.Acid
+#endif
 import Data.SafeCopy
 
 import Yesod.Helpers.Types                  (UrlText)
@@ -102,6 +104,7 @@ instance NFData ReqSaveStateJsonMap where
 instance Default ReqSaveStateJsonMap where
     def = ReqSaveStateJsonMap def
 
+#if defined(VERSION_acid_state)
 acidOpSaveReqSaveState :: ByteString -> SafeCopyJsonVal -> UTCTime -> Update ReqSaveStateJsonMap Bool
 acidOpSaveReqSaveState key val now = do
     ReqSaveStateJsonMap m <- get
@@ -171,3 +174,4 @@ instance ReqSaveState (AcidState ReqSaveStateJsonMap) where
         now <- getCurrentTime
         let oldest = addUTCTime (negate (abs ttl)) now
         update acid $ AcidOpCleanupReqSaveState oldest
+#endif

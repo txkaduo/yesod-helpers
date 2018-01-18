@@ -39,6 +39,10 @@ Flag network-uri
     Description: Get Network.URI from the network-uri package
     Default: True
 
+Flag acid-state
+    Description:   Build with acid-state
+    Default: True
+
 library
   exposed-modules:     Yesod.Helpers.Form
                        Yesod.Helpers.Form2
@@ -56,7 +60,6 @@ library
                        Yesod.Helpers.Yaml
                        Yesod.Helpers.Upload
                        Yesod.Helpers.SafeCopy
-                       Yesod.Helpers.Acid
                        Yesod.Helpers.About
                        Yesod.Helpers.Logger
                        Yesod.Helpers.BgThread
@@ -113,7 +116,6 @@ library
                      , Glob
                      , safecopy
                      , cereal
-                     , acid-state
                      , monad-logger
                      , data-default
                      , streaming-commons
@@ -146,6 +148,10 @@ library
                      , mime-types
                      , vault
                      , parsec-tx-utils         >= 0.3.1
+
+  if flag(acid-state)
+      build-depends:   acid-state
+      exposed-modules: Yesod.Helpers.Acid
 
   if flag(parsec3)
       build-depends:   parsec3
