@@ -640,7 +640,7 @@ checkFieldDBUnique mk_unique msg = checkFieldDBUnique2 mk_unique msg Nothing
 -- | can be used as a placeholder
 emptyFieldView :: FieldView site
 emptyFieldView = FieldView
-                    { fvLabel       = Empty
+                    { fvLabel       = mempty
                     , fvTooltip     = Nothing
                     , fvId          = ""
                     , fvInput       = return ()
