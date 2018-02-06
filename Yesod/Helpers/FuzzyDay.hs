@@ -164,6 +164,16 @@ fromFuzzyDay fd = fromGregorian (fromIntegral y) m d
 -- }}}1
 
 
+fromFuzzyDayMaybe :: FuzzyDay -> Maybe Day
+-- {{{1
+fromFuzzyDayMaybe fd =
+  case fd of
+    FuzzyDayYMD y m d -> Just $ fromGregorian (fromIntegral y) m d
+    _ -> Nothing
+-- }}}1
+
+
+
 -- | FuzzyDay所指范围的最后一日
 fromFuzzyDayEnd :: FuzzyDay -> Day
 -- {{{1
