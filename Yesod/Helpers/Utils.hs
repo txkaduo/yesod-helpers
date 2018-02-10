@@ -133,6 +133,10 @@ randomString :: MonadIO m => Int -> [Char] -> m [Char]
 randomString len chars = replicateM len (randomPick chars)
 
 
+randomUrlSafeString :: MonadIO m => Int -> m [Char]
+randomUrlSafeString = flip randomString $ ['0'..'9'] <> ['a'..'z'] <> ['A'..'Z'] <> "-_"
+
+
 zhCnTimeLocale :: TimeLocale
 -- {{{1
 zhCnTimeLocale =
