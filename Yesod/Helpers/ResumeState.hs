@@ -4,16 +4,12 @@ module Yesod.Helpers.ResumeState where
 
 import Prelude
 -- import Data.Proxy
-import qualified Data.Map.Strict            as Map
 import Data.Map.Strict                      (Map)
 import Data.ByteString                      (ByteString)
-import qualified Data.ByteString            as B
 import Control.Monad.State hiding (forM, mapM)
-import Control.Monad.Reader hiding (forM, mapM)
-import System.Random                        (randomIO)
 import Data.Default                         (Default(..))
 import Data.String                          (IsString(..))
-import Control.DeepSeq                      (NFData(..), ($!!))
+import Control.DeepSeq                      (NFData(..))
 import Data.Aeson
 import Data.Time
 import Data.Text                            (Text)
