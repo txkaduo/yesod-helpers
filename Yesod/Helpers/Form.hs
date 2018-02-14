@@ -38,7 +38,6 @@ import Data.Conduit.Binary                  (sourceLbs, sinkLbs)
 
 import Data.List                            (nub)
 import Text.Blaze.Renderer.Utf8             (renderMarkup)
-import Text.Blaze.Internal                  (MarkupM(Empty))
 import Control.Monad.Catch                  (catch)
 import Text.Parsec                          (parse, space, eof, Parsec)
 import Control.Monad.Except                 (runExceptT, throwError, ExceptT(..), withExceptT)
