@@ -13,6 +13,7 @@ module Yesod.Helpers.Form2
     , generateEMFormGet
     , emreq, emopt, emstatic
     , semreq, semopt, semreqOpt, semstatic, semstatic'
+    , semview
     , addEMFieldError
     , addEMOverallError
     , renderBootstrapES
@@ -352,6 +353,24 @@ semstatic' :: (HandlerSite m ~ site, MonadHandler m)
     -> a
     -> SEMForm m (FormResult a)
 semstatic' = flip $ flip . semstatic
+
+semview :: (HandlerSite m ~ site, MonadHandler m)
+        => Text -> FieldSettings site -> SEMForm m ()
+semview text (FieldSettings fsLabel fsTooltip fsId fsName fsAttrs) = do
+  theId <- lift $ lift $ maybe newIdent return fsId
+  (_, site, langs) <- lift $ ask
+  let mr2 = renderMessage site langs
+      view = FieldView
+        { fvLabel = toHtml $ mr2 fsLabel
+        , fvTooltip = fmap toHtml $ fmap mr2 fsTooltip
+        , fvId = theId
+        , fvInput = toWidget
+          [shamlet|<p id="#{theId}" *{fsAttrs} .form-control-static>#{text}|]
+        , fvErrors = Nothing
+        , fvRequired = False
+        }
+
+  SS.modify ( view : )
 
 -- | Use `semreq` internally, but make the signature like `semopt`.
 -- Useful when whether some fields is required depends on other conditions.
