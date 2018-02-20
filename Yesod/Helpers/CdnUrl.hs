@@ -20,6 +20,9 @@ class JqueryCdnUrl a where
 class JqueryFormCdnUrl a where
     urlJqueryFormJsText :: a -> Text
 
+class JqueryQrcodeCdnUrl a where
+    urlJqueryQrcodeJs :: a -> Text
+
 class BootstrapCdnUrl a where
     urlBootstrapCssText :: a -> Text
     urlBootstrapJsText :: a -> Text
@@ -116,6 +119,14 @@ class MoxieCdnUrl a where
   urlMoxieSwf :: a -> Text
 
 
+class Json3CdnUrl a where
+  urlJson3Js :: a -> Text
+
+
+class NodeUuidCdnUrl a where
+  urlNodeUuidJs :: a -> Text
+
+
 -- | To offload static files to CDN. See urlRenderOverride
 urlRenderOverrideStatic :: (Yesod site, Foldable t, RenderRoute a)
                         => site
@@ -158,6 +169,11 @@ instance JqueryFormCdnUrl BootcssCdn where
         if min_ver
             then "https://cdn.bootcss.com/jquery.form/4.2.1/jquery.form.min.js"
             else "https://cdn.bootcss.com/jquery.form/4.2.1/jquery.form.js"
+
+instance JqueryQrcodeCdnUrl BootcssCdn where
+  urlJqueryQrcodeJs (BootcssCdn _min_ver) =
+    "https://cdn.bootcss.com/jquery.qrcode/1.0/jquery.qrcode.min.js"
+
 
 instance BootstrapCdnUrl BootcssCdn where
     urlBootstrapCssText (BootcssCdn min_ver) =
@@ -324,3 +340,17 @@ instance PluploadCdnUrl BootcssCdn where
 instance MoxieCdnUrl BootcssCdn where
   urlMoxieSwf (BootcssCdn _) =
     "https://cdn.bootcss.com/plupload/2.3.6/Moxie.swf"
+
+
+instance Json3CdnUrl BootcssCdn where
+  urlJson3Js (BootcssCdn min_ver) =
+    if min_ver
+       then "https://cdn.bootcss.com/json3/3.3.2/json3.min.js"
+       else "https://cdn.bootcss.com/json3/3.3.2/json3.js"
+
+
+instance NodeUuidCdnUrl BootcssCdn where
+  urlNodeUuidJs (BootcssCdn min_ver) =
+    if min_ver
+       then "https://cdn.bootcss.com/node-uuid/1.4.8/uuid.min.js"
+       else "https://cdn.bootcss.com/node-uuid/1.4.8/uuid.js"
