@@ -127,6 +127,10 @@ class NodeUuidCdnUrl a where
   urlNodeUuidJs :: a -> Text
 
 
+class WeuiCdnUrl a where
+  urlWeuiCss :: a -> Text
+
+
 -- | To offload static files to CDN. See urlRenderOverride
 urlRenderOverrideStatic :: (Yesod site, Foldable t, RenderRoute a)
                         => site
@@ -354,3 +358,10 @@ instance NodeUuidCdnUrl BootcssCdn where
     if min_ver
        then "https://cdn.bootcss.com/node-uuid/1.4.8/uuid.min.js"
        else "https://cdn.bootcss.com/node-uuid/1.4.8/uuid.js"
+
+
+instance WeuiCdnUrl BootcssCdn where
+  urlWeuiCss (BootcssCdn min_ver) =
+    if min_ver
+       then "https://cdn.bootcss.com/weui/1.1.2/style/weui.min.css"
+       else "https://cdn.bootcss.com/weui/1.1.2/style/weui.css"
