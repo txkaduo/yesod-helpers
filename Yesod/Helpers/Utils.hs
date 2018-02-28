@@ -27,6 +27,7 @@ import Network.HTTP.Types                   (parseQueryText, renderQueryText, Qu
 import qualified Network.Mime               as MM
 import Network.URI                          (parseURIReference, uriQuery, uriToString
                                             , parseAbsoluteURI, uriAuthority, uriRegName
+                                            , URI, uriScheme, uriPort
                                             )
 import Yesod.Core.Types                     (ContentType)
 import qualified Blaze.ByteString.Builder   as BBB
@@ -339,6 +340,14 @@ domainPrependDot :: ( IsString s
 domainPrependDot d = if isPrefixOf "." d
                         then d
                         else "." <> d
+
+
+-- | Get http origin from url
+uriOrigin :: URI -> String
+uriOrigin uri =
+  uriScheme uri <> fromMaybe "" (uri_auth_no_user <$> uriAuthority uri)
+  where
+    uri_auth_no_user x = "//" <> uriRegName x <> uriPort x
 
 
 -- | Construct LocalTime for the start point of time range, with optional time of day.
