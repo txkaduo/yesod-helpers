@@ -20,6 +20,9 @@ class JqueryCdnUrl a where
 class JqueryFormCdnUrl a where
     urlJqueryFormJsText :: a -> Text
 
+class JqueryQrcodeCdnUrl a where
+    urlJqueryQrcodeJs :: a -> Text
+
 class BootstrapCdnUrl a where
     urlBootstrapCssText :: a -> Text
     urlBootstrapJsText :: a -> Text
@@ -104,6 +107,30 @@ class SummerNoteCdnUrl a where
   urlSummerNoteCss :: a -> Text
 
 
+-- | plupload
+class PluploadCdnUrl a where
+  urlPluploadFullJs :: a -> Text
+  urlPluploadJsZhCn :: a -> Text
+  urlPluploadUiJqueryJs :: a -> Text
+  urlPluploadUiJqueryCss :: a -> Text
+
+
+class MoxieCdnUrl a where
+  urlMoxieSwf :: a -> Text
+
+
+class Json3CdnUrl a where
+  urlJson3Js :: a -> Text
+
+
+class NodeUuidCdnUrl a where
+  urlNodeUuidJs :: a -> Text
+
+
+class WeuiCdnUrl a where
+  urlWeuiCss :: a -> Text
+
+
 -- | To offload static files to CDN. See urlRenderOverride
 urlRenderOverrideStatic :: (Yesod site, Foldable t, RenderRoute a)
                         => site
@@ -146,6 +173,11 @@ instance JqueryFormCdnUrl BootcssCdn where
         if min_ver
             then "https://cdn.bootcss.com/jquery.form/4.2.1/jquery.form.min.js"
             else "https://cdn.bootcss.com/jquery.form/4.2.1/jquery.form.js"
+
+instance JqueryQrcodeCdnUrl BootcssCdn where
+  urlJqueryQrcodeJs (BootcssCdn _min_ver) =
+    "https://cdn.bootcss.com/jquery.qrcode/1.0/jquery.qrcode.min.js"
+
 
 instance BootstrapCdnUrl BootcssCdn where
     urlBootstrapCssText (BootcssCdn min_ver) =
@@ -290,3 +322,44 @@ instance SummerNoteCdnUrl BootcssCdn where
   urlSummerNoteCss (BootcssCdn _min_ver) =
     "https://cdn.bootcss.com/summernote/0.8.8/summernote.css"
 
+
+instance PluploadCdnUrl BootcssCdn where
+  urlPluploadFullJs (BootcssCdn _min_ver) =
+    "https://cdn.bootcss.com/plupload/2.3.6/plupload.full.min.js"
+
+  urlPluploadJsZhCn (BootcssCdn _min_ver) =
+    "https://cdn.bootcss.com/plupload/2.3.6/i18n/zh_CN.js"
+
+  urlPluploadUiJqueryJs (BootcssCdn min_ver) =
+    if min_ver
+       then "https://cdn.bootcss.com/plupload/2.3.6/jquery.ui.plupload/jquery.ui.plupload.min.js"
+       else "https://cdn.bootcss.com/plupload/2.3.6/jquery.ui.plupload/jquery.ui.plupload.js"
+
+  urlPluploadUiJqueryCss (BootcssCdn _min_ver) =
+    "https://cdn.bootcss.com/plupload/2.3.6/jquery.plupload.queue/css/jquery.plupload.queue.css"
+
+
+instance MoxieCdnUrl BootcssCdn where
+  urlMoxieSwf (BootcssCdn _) =
+    "https://cdn.bootcss.com/plupload/2.3.6/Moxie.swf"
+
+
+instance Json3CdnUrl BootcssCdn where
+  urlJson3Js (BootcssCdn min_ver) =
+    if min_ver
+       then "https://cdn.bootcss.com/json3/3.3.2/json3.min.js"
+       else "https://cdn.bootcss.com/json3/3.3.2/json3.js"
+
+
+instance NodeUuidCdnUrl BootcssCdn where
+  urlNodeUuidJs (BootcssCdn min_ver) =
+    if min_ver
+       then "https://cdn.bootcss.com/node-uuid/1.4.8/uuid.min.js"
+       else "https://cdn.bootcss.com/node-uuid/1.4.8/uuid.js"
+
+
+instance WeuiCdnUrl BootcssCdn where
+  urlWeuiCss (BootcssCdn min_ver) =
+    if min_ver
+       then "https://cdn.bootcss.com/weui/1.1.2/style/weui.min.css"
+       else "https://cdn.bootcss.com/weui/1.1.2/style/weui.css"

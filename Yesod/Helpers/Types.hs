@@ -10,6 +10,7 @@ import qualified Data.ByteString.Char8      as C8
 import qualified Data.ByteString.Lazy       as LB
 import           Data.Proxy                 (Proxy(..))
 import qualified Data.Serialize             as SL
+import qualified Data.Text                  as T
 
 import Language.Haskell.TH.Lift             (deriveLift)
 import Data.Time                            (TimeZone, timeZoneOffsetString)
@@ -363,3 +364,19 @@ instance (PathPiece k, PathPiece i) => PathPiece (KeyOrIdent k i) where
             [ fmap KI_Key (fromPathPiece t)
             , fmap KI_Ident (fromPathPiece t)
             ]
+
+
+
+-- | 两个 PathPiece 用逗号分开: 常用于一对出现才有意义情况
+-- 例如: 第一个元素表示类型，第二个元素表示该类型下的对象id
+newtype PathPieceTuple a b = PathPieceTuple { unPathPieceTuple :: (a, b) }
+
+instance (PathPiece a, PathPiece b) => PathPiece (PathPieceTuple a b) where
+  toPathPiece (PathPieceTuple (x, y)) = toPathPiece x <> "," <> toPathPiece y
+
+  fromPathPiece s = do
+    x <- fromPathPiece xs
+    ys <- T.stripPrefix "," ys1
+    y <- fromPathPiece ys
+    return $ PathPieceTuple (x, y)
+    where (xs, ys1) = T.breakOn "," s
