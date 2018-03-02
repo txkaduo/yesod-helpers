@@ -287,8 +287,6 @@ instance SummerNoteCdnUrl BootcssCdn where
        then "https://cdn.bootcss.com/summernote/0.8.8/lang/summernote-zh-CN.min.js"
        else "https://cdn.bootcss.com/summernote/0.8.8/lang/summernote-zh-CN.js"
 
-  urlSummerNoteCss (BootcssCdn min_ver) =
-    if min_ver
-       then "https://cdn.bootcss.com/summernote/0.8.8/summernote.min.css"
-       else "https://cdn.bootcss.com/summernote/0.8.8/summernote.css"
+  urlSummerNoteCss (BootcssCdn _min_ver) =
+    "https://cdn.bootcss.com/summernote/0.8.8/summernote.css"
 
