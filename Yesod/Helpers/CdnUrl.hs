@@ -202,13 +202,13 @@ instance FontAwesomeCdnUrl BootcssCdn where
 instance HandlebarsCdnUrl BootcssCdn where
     urlHandlebarsJsText (BootcssCdn min_ver) =
         if min_ver
-            then "https://cdn.bootcss.com/handlebars.js/4.0.8/handlebars.min.js"
-            else "https://cdn.bootcss.com/handlebars.js/4.0.8/handlebars.min.js"
+            then "https://cdn.bootcss.com/handlebars.js/4.0.11/handlebars.min.js"
+            else "https://cdn.bootcss.com/handlebars.js/4.0.11/handlebars.min.js"
 
     urlHandlebarsRuntimeJsText (BootcssCdn min_ver) =
         if min_ver
-            then "https://cdn.bootcss.com/handlebars.js/4.0.8/handlebars.runtime.min.js"
-            else "https://cdn.bootcss.com/handlebars.js/4.0.8/handlebars.runtime.js"
+            then "https://cdn.bootcss.com/handlebars.js/4.0.11/handlebars.runtime.min.js"
+            else "https://cdn.bootcss.com/handlebars.js/4.0.11/handlebars.runtime.js"
 
 instance ZeptoCdnUrl BootcssCdn where
     urlZeptoJsText (BootcssCdn min_ver) =
