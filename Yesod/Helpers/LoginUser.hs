@@ -10,7 +10,7 @@ import Control.Monad.Catch                  (MonadThrow)
 
 import Yesod.Helpers.Json                   (jsonDecodeKey, jsonEncodeKey)
 import Yesod.Helpers.Form                   (nameToFs)
-import Yesod.Helpers.Handler                (lookupReqAccept, matchMimeType)
+import Yesod.Helpers.Handler                (lookupReqAccept, matchMimeType, retainHttpParams)
 import Yesod.Helpers.ResumeState            (savedReqStateParamName)
 
 -- | Any logged-in user on Web
@@ -201,6 +201,10 @@ loginParamHiddenFormParts = do
         [ mopt hiddenField (nameToFs returnUrlParamName) (Just $ loginParamFromUrl lp)
         , mopt hiddenField (nameToFs loginMsgParamName) (Just $ loginParamMessage lp)
         ]
+
+getLoginUrlRender :: MonadHandler m => m (Route (HandlerSite m) -> Text)
+getLoginUrlRender = do
+  flip <$> getUrlRenderParams <*> retainHttpParams loginParamNames
 
 loginParamNames :: [Text]
 loginParamNames =   [ savedReqStateParamName
