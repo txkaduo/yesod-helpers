@@ -206,6 +206,12 @@ getLoginUrlRender :: MonadHandler m => m (Route (HandlerSite m) -> Text)
 getLoginUrlRender = do
   flip <$> getUrlRenderParams <*> retainHttpParams loginParamNames
 
+redirectToReturnUrl :: MonadHandler m => Route (HandlerSite m) -> m a
+redirectToReturnUrl = do
+  (lk returnUrlParamName >>=) . flip maybe redirect . redirect
+  where
+      lk x = lookupPostParam x >>= maybe (lookupGetParam x) (return . Just)
+
 loginParamNames :: [Text]
 loginParamNames =   [ savedReqStateParamName
                     , returnUrlParamName
