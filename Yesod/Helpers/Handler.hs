@@ -227,6 +227,32 @@ handleGetEMForm form show_widget f = do
 -- }}}1
 
 
+-- | Handler a GET form
+-- Form result can be 'missing'
+handleGetEMFormMaybe :: (ToTypedContent b, MonadHandler m, w ~ WidgetT site IO ())
+                     => (Html -> EMForm m (FormResult a, w))
+                     -- ^ 'MkEMForm a', the form function
+                     -> ((w, Enctype) -> FieldErrors (HandlerSite m) -> Maybe Text -> Maybe w -> m b)
+                     -- ^ a function to make some output.
+                     -- Maybe Text param: an error message
+                     -- first 'w': form widget
+                     -- second 'w': extra content. If form failed/missing, this is mempty, otherwise, it is the output of function in next param.
+                     -> (Maybe a -> m w)
+                     -- ^ use the form result
+                     -> m b
+-- {{{1
+handleGetEMFormMaybe form show_widget f = do
+  (((form_result, form_widget), form_enc), form_errs) <- runEMFormGet form
+  let show_empty_form_page m_err = do
+        show_widget (form_widget, form_enc) form_errs m_err Nothing
+
+  m_res <- case form_result of
+    FormFailure errs -> show_empty_form_page (Just $ intercalate "," errs) >>= sendResponse
+    FormMissing -> return Nothing
+    FormSuccess result -> return $ Just result
+
+  f m_res >>= show_widget (form_widget, form_enc) mempty Nothing . Just
+-- }}}1
 
 -- ^
 -- Typical Usage:
