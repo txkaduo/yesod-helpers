@@ -552,20 +552,44 @@ checkFieldDBUniqueId ::
         -- ^ Old value. Don't check DB if result is the same as this.
     -> Field (HandlerT site IO) a
     -> Field (HandlerT site IO) a
+checkFieldDBUniqueId mk_unique msg m_old_id = checkM (runDB . dbCheckFieldDBUniqueId mk_unique msg m_old_id)
+
+
+dbCheckFieldDBUniqueId ::
+    (
+#if MIN_VERSION_persistent(2, 0, 0)
+    PersistUnique backend
+    , PersistRecordBackend val backend
+    , MonadIO m
+#else
+    PersistUnique m
+    , PersistMonadBackend m ~ PersistEntityBackend val
+    , PersistEntity val
+#endif
+    ) =>
+    (a -> Unique val)
+    -> msg
+    -> Maybe (Key val)
+        -- ^ Old value. Don't check DB if result is the same as this.
+    -> a
+#if MIN_VERSION_persistent(2, 0, 0)
+    -> ReaderT backend m (Either msg a)
+#else
+    -> m (Either msg a)
+#endif
 -- {{{1
-checkFieldDBUniqueId mk_unique msg m_old_id = checkM chk
-  where
-    chk t = runDB $ runExceptT $ do
-      m_rec <- lift $ getBy (mk_unique t)
+dbCheckFieldDBUniqueId mk_unique msg m_old_id t =
+  runExceptT $ do
+    m_rec <- lift $ getBy (mk_unique t)
 
-      case m_rec of
-        Nothing -> return ()
-        Just (Entity rec_id _) -> do
-          case m_old_id of
-            Nothing     -> throwError msg
-            Just old_id -> unless (old_id == rec_id) $ throwError msg
+    case m_rec of
+      Nothing -> return ()
+      Just (Entity rec_id _) -> do
+        case m_old_id of
+          Nothing     -> throwError msg
+          Just old_id -> unless (old_id == rec_id) $ throwError msg
 
-      return t
+    return t
 -- }}}1
 
 
