@@ -356,7 +356,7 @@ semstatic' = flip $ flip . semstatic
 
 semview :: (HandlerSite m ~ site, MonadHandler m)
         => Text -> FieldSettings site -> SEMForm m ()
-semview text (FieldSettings fsLabel fsTooltip fsId fsName fsAttrs) = do
+semview text (FieldSettings fsLabel fsTooltip fsId _fsName fsAttrs) = do
   theId <- lift $ lift $ maybe newIdent return fsId
   (_, site, langs) <- lift $ ask
   let mr2 = renderMessage site langs
