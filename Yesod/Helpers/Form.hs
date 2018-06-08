@@ -202,8 +202,8 @@ neverMissingField val_when_missing field =
     fp2 x y = fmap (right $ Just . maybe val_when_missing Just) $ fieldParse field x y
 
     fv = fieldView field
-    fv2 tid name attrs t_or_res is_req =
-      fv tid name attrs t_or_res' is_req
+    fv2 tid name attrs t_or_res _is_req =
+      fv tid name attrs t_or_res' False
       where
         t_or_res' = case t_or_res of
                       Right Nothing   -> Left "" -- should never reach here
