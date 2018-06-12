@@ -1258,11 +1258,10 @@ weekDateMultiSelectField = multiSelectFieldList weekDateMsgList
 
 -- | 这段代码从 yesod 中截取出来．
 -- 其结果是一个可以因 CSRF 而设的token，用于手写 form 时，插入到form内部去
-formTokenWidget :: (MonadBaseControl IO m, MonadThrow m, MonadIO m)
-                => WidgetT site m ()
+csrfTokenInputWidget :: MonadWidget m => m ()
 -- {{{1
-formTokenWidget = do
-  req <- handlerToWidget getRequest
+csrfTokenInputWidget = do
+  req <- getRequest
   let tokenKey =
 #if MIN_VERSION_yesod_core(1, 4, 14)
                   defaultCsrfParamName
@@ -1275,6 +1274,10 @@ formTokenWidget = do
       Nothing -> mempty
       Just n -> [shamlet|<input type=hidden name=#{tokenKey} value=#{n}>|]
 -- }}}1
+
+{-# DEPRECATED formTokenWidget "use csrfTokenInputWidget instead" #-}
+formTokenWidget :: MonadWidget m => m ()
+formTokenWidget = csrfTokenInputWidget
 
 
 -- vim: set foldmethod=marker:
