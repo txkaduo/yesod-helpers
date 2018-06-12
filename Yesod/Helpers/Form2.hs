@@ -228,7 +228,12 @@ postHelper  :: (MonadHandler m, RenderMessage (HandlerSite m) FormMessage)
 -- {{{1
 postHelper form env = do
     req <- getRequest
-    let tokenKey = asText "_token"
+    let tokenKey =
+#if MIN_VERSION_yesod_core(1, 4, 14)
+                  defaultCsrfParamName
+#else
+                  asText "_token"
+#endif
     let token =
             case reqToken req of
                 Nothing -> mempty

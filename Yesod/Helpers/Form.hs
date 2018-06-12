@@ -1263,7 +1263,12 @@ formTokenWidget :: (MonadBaseControl IO m, MonadThrow m, MonadIO m)
 -- {{{1
 formTokenWidget = do
   req <- handlerToWidget getRequest
-  let tokenKey = asText "_token"
+  let tokenKey =
+#if MIN_VERSION_yesod_core(1, 4, 14)
+                  defaultCsrfParamName
+#else
+                  asText "_token"
+#endif
 
   toWidget $
     case reqToken req of
