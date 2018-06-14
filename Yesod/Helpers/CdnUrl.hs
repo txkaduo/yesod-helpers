@@ -131,6 +131,11 @@ class WeuiCdnUrl a where
   urlWeuiCss :: a -> Text
 
 
+class JqueryFancyTreeCdnUrl a where
+  urlJqueryFancyTreeJs :: a -> Text
+  urlJqueryFancyTreeSkinWin8Css :: a -> Text
+
+
 -- | To offload static files to CDN. See urlRenderOverride
 urlRenderOverrideStatic :: (Yesod site, Foldable t, RenderRoute a)
                         => site
@@ -363,3 +368,15 @@ instance WeuiCdnUrl BootcssCdn where
     if min_ver
        then "https://cdn.bootcss.com/weui/1.1.2/style/weui.min.css"
        else "https://cdn.bootcss.com/weui/1.1.2/style/weui.css"
+
+
+instance JqueryFancyTreeCdnUrl BootcssCdn where
+  urlJqueryFancyTreeJs (BootcssCdn min_ver) =
+    if min_ver
+       then "https://cdn.bootcss.com/jquery.fancytree/2.28.1/jquery.fancytree-all.min.js"
+       else "https://cdn.bootcss.com/jquery.fancytree/2.28.1/jquery.fancytree-all.js"
+
+  urlJqueryFancyTreeSkinWin8Css (BootcssCdn min_ver) =
+    if min_ver
+       then "https://cdn.bootcss.com/jquery.fancytree/2.28.1/skin-win8/ui.fancytree.min.css"
+       else "https://cdn.bootcss.com/jquery.fancytree/2.28.1/skin-win8/ui.fancytree.css"
