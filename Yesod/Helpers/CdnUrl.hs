@@ -136,6 +136,10 @@ class JqueryFancyTreeCdnUrl a where
   urlJqueryFancyTreeSkinWin8Css :: a -> Text
 
 
+class JqueryLoadingOverlayCdnUrl a where
+  urlJqueryLoadingOverlayJs :: a -> Text
+
+
 -- | To offload static files to CDN. See urlRenderOverride
 urlRenderOverrideStatic :: (Yesod site, Foldable t, RenderRoute a)
                         => site
@@ -380,3 +384,11 @@ instance JqueryFancyTreeCdnUrl BootcssCdn where
     if min_ver
        then "https://cdn.bootcss.com/jquery.fancytree/2.28.1/skin-win8/ui.fancytree.min.css"
        else "https://cdn.bootcss.com/jquery.fancytree/2.28.1/skin-win8/ui.fancytree.css"
+
+
+instance JqueryLoadingOverlayCdnUrl BootcssCdn where
+  urlJqueryLoadingOverlayJs (BootcssCdn min_ver) =
+    if min_ver
+       then "https://cdn.bootcss.com/jquery-loading-overlay/2.1.3/loadingoverlay.min.js"
+       else "https://cdn.bootcss.com/jquery-loading-overlay/2.1.3/loadingoverlay.js"
+
