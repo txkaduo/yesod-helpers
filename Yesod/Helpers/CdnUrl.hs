@@ -140,6 +140,11 @@ class JqueryLoadingOverlayCdnUrl a where
   urlJqueryLoadingOverlayJs :: a -> Text
 
 
+class TooltipsterCdnUrl a where
+  urlTooltipsterJs :: a -> Text
+  urlTooltipsterCss :: a -> Text
+
+
 -- | To offload static files to CDN. See urlRenderOverride
 urlRenderOverrideStatic :: (Yesod site, Foldable t, RenderRoute a)
                         => site
@@ -391,4 +396,16 @@ instance JqueryLoadingOverlayCdnUrl BootcssCdn where
     if min_ver
        then "https://cdn.bootcss.com/jquery-loading-overlay/2.1.3/loadingoverlay.min.js"
        else "https://cdn.bootcss.com/jquery-loading-overlay/2.1.3/loadingoverlay.js"
+
+instance TooltipsterCdnUrl BootcssCdn where
+  urlTooltipsterJs (BootcssCdn min_ver) =
+    if min_ver
+       then "https://cdn.bootcss.com/tooltipster/3.3.0/js/jquery.tooltipster.min.js"
+       else "https://cdn.bootcss.com/tooltipster/3.3.0/js/jquery.tooltipster.js"
+
+  urlTooltipsterCss (BootcssCdn min_ver) =
+    if min_ver
+       then "https://cdn.bootcss.com/tooltipster/3.3.0/css/tooltipster.min.css"
+       else "https://cdn.bootcss.com/tooltipster/3.3.0/css/tooltipster.css"
+
 
