@@ -2,6 +2,7 @@ module Yesod.Helpers.Utils where
 
 -- {{{1
 import ClassyPrelude
+import Control.Monad.STM                    (check)
 import Data.Char
 import Data.List                            ((!!))
 import Data.Proxy
@@ -200,100 +201,62 @@ writeChanWaitMVar ch mk_cmd = do
     liftIO $ takeMVar mvar
 
 
--- | Run monadic computation forever, log and retry when exceptions occurs.
--- Loop will stop when the following conditions are all true:
--- 'block_check_exit' returns True
--- 'f' returns False
-foreverLogExcWhen :: ( MonadIO m, MonadLogger m
-#if MIN_VERSION_classy_prelude(1, 0, 0)
-                     , MonadCatch m
-#else
-                     , MonadBaseControl IO m
-#endif
-                     )
-                  => IO Bool     -- ^ This function should be a blocking op,
-                              -- return True if the infinite loop should be aborted.
-                  -> Int      -- ^ ms
-                  -> m Bool
-                  -> m ()
-foreverLogExcWhen = foreverLogExcIdentWhen ""
+-- | 在一定时间内，等待一个 TVar 变成 True
+-- TVar 的意义应该是某种结束标志
+-- 所以超时代表不结束，此函数会直接返回 False
+checkTVarTimeout :: MonadIO m
+                 => Int
+                 -> TVar Bool
+                 -> m Bool
+checkTVarTimeout ms tvar = liftIO $ do
+  fmap (fromMaybe False) $ timeout ms $ atomically (readTVar tvar >>= check >> return True)
 
-foreverLogExcIdentWhen :: (MonadIO m, MonadLogger m
+
+-- | 配合 startBgThreadIdentW 及 foreverWithExitCheck 使用的小工具
+logExcWithThreadIdent :: MonadLogger m => Text -> SomeException -> m ()
+-- {{{1
+logExcWithThreadIdent thr_ident e = do
+    if null thr_ident
+       then $logError $ "Got exception in loop: " <> tshow e
+       else $logError $ "Thread of " <> thr_ident <> ": Got exception in loop: " <> tshow e
+-- }}}1
+
+
+-- | 重复调用工作函数，每次调用前调用一次检查是否要退出的函数
+-- 结束循环的条件是以下任意一种情况成立
+-- * 工作函数返回 False
+-- * 检查退出函数返回 True
+foreverWithExitCheck :: (MonadIO m, MonadLogger m
 #if MIN_VERSION_classy_prelude(1, 0, 0)
                           , MonadCatch m
 #else
                           , MonadBaseControl IO m
 #endif
                           )
-                       => Text
-                       -> IO Bool     -- ^ This function should be a blocking op,
-                                   -- return True if the infinite loop should be aborted.
-                       -> Int      -- ^ ms
-                       -> m Bool
-                       -> m ()
-foreverLogExcIdentWhen thr_ident block_check_exit interval f = go False
+                      => (Maybe SomeException -> m Bool)
+                      -- ^ This function should return True if need to exit between iterations.
+                      -- It can be blocking op (timeout somehow)
+                      -- Or can return result immediately
+                      -- 这个函数会在工作函数正常或异常结束时调用
+                      -- 即在每次重复调用工作函数前调用
+                      -> m Bool
+                      -- ^ 这个函数代表一轮要完成的工作
+                      -- 它返回 True 代表暂时没有工作可以做，但希望再重试
+                      -- 返回 False 代表全部工作已完成，不再循环
+                      -> m ()
+-- {{{1
+foreverWithExitCheck check_exit f = loop
   where
-    go waiting_exit = do
-      need_more <- f `catchAny` h
-      m_b <- if waiting_exit
-                then return $ Just True
-                else liftIO (timeout interval block_check_exit)
-      case m_b of
-        Nothing -> go False
-        Just need_exit -> do
-          if need_exit && not need_more
-             then return ()
-             else go need_exit
-
-    h e = do
-        if null thr_ident
-           then $(logError) $ "Got exception in loop: " <> tshow e
-           else $(logError) $ thr_ident <> ": Got exception in loop: " <> tshow e
-
-        return True
-
-
--- | Run monadic computation forever, log and retry when exceptions occurs.
--- Loop will stop when the following conditions are all true:
--- 'block_check_exit' returns True
-foreverLogExc :: ( MonadIO m, MonadLogger m
-#if MIN_VERSION_classy_prelude(1, 0, 0)
-                 , MonadCatch m
-#else
-                 , MonadBaseControl IO m
-#endif
-                 )
-                => IO Bool     -- ^ This function should be a blocking op,
-                            -- return True if the infinite loop should be aborted.
-                -> Int      -- ^ ms
-                -> m ()
-                -> m ()
-foreverLogExc = foreverLogExcIdent ""
-
-
-foreverLogExcIdent :: (MonadIO m, MonadLogger m
-#if MIN_VERSION_classy_prelude(1, 0, 0)
-                      , MonadCatch m
-#else
-                      , MonadBaseControl IO m
-#endif
-                      )
-                   => Text
-                   -> IO Bool     -- ^ This function should be a blocking op,
-                               -- return True if the infinite loop should be aborted.
-                   -> Int      -- ^ ms
-                   -> m ()
-                   -> m ()
-foreverLogExcIdent thr_ident block_check_exit interval f = go
-    where
-        go = do
-            f `catchAny` h
-            liftIO (timeout interval block_check_exit)
-                >>= maybe go (const $ return ())
-        h e = do
-            if null thr_ident
-               then $(logError) $ "Got exception in loop: " <> tshow e
-               else $(logError) $ thr_ident <> ": Got exception in loop: " <> tshow e
+    loop = do
+      err_or_maybe_more <- fmap Right f `catchAny` (return . Left)
+      let m_err = either Just (const Nothing) err_or_maybe_more
+      need_exit <- check_exit m_err
+      if need_exit
+         then return ()
+         else case err_or_maybe_more of
+                Right False -> return ()
+                _           -> loop
+-- }}}1
 
 
 urlUpdateQueryText :: (QueryText -> QueryText)
