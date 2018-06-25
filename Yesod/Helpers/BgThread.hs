@@ -2,6 +2,7 @@ module Yesod.Helpers.BgThread where
 
 import ClassyPrelude
 
+-- {{{1 imports
 import Control.Concurrent.STM               (check)
 #if !MIN_VERSION_classy_prelude(1, 0, 0)
 import Control.Concurrent.Async             (async)
@@ -11,16 +12,18 @@ import Control.Monad.Logger
 import Control.Monad.Writer.Class           (MonadWriter(..))
 import Data.List.NonEmpty                   (NonEmpty(..), nonEmpty)
 import System.Timeout                       (timeout)
+-- }}}1
 
 
 -- | helper used in devel.hs and main.hs of yesod
-loopWatchAsyncList :: (MonadIO m) =>
-    STM Bool    -- ^ an action that return True when this loop should be ended
-    -> [(a, Async r)]
-                -- ^ 'a' is some kind of identification of the action
-    -> (a -> Async r -> Either SomeException r -> m ())
-                -- ^ callback when a Async finished
-    -> m ()
+loopWatchAsyncList :: (MonadIO m)
+                   => STM Bool    -- ^ an action that return True when this loop should be ended
+                   -> [(a, Async r)]
+                               -- ^ 'a' is some kind of identification of the action
+                   -> (a -> Async r -> Either SomeException r -> m ())
+                               -- ^ callback when a Async finished
+                   -> m ()
+-- {{{1
 loopWatchAsyncList check_exit a_list0 cb = go a_list0
     where
         go a_list = do
@@ -44,11 +47,16 @@ loopWatchAsyncList check_exit a_list0 cb = go a_list0
                             Nothing     -> return $ Just (ident, ac)
 
                     go a_list'
+-- }}}1
 
 
 -- | for loopWatchAsyncList
-reportBgThreadExited :: (MonadLogger m) =>
-    Text -> Async () -> Either SomeException () -> m ()
+reportBgThreadExited :: (MonadLogger m)
+                     => Text
+                     -> Async ()
+                     -> Either SomeException ()
+                     -> m ()
+-- {{{1
 reportBgThreadExited ident _ay res = do
     case res of
         Left err -> do
@@ -58,6 +66,7 @@ reportBgThreadExited ident _ay res = do
         Right _ -> do
             $logWarn $
                 "background thread " <> ident <> " exited."
+-- }}}1
 
 
 startBgThread :: Text -> IO r -> IO (Text, Async r)
@@ -91,6 +100,7 @@ tryPortToRunAndCheck :: Show a
                      -> (a -> IO ())
                               -- ^ real work, may never return
                      -> IO ()
+-- {{{1
 tryPortToRunAndCheck run_logging make_sure_alive_seconds ports svc_name f = do
   let report_port ex_mvar port = do
         -- 等待若干秒，如果没收到异常，认为服务器线程成功启动
@@ -118,3 +128,7 @@ tryPortToRunAndCheck run_logging make_sure_alive_seconds ports svc_name f = do
                 Just ps -> go ps
 
   go ports
+-- }}}1
+
+
+-- vim: set foldmethod=marker:
