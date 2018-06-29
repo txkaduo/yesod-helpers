@@ -4,9 +4,11 @@ module Yesod.Helpers.Utils where
 import ClassyPrelude
 import Control.Monad.STM                    (check)
 import Data.Char
+import qualified Data.Map                   as Map
 import Data.List                            ((!!))
 import Data.Proxy
 import qualified Data.Text                  as T
+import qualified Data.Sequence              as Sq
 import Data.Time                            ( localTimeToUTC, zonedTimeToUTC, TimeZone, ParseTime
                                             , LocalTime(..), midnight, TimeOfDay, addDays
                                             , NominalDiffTime, TimeLocale(..), TimeZone(..)
@@ -256,6 +258,149 @@ foreverWithExitCheck check_exit f = loop
          else case err_or_maybe_more of
                 Right False -> return ()
                 _           -> loop
+-- }}}1
+
+
+class StmQueue t where
+  newStmQueue :: STM (t a)
+  readStmQueue :: t a -> STM a
+  tryReadStmQueue :: t a -> STM (Maybe a)
+  writeStmQueue :: t a -> a -> STM ()
+
+
+instance StmQueue TChan where
+  newStmQueue = newTChan
+  readStmQueue = readTChan
+  tryReadStmQueue = tryReadTChan
+  writeStmQueue = writeTChan
+
+instance StmQueue TQueue where
+  newStmQueue = newTQueue
+  readStmQueue = readTQueue
+  tryReadStmQueue = tryReadTQueue
+  writeStmQueue = writeTQueue
+
+
+
+-- | 从原有的 StmQueue 搬数据到新的 StmQueue
+-- 保证相同键值的数据之间有至少一定的时间间隔
+intersperseDelayStmQueue :: (Ord b, StmQueue t1, StmQueue t2)
+                         => (a -> b)
+                         -> Int -- ^ 最小等待时间 ms
+                         -> t1 a
+                         -> IO (t2 a, (Async (), TVar Bool))
+                         -- ^ 新的TChan，及用于退出生成的工作线程的工具
+-- {{{1
+intersperseDelayStmQueue get_key delay_ms old_chan = do
+  new_chan <- atomically newStmQueue
+  exit_var <- newTVarIO False
+  ref_buffer <- newIORef (asMap mempty)
+
+  let loop = do
+        result <- do
+          the_map <- readIORef ref_buffer
+          atomically $ do
+            need_exit <- readTVar exit_var
+            if need_exit
+               then do
+                    -- 准备退出工作时，有两种策略
+                    -- 一种是立即把已缓存的数据发出，以便下个环节处理
+                    -- 另一种是不再读新的数据，但保持原有的等待然后处理的逻辑
+                    -- 为保持尽量优雅的退出方式，后一种似乎更合理
+                    -- 如果调用者想立即退出，可以 cancel 所返回的 Async
+                    -- 因为不再读新的数据，缓存中若有空的列表，可以删除
+                    let new_map = Map.filter (not . null . snd) the_map
+                    if null new_map
+                       then return Nothing
+                       else fmap (Just . (new_map,) . Left) $
+                              asum (map read_tvar_in_map $ mapToList new_map)
+
+               else fmap (Just . (the_map,)) $
+                      fmap Left (asum (map read_tvar_in_map $ mapToList the_map))
+                        <|> fmap Right (readStmQueue old_chan)
+
+        case result of
+          Nothing -> do
+            -- 所有工作已完成, 退出循环
+            return ()
+
+          Just (the_map, old_or_new) -> do
+            case old_or_new of
+              Left (xk, (_tv, vlist)) -> do
+                -- 有一个旧的数据组到期要处理
+                case Sq.viewr vlist of
+                  Sq.EmptyR -> modifyIORef' ref_buffer $ deleteMap xk
+                  vlist2 Sq.:> v -> do
+                    -- keep save vlist2 event if it may be null.
+                    -- so when new value comes in, we know we should wait
+                    atomically $ writeStmQueue new_chan v
+                    new_tv <- registerDelay delay_ms
+                    modifyIORef' ref_buffer $ insertMap xk (new_tv, vlist2)
+
+              Right v -> do
+                -- 有新的数据进入
+                let xk = get_key v
+                let update_map = modifyIORef' ref_buffer . insertMap xk
+
+                case lookup xk the_map of
+                  Just (tv, vlist) -> do
+                    update_map  (tv, cons v vlist)
+
+                  Nothing -> do
+                    -- no preceding element, just pass through
+                    atomically $ writeStmQueue new_chan v
+                    tv <- registerDelay delay_ms
+                    update_map (tv, mempty)
+
+            loop
+
+  thr <- async loop
+  return (new_chan, (thr, exit_var))
+  where
+    read_tvar_in_map (k, (tv, v)) = do
+      b <- readTVar tv
+      check b
+      return (k, (tv, v))
+-- }}}1
+
+
+-- | 辅助读 intersperseDelayStmQueue 中的信息并处理的函数
+handleReadDelayedStmQueue :: (MonadIO m, MonadLogger m, MonadBaseControl IO m, MonadMask m, Ord b, StmQueue t)
+                          => TVar Bool
+                          -- ^ 全局结束标志
+                          -> (Maybe SomeException -> m Bool)
+                          -- ^ 工作函数每次调用之间检查是否退出
+                          -> (a -> b)
+                          -- ^ 数据的健值
+                          -> Int
+                          -- ^ 最小延时 ms
+                          -> t a
+                          -- ^ 原始的数据输入
+                          -> (a -> m ())
+                          -- ^ 真正处理得到的数据的逻辑
+                          -> m ()
+-- {{{1
+handleReadDelayedStmQueue app_exit_var check_exit_between get_key delay_ms in_chan real_work = do
+  bracket
+    (liftIO $ intersperseDelayStmQueue get_key delay_ms in_chan)
+    cleanup
+    (foreverWithExitCheck check_exit_between . loop)
+      -- 最外层循环控制异常后重试
+
+  where
+    loop (new_chan, (thr, exit_var)) = do
+      m_job <- atomically $ do
+        app_exiting <- readTVar app_exit_var
+        if app_exiting
+           then writeTVar exit_var True >> tryReadTChan new_chan
+           else fmap Just $ readTChan new_chan
+
+      mapM_ real_work m_job
+      if isJust m_job
+         then loop (new_chan, (thr, exit_var))
+         else return False
+
+    cleanup (_new_chan, (_thr, exit_var)) = atomically $ writeTVar exit_var True
 -- }}}1
 
 
