@@ -229,6 +229,11 @@ logExcWithThreadIdent thr_ident e = do
 -- }}}1
 
 
+foreverUntilFalse :: Monad m => m Bool -> m Bool
+foreverUntilFalse f = loop
+  where loop = f >>= bool (return False) loop
+
+
 -- | 重复调用工作函数，每次调用前调用一次检查是否要退出的函数
 -- 结束循环的条件是以下任意一种情况成立
 -- * 工作函数返回 False
