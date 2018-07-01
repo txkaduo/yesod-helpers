@@ -214,6 +214,11 @@ checkTVarTimeout ms tvar = liftIO $ do
   fmap (fromMaybe False) $ timeout ms $ atomically (readTVar tvar >>= check >> return True)
 
 
+checkExitTVarOrElse :: TVar Bool -> STM a -> STM (Maybe a)
+checkExitTVarOrElse exit_var f = do
+  (readTVar exit_var >>= check >> return Nothing) <|> fmap Just f
+
+
 -- | 配合 startBgThreadIdentW 及 foreverWithExitCheck 使用的小工具
 logExcWithThreadIdent :: MonadLogger m => Text -> SomeException -> m ()
 -- {{{1
