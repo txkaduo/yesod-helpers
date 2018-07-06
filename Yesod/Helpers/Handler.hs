@@ -602,11 +602,52 @@ defaultZhCnLangs :: MonadHandler m
                 => m [Lang]
 defaultZhCnLangs = defaultLangs "zh-CN"
 
+
 type PagedPage site a = Maybe Text
                      -> PagedResult
                      -> a
                      -> Int
                      -> EFormHandlerT site IO Html
+
+
+handlerPagedPageWithForm' :: (NumPerPage so, Yesod site, RenderMessage site FormMessage)
+                          => (Maybe so -> HandlerT site IO so)
+                          -> MkEMForm site IO so
+                          -> (so -> Int -> Int -> HandlerT site IO ((a, Value), Int))
+                          -> PagedPage site a
+                          -> HandlerT site IO TypedContent
+-- {{{1
+handlerPagedPageWithForm' mk_def_so form get_data show_html = do
+  (((result, formWidget), formEnctype), form_errs) <- runEMFormGet form
+
+  so <- mk_def_so $ case result of
+                      FormSuccess x -> Just x
+                      _ -> Nothing
+
+  let npp = numPerPage so
+  let pager_settings = PagerSettings npp pn_param
+  pn <- pagerGetCurrentPageNumGet pager_settings
+
+  ((result_list, json), total_num) <- get_data so npp pn
+  paged <- runPager pager_settings pn total_num
+
+  selectRep $ do
+    provideRep $ do
+      let showf merr results = do
+            m_add_err <- liftM (fromMaybe mempty) $ forM merr $ \err -> do
+                            return $ overallFieldError err
+            flip runReaderT ((formWidget, formEnctype), form_errs <> m_add_err) $ do
+              show_html merr paged results total_num
+
+      showf Nothing result_list
+
+    provideRepJsendAndJsonp $ do
+      return $ JSendSuccess json
+
+  where pn_param = "p"
+-- }}}1
+
+
 
 handlerPagedPageWithForm :: (NumPerPage so, Yesod site, RenderMessage site FormMessage)
                          => so
@@ -616,33 +657,7 @@ handlerPagedPageWithForm :: (NumPerPage so, Yesod site, RenderMessage site FormM
                          -> HandlerT site IO TypedContent
 -- {{{1
 handlerPagedPageWithForm def_so form get_data show_html = do
-  (((result, formWidget), formEnctype), form_errs) <- runEMFormGet form
-
-  let so = case result of
-            FormSuccess x -> x
-            _ -> def_so
-
-  let npp = numPerPage so
-      pn_param = "p"
-
-  let pager_settings = PagerSettings npp pn_param
-  pn <- pagerGetCurrentPageNumGet pager_settings
-
-  ((result_list, json), total_num) <- get_data so npp pn
-  paged <- runPager pager_settings pn total_num
-
-  let showf merr results = do
-          m_add_err <- liftM (fromMaybe mempty) $ forM merr $ \err -> do
-                          return $ overallFieldError err
-          flip runReaderT ((formWidget, formEnctype), form_errs <> m_add_err) $ do
-            show_html merr paged results total_num
-
-  selectRep $ do
-    provideRep $ do
-      showf Nothing result_list
-
-    provideRepJsendAndJsonp $ do
-      return $ JSendSuccess json
+  handlerPagedPageWithForm' (return . fromMaybe def_so) form get_data show_html
 -- }}}1
 
 
