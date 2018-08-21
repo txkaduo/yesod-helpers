@@ -302,13 +302,10 @@ entityKeyField ::
     msg
     -> msg
     -> Field (HandlerT site IO) (Key val)
-entityKeyField invalid_msg not_found_msg =
-    checkMMap f toPathPiece strippedTextField
-    where
-        f t = runExceptT $ do
-            k <- maybe (throwError invalid_msg) return $ fromPathPiece t
-            (lift $ runDB $ get k) >>= maybe (throwError not_found_msg) (const $ return k)
+entityKeyField = (convertToEntityKeyField .) . entityField
 
+convertToEntityKeyField :: (PersistEntity a, Functor m) => Field m (Entity a) -> Field m (Key a)
+convertToEntityKeyField = convertField entityKey $ flip Entity (error "fake entity value")
 
 entityKeyHiddenField ::
     ( RenderMessage site msg
