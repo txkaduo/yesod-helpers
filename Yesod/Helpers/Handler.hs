@@ -131,6 +131,15 @@ handleGetPostEMFormTc form show_form handle_form_data = do
 -- }}}1
 
 
+handleGetPost :: MonadHandler m => m a -> m a -> m a
+handleGetPost get_func post_func = do
+  req_method <- requestMethod <$> waiRequest
+  case req_method of
+    "GET" -> get_func
+    "POST" -> post_func
+    _ -> sendResponseStatus methodNotAllowed405 (asText "Method Not Allowed!")
+
+
 handleGetPostEMForm :: (Yesod site, RenderMessage site FormMessage)
                     => MkEMForm site IO a
                     -> (Maybe e -> EFormHandlerT site IO c)
@@ -138,12 +147,11 @@ handleGetPostEMForm :: (Yesod site, RenderMessage site FormMessage)
                     -> HandlerT site IO c
 -- {{{1
 handleGetPostEMForm form show_form handle_form_data = do
-  req_method <- requestMethod <$> waiRequest
-  case req_method of
-    "GET" -> do
-      generateEMFormPost form >>= runReaderT ((show_form Nothing))
+  handleGetPost on_get on_post
+  where
+    on_get = generateEMFormPost form >>= runReaderT ((show_form Nothing))
 
-    "POST" -> do
+    on_post = do
       (((result, formWidget), formEnctype), form_errs) <- runEMFormPost form
       let showf merr = do
               flip runReaderT ((formWidget, formEnctype), form_errs) $ do
@@ -153,8 +161,6 @@ handleGetPostEMForm form show_form handle_form_data = do
           FormMissing     -> showf Nothing
           FormFailure _   -> showf Nothing
           FormSuccess form_data -> handle_form_data showf form_data
-
-    _ -> sendResponseStatus methodNotAllowed405 (asText "Method Not Allowed!")
 -- }}}1
 
 
@@ -178,12 +184,12 @@ handleGetPostEMFormNoToken :: (Yesod site, RenderMessage site FormMessage)
                            -> HandlerT site IO c
 -- {{{1
 handleGetPostEMFormNoToken form show_form handle_form_data = do
-  req_method <- requestMethod <$> waiRequest
-  case req_method of
-    "GET" -> do
+  handleGetPost on_get on_post
+  where
+    on_get =
       generateEMFormPost form >>= runReaderT ((show_form Nothing))
 
-    "POST" -> do
+    on_post = do
       (((result, formWidget), formEnctype), form_errs) <- runEMFormPostNoToken form
       let showf merr = do
               m_add_err <- liftM (fromMaybe mempty) $ forM merr $ \err -> do
@@ -195,8 +201,6 @@ handleGetPostEMFormNoToken form show_form handle_form_data = do
           FormMissing     -> showf Nothing
           FormFailure _   -> showf Nothing
           FormSuccess form_data -> handle_form_data showf form_data
-
-    _ -> sendResponseStatus methodNotAllowed405 (asText "Method Not Allowed!")
 -- }}}1
 
 
