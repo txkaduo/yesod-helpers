@@ -89,6 +89,7 @@ class FileSaverCdnUrl a where
 
 class JsXlsxCdnUrl a where
   urlJsXlsxCore :: a -> Text
+  urlJsXlsxFull :: a -> Text
 
 -- | TableExport
 class TableExportCdlUrl a where
@@ -295,8 +296,14 @@ instance JsXlsxCdnUrl BootcssCdn where
   urlJsXlsxCore (BootcssCdn min_ver) =
     -- only 'min' version available
     if min_ver
-       then "https://cdn.bootcss.com/xlsx/0.11.5/xlsx.core.min.js"
-       else "https://cdn.bootcss.com/xlsx/0.11.5/xlsx.core.min.js"
+       then "https://cdn.bootcss.com/xlsx/0.12.13/xlsx.core.min.js"
+       else "https://cdn.bootcss.com/xlsx/0.12.13/xlsx.core.min.js"
+
+  urlJsXlsxFull (BootcssCdn min_ver) =
+    -- only 'min' version available
+    if min_ver
+       then "https://cdn.bootcss.com/xlsx/0.12.13/xlsx.full.min.js"
+       else "https://cdn.bootcss.com/xlsx/0.12.13/xlsx.full.min.js"
 
 
 instance TableExportCdlUrl BootcssCdn where
