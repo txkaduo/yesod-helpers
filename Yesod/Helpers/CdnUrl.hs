@@ -146,6 +146,11 @@ class TooltipsterCdnUrl a where
   urlTooltipsterCss :: a -> Text
 
 
+class TimeagoCdnUrl a where
+  urlTimeAgoJs :: a -> Text
+  urlTimeAgoLocalesJs :: a -> Text
+
+
 -- | To offload static files to CDN. See urlRenderOverride
 urlRenderOverrideStatic :: (Yesod site, Foldable t, RenderRoute a)
                         => site
@@ -416,6 +421,19 @@ instance TooltipsterCdnUrl BootcssCdn where
        else "https://cdn.bootcss.com/tooltipster/3.3.0/css/tooltipster.css"
 
 
+instance TimeagoCdnUrl BootcssCdn where
+  urlTimeAgoJs (BootcssCdn min_ver) =
+    if min_ver
+       then "https://cdn.bootcss.com/timeago.js/3.0.2/timeago.min.js"
+       else "https://cdn.bootcss.com/timeago.js/3.0.2/timeago.js"
+
+  urlTimeAgoLocalesJs (BootcssCdn min_ver) =
+    -- only min version available
+    if min_ver
+       then "https://cdn.bootcss.com/timeago.js/3.0.2/timeago.locales.min.js"
+       else "https://cdn.bootcss.com/timeago.js/3.0.2/timeago.locales.min.js"
+
+
 data StaticFileCdn = StaticFileCdn Bool
 
 instance JqueryCdnUrl StaticFileCdn where
@@ -674,6 +692,19 @@ instance TooltipsterCdnUrl StaticFileCdn where
        else "https://cdn.staticfile.org/tooltipster/3.3.0/css/tooltipster.css"
 
 
+instance TimeagoCdnUrl StaticFileCdn where
+  urlTimeAgoJs (StaticFileCdn min_ver) =
+    if min_ver
+       then "https://cdn.staticfile.org/timeago.js/3.0.2/timeago.min.js"
+       else "https://cdn.staticfile.org/timeago.js/3.0.2/timeago.js"
+
+  urlTimeAgoLocalesJs (StaticFileCdn min_ver) =
+    -- only min version available
+    if min_ver
+       then "https://cdn.staticfile.org/timeago.js/3.0.2/timeago.locales.min.js"
+       else "https://cdn.staticfile.org/timeago.js/3.0.2/timeago.locales.min.js"
+
+
 
 type CoreFunctionalCdn a = (JqueryCdnUrl a, BootstrapCdnUrl a, FontAwesomeCdnUrl a, ZeptoCdnUrl a)
 
@@ -701,6 +732,7 @@ type FullyFunctionalCdn a = ( CoreFunctionalCdn a
                             , JqueryFancyTreeCdnUrl a
                             , JqueryLoadingOverlayCdnUrl a
                             , TooltipsterCdnUrl a
+                            , TimeagoCdnUrl a
                             )
 
 
@@ -803,4 +835,8 @@ instance JqueryLoadingOverlayCdnUrl SomeFullyFunctionalCdn where
 instance TooltipsterCdnUrl SomeFullyFunctionalCdn where
   urlTooltipsterJs (SomeFullyFunctionalCdn x) = urlTooltipsterJs x
   urlTooltipsterCss (SomeFullyFunctionalCdn x) = urlTooltipsterCss x
+
+instance TimeagoCdnUrl SomeFullyFunctionalCdn where
+  urlTimeAgoJs (SomeFullyFunctionalCdn x) = urlTimeAgoJs x
+  urlTimeAgoLocalesJs (SomeFullyFunctionalCdn x) = urlTimeAgoLocalesJs x
 
