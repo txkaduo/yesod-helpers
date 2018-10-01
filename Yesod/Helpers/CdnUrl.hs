@@ -186,8 +186,8 @@ instance JqueryCdnUrl BootcssCdn where
 instance JqueryFormCdnUrl BootcssCdn where
     urlJqueryFormJsText (BootcssCdn min_ver) =
         if min_ver
-            then "https://cdn.bootcss.com/jquery.form/4.2.1/jquery.form.min.js"
-            else "https://cdn.bootcss.com/jquery.form/4.2.1/jquery.form.js"
+            then "https://cdn.bootcss.com/jquery.form/4.2.2/jquery.form.min.js"
+            else "https://cdn.bootcss.com/jquery.form/4.2.2/jquery.form.js"
 
 instance JqueryQrcodeCdnUrl BootcssCdn where
   urlJqueryQrcodeJs (BootcssCdn _min_ver) =
@@ -218,7 +218,7 @@ instance HandlebarsCdnUrl BootcssCdn where
     urlHandlebarsJsText (BootcssCdn min_ver) =
         if min_ver
             then "https://cdn.bootcss.com/handlebars.js/4.0.11/handlebars.min.js"
-            else "https://cdn.bootcss.com/handlebars.js/4.0.11/handlebars.min.js"
+            else "https://cdn.bootcss.com/handlebars.js/4.0.11/handlebars.js"
 
     urlHandlebarsRuntimeJsText (BootcssCdn min_ver) =
         if min_ver
@@ -259,13 +259,13 @@ instance TypeaheadCdnUrl BootcssCdn where
 instance VideoJsCdnUrl BootcssCdn where
   urlVideoJs (BootcssCdn min_ver) =
     if min_ver
-       then "https://cdn.bootcss.com/video.js/6.2.6/video.min.js"
-       else "https://cdn.bootcss.com/video.js/6.2.6/video.js"
+       then "https://cdn.bootcss.com/video.js/6.10.1/video.min.js"
+       else "https://cdn.bootcss.com/video.js/6.10.1/video.js"
 
   urlVideoJsCss (BootcssCdn min_ver) =
     if min_ver
-       then "https://cdn.bootcss.com/video.js/6.2.6/video-js.min.css"
-       else "https://cdn.bootcss.com/video.js/6.2.6/video-js.css"
+       then "https://cdn.bootcss.com/video.js/6.10.1/video-js.min.css"
+       else "https://cdn.bootcss.com/video.js/6.10.1/video-js.css"
 
 
 instance VideoJsOverlayCdnUrl BootcssCdn where
@@ -288,8 +288,8 @@ instance ClipboardJsCdnUrl BootcssCdn where
 instance FileSaverCdnUrl BootcssCdn where
   urlFileSaverJs (BootcssCdn min_ver) =
     if min_ver
-       then "https://cdn.bootcss.com/FileSaver.js/1.3.3/FileSaver.min.js"
-       else "https://cdn.bootcss.com/FileSaver.js/1.3.3/FileSaver.js"
+       then "https://cdn.bootcss.com/FileSaver.js/1.3.8/FileSaver.min.js"
+       else "https://cdn.bootcss.com/FileSaver.js/1.3.8/FileSaver.js"
 
 
 instance JsXlsxCdnUrl BootcssCdn where
@@ -309,39 +309,39 @@ instance JsXlsxCdnUrl BootcssCdn where
 instance TableExportCdlUrl BootcssCdn where
   urlTableExportJs (BootcssCdn min_ver) =
     if min_ver
-       then "https://cdn.bootcss.com/TableExport/4.0.11/js/tableexport.min.js"
-       else "https://cdn.bootcss.com/TableExport/4.0.11/js/tableexport.js"
+       then "https://cdn.bootcss.com/TableExport/5.0.2/js/tableexport.min.js"
+       else "https://cdn.bootcss.com/TableExport/5.0.2/js/tableexport.js"
 
   urlTableExportCss (BootcssCdn min_ver) =
     if min_ver
-       then "https://cdn.bootcss.com/TableExport/4.0.11/css/tableexport.min.css"
-       else "https://cdn.bootcss.com/TableExport/4.0.11/css/tableexport.css"
+       then "https://cdn.bootcss.com/TableExport/5.0.2/css/tableexport.min.css"
+       else "https://cdn.bootcss.com/TableExport/5.0.2/css/tableexport.css"
 
 instance MomentCdnUrl BootcssCdn where
   urlMoment (BootcssCdn min_ver) =
     if min_ver
-       then "https://cdn.bootcss.com/moment.js/2.19.0/moment.min.js"
-       else "https://cdn.bootcss.com/moment.js/2.19.0/moment.js"
+       then "https://cdn.bootcss.com/moment.js/2.22.1/moment.min.js"
+       else "https://cdn.bootcss.com/moment.js/2.22.1/moment.js"
 
   urlMomentWithAllLocale (BootcssCdn min_ver) =
     if min_ver
-       then "https://cdn.bootcss.com/moment.js/2.19.0/moment-with-locales.min.js"
-       else "https://cdn.bootcss.com/moment.js/2.19.0/moment-with-locales.js"
+       then "https://cdn.bootcss.com/moment.js/2.22.1/moment-with-locales.min.js"
+       else "https://cdn.bootcss.com/moment.js/2.22.1/moment-with-locales.js"
 
 
 instance SummerNoteCdnUrl BootcssCdn where
   urlSummerNoteJs (BootcssCdn min_ver) =
     if min_ver
-       then "https://cdn.bootcss.com/summernote/0.8.8/summernote.min.js"
-       else "https://cdn.bootcss.com/summernote/0.8.8/summernote.js"
+       then "https://cdn.bootcss.com/summernote/0.8.10/summernote.min.js"
+       else "https://cdn.bootcss.com/summernote/0.8.10/summernote.js"
 
   urlSummerNoteJsZhCn (BootcssCdn min_ver) =
     if min_ver
-       then "https://cdn.bootcss.com/summernote/0.8.8/lang/summernote-zh-CN.min.js"
-       else "https://cdn.bootcss.com/summernote/0.8.8/lang/summernote-zh-CN.js"
+       then "https://cdn.bootcss.com/summernote/0.8.10/lang/summernote-zh-CN.min.js"
+       else "https://cdn.bootcss.com/summernote/0.8.10/lang/summernote-zh-CN.js"
 
   urlSummerNoteCss (BootcssCdn _min_ver) =
-    "https://cdn.bootcss.com/summernote/0.8.8/summernote.css"
+    "https://cdn.bootcss.com/summernote/0.8.10/summernote.css"
 
 
 instance PluploadCdnUrl BootcssCdn where
@@ -414,5 +414,263 @@ instance TooltipsterCdnUrl BootcssCdn where
     if min_ver
        then "https://cdn.bootcss.com/tooltipster/3.3.0/css/tooltipster.min.css"
        else "https://cdn.bootcss.com/tooltipster/3.3.0/css/tooltipster.css"
+
+
+data StaticFileCdn = StaticFileCdn Bool
+
+instance JqueryCdnUrl StaticFileCdn where
+    urlJqueryJsText (StaticFileCdn min_ver) =
+        if min_ver
+            then "https://cdn.staticfile.org/jquery/1.12.4/jquery.min.js"
+            else "https://cdn.staticfile.org/jquery/1.12.4/jquery.js"
+
+    urlJqueryUiJsText (StaticFileCdn min_ver) =
+        if min_ver
+            then "https://cdn.staticfile.org/jqueryui/1.12.1/jquery-ui.min.css"
+            else "https://cdn.staticfile.org/jqueryui/1.12.1/jquery-ui.css"
+
+    urlJqueryUiCssText (StaticFileCdn min_ver) =
+        if min_ver
+            then "https://cdn.staticfile.org/jqueryui/1.12.1/themes/base/jquery-ui.min.css"
+            else "https://cdn.staticfile.org/jqueryui/1.12.1/themes/base/jquery-ui.css"
+
+
+instance JqueryFormCdnUrl StaticFileCdn where
+    urlJqueryFormJsText (StaticFileCdn min_ver) =
+        if min_ver
+            then "https://cdn.staticfile.org/jquery.form/4.2.2/jquery.form.min.js"
+            else "https://cdn.staticfile.org/jquery.form/4.2.2/jquery.form.js"
+
+
+instance JqueryQrcodeCdnUrl StaticFileCdn where
+  urlJqueryQrcodeJs (StaticFileCdn _min_ver) =
+    "https://cdn.staticfile.org/jquery.qrcode/1.0/jquery.qrcode.min.js"
+
+
+instance BootstrapCdnUrl StaticFileCdn where
+    urlBootstrapCssText (StaticFileCdn min_ver) =
+        if min_ver
+            then "https://cdn.staticfile.org/twitter-bootstrap/3.3.7/css/bootstrap.min.css"
+            else "https://cdn.staticfile.org/twitter-bootstrap/3.3.7/css/bootstrap.css"
+
+    urlBootstrapJsText (StaticFileCdn min_ver) =
+        if min_ver
+            then "https://cdn.staticfile.org/twitter-bootstrap/3.3.7/js/bootstrap.min.js"
+            else "https://cdn.staticfile.org/twitter-bootstrap/3.3.7/js/bootstrap.js"
+
+
+instance FontAwesomeCdnUrl StaticFileCdn where
+    urlFontAwesomeCssText (StaticFileCdn min_ver) =
+        if min_ver
+            then "https://cdn.staticfile.org/font-awesome/4.7.0/css/font-awesome.min.css"
+            else "https://cdn.staticfile.org/font-awesome/4.7.0/css/font-awesome.css"
+
+    urlFontAwesomeWebFontText _ =
+        "https://cdn.staticfile.org/font-awesome/4.7.0/fonts/fontawesome-webfont.svg"
+
+
+instance HandlebarsCdnUrl StaticFileCdn where
+    urlHandlebarsJsText (StaticFileCdn min_ver) =
+        if min_ver
+            then "https://cdn.staticfile.org/handlebars.js/4.0.12/handlebars.min.js"
+            else "https://cdn.staticfile.org/handlebars.js/4.0.12/handlebars.js"
+
+    urlHandlebarsRuntimeJsText (StaticFileCdn min_ver) =
+        if min_ver
+            then "https://cdn.staticfile.org/handlebars.js/4.0.12/handlebars.runtime.min.js"
+            else "https://cdn.staticfile.org/handlebars.js/4.0.12/handlebars.runtime.js"
+
+
+instance ZeptoCdnUrl StaticFileCdn where
+    urlZeptoJsText (StaticFileCdn min_ver) =
+        if min_ver
+            then "https://cdn.staticfile.org/zepto/1.1.7/zepto.min.js"
+            else "https://cdn.staticfile.org/zepto/1.1.7/zepto.js"
+
+instance OnePageScrollCssCdnUrl StaticFileCdn where
+    urlOnePageScrollCssText (StaticFileCdn min_ver) =
+        if min_ver
+            then "https://cdn.staticfile.org/onepage-scroll/1.3.1/onepage-scroll.min.css"
+            else "https://cdn.staticfile.org/onepage-scroll/1.3.1/onepage-scroll.css"
+
+instance OnePageScrollJsJqueryCdnUrl StaticFileCdn where
+    urlOnePageScrollJsJqueryText (StaticFileCdn min_ver) =
+        if min_ver
+            then "https://cdn.staticfile.org/onepage-scroll/1.3.1/jquery.onepage-scroll.min.js"
+            else "https://cdn.staticfile.org/onepage-scroll/1.3.1/jquery.onepage-scroll.js"
+
+instance JsCookieCdnUrl StaticFileCdn where
+    urlJsCookieJsText (StaticFileCdn min_ver) =
+        if min_ver
+            then "https://cdn.staticfile.org/js-cookie/latest/js.cookie.min.js"
+            else "https://cdn.staticfile.org/js-cookie/latest/js.cookie.js"
+
+instance TypeaheadCdnUrl StaticFileCdn where
+  urlTypeaheadBundleJs (StaticFileCdn min_ver) =
+    if min_ver
+       then "https://cdn.staticfile.org/typeahead.js/0.11.1/typeahead.bundle.min.js"
+       else "https://cdn.staticfile.org/typeahead.js/0.11.1/typeahead.bundle.js"
+
+
+instance VideoJsCdnUrl StaticFileCdn where
+  urlVideoJs (StaticFileCdn min_ver) =
+    if min_ver
+       then "https://cdn.staticfile.org/video.js/6.12.1/video.min.js"
+       else "https://cdn.staticfile.org/video.js/6.12.1/video.js"
+
+  urlVideoJsCss (StaticFileCdn min_ver) =
+    if min_ver
+       then "https://cdn.staticfile.org/video.js/6.12.1/video-js.min.css"
+       else "https://cdn.staticfile.org/video.js/6.12.1/video-js.css"
+
+
+instance VideoJsOverlayCdnUrl StaticFileCdn where
+  urlVideoJsOverlay (StaticFileCdn min_ver) =
+    if min_ver
+       then "https://cdn.staticfile.org/videojs-overlay/1.1.4/videojs-overlay.min.js"
+       else "https://cdn.staticfile.org/videojs-overlay/1.1.4/videojs-overlay.js"
+
+  urlVideoJsOverlayCss (StaticFileCdn _min_ver) =
+    "https://cdn.staticfile.org/videojs-overlay/1.1.4/videojs-overlay.css"
+
+
+instance ClipboardJsCdnUrl StaticFileCdn where
+  urlClipboardJs (StaticFileCdn min_ver) =
+    if min_ver
+       then "https://cdn.staticfile.org/clipboard.js/1.7.1/clipboard.min.js"
+       else "https://cdn.staticfile.org/clipboard.js/1.7.1/clipboard.js"
+
+
+instance FileSaverCdnUrl StaticFileCdn where
+  urlFileSaverJs (StaticFileCdn min_ver) =
+    if min_ver
+       then "https://cdn.staticfile.org/FileSaver.js/1.3.8/FileSaver.min.js"
+       else "https://cdn.staticfile.org/FileSaver.js/1.3.8/FileSaver.js"
+
+
+instance JsXlsxCdnUrl StaticFileCdn where
+  urlJsXlsxCore (StaticFileCdn min_ver) =
+    -- only 'min' version available
+    if min_ver
+       then "https://cdn.staticfile.org/xlsx/0.14.0/xlsx.core.min.js"
+       else "https://cdn.staticfile.org/xlsx/0.14.0/xlsx.core.min.js"
+
+  urlJsXlsxFull (StaticFileCdn min_ver) =
+    -- only 'min' version available
+    if min_ver
+       then "https://cdn.staticfile.org/xlsx/0.14.0/xlsx.full.min.js"
+       else "https://cdn.staticfile.org/xlsx/0.14.0/xlsx.full.min.js"
+
+
+instance TableExportCdlUrl StaticFileCdn where
+  urlTableExportJs (StaticFileCdn min_ver) =
+    if min_ver
+       then "https://cdn.staticfile.org/TableExport/5.0.2/js/tableexport.min.js"
+       else "https://cdn.staticfile.org/TableExport/5.0.2/js/tableexport.js"
+
+  urlTableExportCss (StaticFileCdn min_ver) =
+    if min_ver
+       then "https://cdn.staticfile.org/TableExport/5.0.2/css/tableexport.min.css"
+       else "https://cdn.staticfile.org/TableExport/5.0.2/css/tableexport.css"
+
+
+instance MomentCdnUrl StaticFileCdn where
+  urlMoment (StaticFileCdn min_ver) =
+    if min_ver
+       then "https://cdn.staticfile.org/moment.js/2.22.2/moment.min.js"
+       else "https://cdn.staticfile.org/moment.js/2.22.2/moment.js"
+
+  urlMomentWithAllLocale (StaticFileCdn min_ver) =
+    if min_ver
+       then "https://cdn.staticfile.org/moment.js/2.22.2/moment-with-locales.min.js"
+       else "https://cdn.staticfile.org/moment.js/2.22.2/moment-with-locales.js"
+
+
+instance SummerNoteCdnUrl StaticFileCdn where
+  urlSummerNoteJs (StaticFileCdn min_ver) =
+    if min_ver
+       then "https://cdn.staticfile.org/summernote/0.8.10/summernote.min.js"
+       else "https://cdn.staticfile.org/summernote/0.8.10/summernote.js"
+
+  urlSummerNoteJsZhCn (StaticFileCdn min_ver) =
+    if min_ver
+       then "https://cdn.staticfile.org/summernote/0.8.10/lang/summernote-zh-CN.min.js"
+       else "https://cdn.staticfile.org/summernote/0.8.10/lang/summernote-zh-CN.js"
+
+  urlSummerNoteCss (StaticFileCdn _min_ver) =
+    "https://cdn.staticfile.org/summernote/0.8.10/summernote.css"
+
+
+instance PluploadCdnUrl StaticFileCdn where
+  urlPluploadFullJs (StaticFileCdn _min_ver) =
+    "https://cdn.staticfile.org/plupload/2.3.6/plupload.full.min.js"
+
+  urlPluploadJsZhCn (StaticFileCdn _min_ver) =
+    "https://cdn.staticfile.org/plupload/2.3.6/i18n/zh_CN.js"
+
+  urlPluploadUiJqueryJs (StaticFileCdn min_ver) =
+    if min_ver
+       then "https://cdn.staticfile.org/plupload/2.3.6/jquery.ui.plupload/jquery.ui.plupload.min.js"
+       else "https://cdn.staticfile.org/plupload/2.3.6/jquery.ui.plupload/jquery.ui.plupload.js"
+
+  urlPluploadUiJqueryCss (StaticFileCdn _min_ver) =
+    "https://cdn.staticfile.org/plupload/2.3.6/jquery.plupload.queue/css/jquery.plupload.queue.css"
+
+
+instance MoxieCdnUrl StaticFileCdn where
+  urlMoxieSwf (StaticFileCdn _) =
+    "https://cdn.staticfile.org/plupload/2.3.6/Moxie.swf"
+
+
+instance Json3CdnUrl StaticFileCdn where
+  urlJson3Js (StaticFileCdn min_ver) =
+    if min_ver
+       then "https://cdn.staticfile.org/json3/3.3.2/json3.min.js"
+       else "https://cdn.staticfile.org/json3/3.3.2/json3.js"
+
+
+instance NodeUuidCdnUrl StaticFileCdn where
+  urlNodeUuidJs (StaticFileCdn min_ver) =
+    if min_ver
+       then "https://cdn.staticfile.org/node-uuid/1.4.8/uuid.min.js"
+       else "https://cdn.staticfile.org/node-uuid/1.4.8/uuid.js"
+
+
+instance WeuiCdnUrl StaticFileCdn where
+  urlWeuiCss (StaticFileCdn min_ver) =
+    if min_ver
+       then "https://cdn.staticfile.org/weui/1.1.3/style/weui.min.css"
+       else "https://cdn.staticfile.org/weui/1.1.3/style/weui.css"
+
+
+instance JqueryFancyTreeCdnUrl StaticFileCdn where
+  urlJqueryFancyTreeJs (StaticFileCdn min_ver) =
+    if min_ver
+       then "https://cdn.staticfile.org/jquery.fancytree/2.30.0/jquery.fancytree-all.min.js"
+       else "https://cdn.staticfile.org/jquery.fancytree/2.30.0/jquery.fancytree-all.js"
+
+  urlJqueryFancyTreeSkinWin8Css (StaticFileCdn min_ver) =
+    if min_ver
+       then "https://cdn.staticfile.org/jquery.fancytree/2.30.0/skin-win8/ui.fancytree.min.css"
+       else "https://cdn.staticfile.org/jquery.fancytree/2.30.0/skin-win8/ui.fancytree.css"
+
+
+instance JqueryLoadingOverlayCdnUrl StaticFileCdn where
+  urlJqueryLoadingOverlayJs (StaticFileCdn min_ver) =
+    if min_ver
+       then "https://cdn.staticfile.org/jquery-loading-overlay/2.1.6/loadingoverlay.min.js"
+       else "https://cdn.staticfile.org/jquery-loading-overlay/2.1.6/loadingoverlay.js"
+
+
+instance TooltipsterCdnUrl StaticFileCdn where
+  urlTooltipsterJs (StaticFileCdn min_ver) =
+    if min_ver
+       then "https://cdn.staticfile.org/tooltipster/3.3.0/js/jquery.tooltipster.min.js"
+       else "https://cdn.staticfile.org/tooltipster/3.3.0/js/jquery.tooltipster.js"
+
+  urlTooltipsterCss (StaticFileCdn min_ver) =
+    if min_ver
+       then "https://cdn.staticfile.org/tooltipster/3.3.0/css/tooltipster.min.css"
+       else "https://cdn.staticfile.org/tooltipster/3.3.0/css/tooltipster.css"
 
 
