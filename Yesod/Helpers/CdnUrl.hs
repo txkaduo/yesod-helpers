@@ -706,137 +706,137 @@ instance TimeagoCdnUrl StaticFileCdn where
 
 
 
-type CoreFunctionalCdn a = (JqueryCdnUrl a, BootstrapCdnUrl a, FontAwesomeCdnUrl a, ZeptoCdnUrl a)
+type CoreStaticCdnUrl a = (JqueryCdnUrl a, BootstrapCdnUrl a, FontAwesomeCdnUrl a, ZeptoCdnUrl a)
 
-type FullyFunctionalCdn a = ( CoreFunctionalCdn a
-                            , JqueryFormCdnUrl a
-                            , JqueryQrcodeCdnUrl a
-                            , HandlebarsCdnUrl a
-                            , OnePageScrollCssCdnUrl a
-                            , OnePageScrollJsJqueryCdnUrl a
-                            , JsCookieCdnUrl a
-                            , TypeaheadCdnUrl a
-                            , VideoJsCdnUrl a
-                            , VideoJsOverlayCdnUrl a
-                            , ClipboardJsCdnUrl a
-                            , FileSaverCdnUrl a
-                            , JsXlsxCdnUrl a
-                            , TableExportCdlUrl a
-                            , MomentCdnUrl a
-                            , SummerNoteCdnUrl a
-                            , PluploadCdnUrl a
-                            , MoxieCdnUrl a
-                            , Json3CdnUrl a
-                            , NodeUuidCdnUrl a
-                            , WeuiCdnUrl a
-                            , JqueryFancyTreeCdnUrl a
-                            , JqueryLoadingOverlayCdnUrl a
-                            , TooltipsterCdnUrl a
-                            , TimeagoCdnUrl a
-                            )
+type FullStaticCdnUrl a = ( CoreStaticCdnUrl a
+                          , JqueryFormCdnUrl a
+                          , JqueryQrcodeCdnUrl a
+                          , HandlebarsCdnUrl a
+                          , OnePageScrollCssCdnUrl a
+                          , OnePageScrollJsJqueryCdnUrl a
+                          , JsCookieCdnUrl a
+                          , TypeaheadCdnUrl a
+                          , VideoJsCdnUrl a
+                          , VideoJsOverlayCdnUrl a
+                          , ClipboardJsCdnUrl a
+                          , FileSaverCdnUrl a
+                          , JsXlsxCdnUrl a
+                          , TableExportCdlUrl a
+                          , MomentCdnUrl a
+                          , SummerNoteCdnUrl a
+                          , PluploadCdnUrl a
+                          , MoxieCdnUrl a
+                          , Json3CdnUrl a
+                          , NodeUuidCdnUrl a
+                          , WeuiCdnUrl a
+                          , JqueryFancyTreeCdnUrl a
+                          , JqueryLoadingOverlayCdnUrl a
+                          , TooltipsterCdnUrl a
+                          , TimeagoCdnUrl a
+                          )
 
 
-data SomeFullyFunctionalCdn = forall a. FullyFunctionalCdn a => SomeFullyFunctionalCdn a
+data SomeFullStaticCdnUrl = forall a. FullStaticCdnUrl a => SomeFullStaticCdnUrl a
 
-instance JqueryCdnUrl SomeFullyFunctionalCdn where
-  urlJqueryJsText (SomeFullyFunctionalCdn x)    = urlJqueryJsText x
-  urlJqueryUiJsText (SomeFullyFunctionalCdn x)  = urlJqueryUiJsText x
-  urlJqueryUiCssText (SomeFullyFunctionalCdn x) = urlJqueryUiCssText x
+instance JqueryCdnUrl SomeFullStaticCdnUrl where
+  urlJqueryJsText (SomeFullStaticCdnUrl x)    = urlJqueryJsText x
+  urlJqueryUiJsText (SomeFullStaticCdnUrl x)  = urlJqueryUiJsText x
+  urlJqueryUiCssText (SomeFullStaticCdnUrl x) = urlJqueryUiCssText x
 
-instance JqueryFormCdnUrl SomeFullyFunctionalCdn where
-  urlJqueryFormJsText (SomeFullyFunctionalCdn x) = urlJqueryFormJsText x
+instance JqueryFormCdnUrl SomeFullStaticCdnUrl where
+  urlJqueryFormJsText (SomeFullStaticCdnUrl x) = urlJqueryFormJsText x
 
-instance JqueryQrcodeCdnUrl SomeFullyFunctionalCdn where
-  urlJqueryQrcodeJs (SomeFullyFunctionalCdn x) = urlJqueryQrcodeJs x
+instance JqueryQrcodeCdnUrl SomeFullStaticCdnUrl where
+  urlJqueryQrcodeJs (SomeFullStaticCdnUrl x) = urlJqueryQrcodeJs x
 
-instance BootstrapCdnUrl SomeFullyFunctionalCdn where
-  urlBootstrapCssText (SomeFullyFunctionalCdn x) = urlBootstrapCssText x
-  urlBootstrapJsText (SomeFullyFunctionalCdn x) = urlBootstrapJsText x
+instance BootstrapCdnUrl SomeFullStaticCdnUrl where
+  urlBootstrapCssText (SomeFullStaticCdnUrl x) = urlBootstrapCssText x
+  urlBootstrapJsText (SomeFullStaticCdnUrl x) = urlBootstrapJsText x
 
-instance FontAwesomeCdnUrl SomeFullyFunctionalCdn where
-  urlFontAwesomeCssText (SomeFullyFunctionalCdn x) = urlFontAwesomeCssText x
-  urlFontAwesomeWebFontText (SomeFullyFunctionalCdn x) = urlFontAwesomeWebFontText x
+instance FontAwesomeCdnUrl SomeFullStaticCdnUrl where
+  urlFontAwesomeCssText (SomeFullStaticCdnUrl x) = urlFontAwesomeCssText x
+  urlFontAwesomeWebFontText (SomeFullStaticCdnUrl x) = urlFontAwesomeWebFontText x
 
-instance HandlebarsCdnUrl SomeFullyFunctionalCdn where
-  urlHandlebarsJsText (SomeFullyFunctionalCdn x) = urlHandlebarsJsText x
-  urlHandlebarsRuntimeJsText (SomeFullyFunctionalCdn x) = urlHandlebarsRuntimeJsText x
+instance HandlebarsCdnUrl SomeFullStaticCdnUrl where
+  urlHandlebarsJsText (SomeFullStaticCdnUrl x) = urlHandlebarsJsText x
+  urlHandlebarsRuntimeJsText (SomeFullStaticCdnUrl x) = urlHandlebarsRuntimeJsText x
 
-instance ZeptoCdnUrl SomeFullyFunctionalCdn where
-  urlZeptoJsText (SomeFullyFunctionalCdn x) = urlZeptoJsText x
+instance ZeptoCdnUrl SomeFullStaticCdnUrl where
+  urlZeptoJsText (SomeFullStaticCdnUrl x) = urlZeptoJsText x
 
-instance OnePageScrollCssCdnUrl SomeFullyFunctionalCdn where
-  urlOnePageScrollCssText (SomeFullyFunctionalCdn x) = urlOnePageScrollCssText x
+instance OnePageScrollCssCdnUrl SomeFullStaticCdnUrl where
+  urlOnePageScrollCssText (SomeFullStaticCdnUrl x) = urlOnePageScrollCssText x
 
-instance OnePageScrollJsJqueryCdnUrl SomeFullyFunctionalCdn where
-  urlOnePageScrollJsJqueryText (SomeFullyFunctionalCdn x) = urlOnePageScrollJsJqueryText x
+instance OnePageScrollJsJqueryCdnUrl SomeFullStaticCdnUrl where
+  urlOnePageScrollJsJqueryText (SomeFullStaticCdnUrl x) = urlOnePageScrollJsJqueryText x
 
-instance JsCookieCdnUrl SomeFullyFunctionalCdn where
-  urlJsCookieJsText (SomeFullyFunctionalCdn x) = urlJsCookieJsText x
+instance JsCookieCdnUrl SomeFullStaticCdnUrl where
+  urlJsCookieJsText (SomeFullStaticCdnUrl x) = urlJsCookieJsText x
 
-instance TypeaheadCdnUrl SomeFullyFunctionalCdn where
-  urlTypeaheadBundleJs (SomeFullyFunctionalCdn x) = urlTypeaheadBundleJs x
+instance TypeaheadCdnUrl SomeFullStaticCdnUrl where
+  urlTypeaheadBundleJs (SomeFullStaticCdnUrl x) = urlTypeaheadBundleJs x
 
-instance VideoJsCdnUrl SomeFullyFunctionalCdn where
-  urlVideoJs (SomeFullyFunctionalCdn x) = urlVideoJs x
-  urlVideoJsCss (SomeFullyFunctionalCdn x) = urlVideoJsCss x
+instance VideoJsCdnUrl SomeFullStaticCdnUrl where
+  urlVideoJs (SomeFullStaticCdnUrl x) = urlVideoJs x
+  urlVideoJsCss (SomeFullStaticCdnUrl x) = urlVideoJsCss x
 
-instance VideoJsOverlayCdnUrl SomeFullyFunctionalCdn where
-  urlVideoJsOverlay (SomeFullyFunctionalCdn x) = urlVideoJsOverlay x
-  urlVideoJsOverlayCss (SomeFullyFunctionalCdn x) = urlVideoJsOverlayCss x
+instance VideoJsOverlayCdnUrl SomeFullStaticCdnUrl where
+  urlVideoJsOverlay (SomeFullStaticCdnUrl x) = urlVideoJsOverlay x
+  urlVideoJsOverlayCss (SomeFullStaticCdnUrl x) = urlVideoJsOverlayCss x
 
-instance ClipboardJsCdnUrl SomeFullyFunctionalCdn where
-  urlClipboardJs (SomeFullyFunctionalCdn x) = urlClipboardJs x
+instance ClipboardJsCdnUrl SomeFullStaticCdnUrl where
+  urlClipboardJs (SomeFullStaticCdnUrl x) = urlClipboardJs x
 
-instance FileSaverCdnUrl SomeFullyFunctionalCdn where
-  urlFileSaverJs (SomeFullyFunctionalCdn x) = urlFileSaverJs x
+instance FileSaverCdnUrl SomeFullStaticCdnUrl where
+  urlFileSaverJs (SomeFullStaticCdnUrl x) = urlFileSaverJs x
 
-instance JsXlsxCdnUrl SomeFullyFunctionalCdn where
-  urlJsXlsxCore (SomeFullyFunctionalCdn x) = urlJsXlsxCore x
-  urlJsXlsxFull (SomeFullyFunctionalCdn x) = urlJsXlsxFull x
+instance JsXlsxCdnUrl SomeFullStaticCdnUrl where
+  urlJsXlsxCore (SomeFullStaticCdnUrl x) = urlJsXlsxCore x
+  urlJsXlsxFull (SomeFullStaticCdnUrl x) = urlJsXlsxFull x
 
-instance TableExportCdlUrl SomeFullyFunctionalCdn where
-  urlTableExportJs (SomeFullyFunctionalCdn x) = urlTableExportJs x
-  urlTableExportCss (SomeFullyFunctionalCdn x) = urlTableExportCss x
+instance TableExportCdlUrl SomeFullStaticCdnUrl where
+  urlTableExportJs (SomeFullStaticCdnUrl x) = urlTableExportJs x
+  urlTableExportCss (SomeFullStaticCdnUrl x) = urlTableExportCss x
 
-instance MomentCdnUrl SomeFullyFunctionalCdn where
-  urlMoment (SomeFullyFunctionalCdn x) = urlMoment x
-  urlMomentWithAllLocale (SomeFullyFunctionalCdn x) = urlMomentWithAllLocale x
+instance MomentCdnUrl SomeFullStaticCdnUrl where
+  urlMoment (SomeFullStaticCdnUrl x) = urlMoment x
+  urlMomentWithAllLocale (SomeFullStaticCdnUrl x) = urlMomentWithAllLocale x
 
-instance SummerNoteCdnUrl SomeFullyFunctionalCdn where
-  urlSummerNoteJs (SomeFullyFunctionalCdn x) = urlSummerNoteJs x
-  urlSummerNoteJsZhCn (SomeFullyFunctionalCdn x) = urlSummerNoteJsZhCn x
-  urlSummerNoteCss (SomeFullyFunctionalCdn x) = urlSummerNoteCss x
+instance SummerNoteCdnUrl SomeFullStaticCdnUrl where
+  urlSummerNoteJs (SomeFullStaticCdnUrl x) = urlSummerNoteJs x
+  urlSummerNoteJsZhCn (SomeFullStaticCdnUrl x) = urlSummerNoteJsZhCn x
+  urlSummerNoteCss (SomeFullStaticCdnUrl x) = urlSummerNoteCss x
 
-instance PluploadCdnUrl SomeFullyFunctionalCdn where
-  urlPluploadFullJs (SomeFullyFunctionalCdn x) = urlPluploadFullJs x
-  urlPluploadJsZhCn (SomeFullyFunctionalCdn x) = urlPluploadJsZhCn x
-  urlPluploadUiJqueryJs (SomeFullyFunctionalCdn x) = urlPluploadUiJqueryJs x
-  urlPluploadUiJqueryCss (SomeFullyFunctionalCdn x) = urlPluploadUiJqueryCss x
+instance PluploadCdnUrl SomeFullStaticCdnUrl where
+  urlPluploadFullJs (SomeFullStaticCdnUrl x) = urlPluploadFullJs x
+  urlPluploadJsZhCn (SomeFullStaticCdnUrl x) = urlPluploadJsZhCn x
+  urlPluploadUiJqueryJs (SomeFullStaticCdnUrl x) = urlPluploadUiJqueryJs x
+  urlPluploadUiJqueryCss (SomeFullStaticCdnUrl x) = urlPluploadUiJqueryCss x
 
-instance MoxieCdnUrl SomeFullyFunctionalCdn where
-  urlMoxieSwf (SomeFullyFunctionalCdn x) = urlMoxieSwf x
+instance MoxieCdnUrl SomeFullStaticCdnUrl where
+  urlMoxieSwf (SomeFullStaticCdnUrl x) = urlMoxieSwf x
 
-instance Json3CdnUrl SomeFullyFunctionalCdn where
-  urlJson3Js (SomeFullyFunctionalCdn x) = urlJson3Js x
+instance Json3CdnUrl SomeFullStaticCdnUrl where
+  urlJson3Js (SomeFullStaticCdnUrl x) = urlJson3Js x
 
-instance NodeUuidCdnUrl SomeFullyFunctionalCdn where
-  urlNodeUuidJs (SomeFullyFunctionalCdn x) = urlNodeUuidJs x
+instance NodeUuidCdnUrl SomeFullStaticCdnUrl where
+  urlNodeUuidJs (SomeFullStaticCdnUrl x) = urlNodeUuidJs x
 
-instance WeuiCdnUrl SomeFullyFunctionalCdn where
-  urlWeuiCss (SomeFullyFunctionalCdn x) = urlWeuiCss x
+instance WeuiCdnUrl SomeFullStaticCdnUrl where
+  urlWeuiCss (SomeFullStaticCdnUrl x) = urlWeuiCss x
 
-instance JqueryFancyTreeCdnUrl SomeFullyFunctionalCdn where
-  urlJqueryFancyTreeJs (SomeFullyFunctionalCdn x) = urlJqueryFancyTreeJs x
-  urlJqueryFancyTreeSkinWin8Css (SomeFullyFunctionalCdn x) = urlJqueryFancyTreeSkinWin8Css x
+instance JqueryFancyTreeCdnUrl SomeFullStaticCdnUrl where
+  urlJqueryFancyTreeJs (SomeFullStaticCdnUrl x) = urlJqueryFancyTreeJs x
+  urlJqueryFancyTreeSkinWin8Css (SomeFullStaticCdnUrl x) = urlJqueryFancyTreeSkinWin8Css x
 
-instance JqueryLoadingOverlayCdnUrl SomeFullyFunctionalCdn where
-  urlJqueryLoadingOverlayJs (SomeFullyFunctionalCdn x) = urlJqueryLoadingOverlayJs x
+instance JqueryLoadingOverlayCdnUrl SomeFullStaticCdnUrl where
+  urlJqueryLoadingOverlayJs (SomeFullStaticCdnUrl x) = urlJqueryLoadingOverlayJs x
 
-instance TooltipsterCdnUrl SomeFullyFunctionalCdn where
-  urlTooltipsterJs (SomeFullyFunctionalCdn x) = urlTooltipsterJs x
-  urlTooltipsterCss (SomeFullyFunctionalCdn x) = urlTooltipsterCss x
+instance TooltipsterCdnUrl SomeFullStaticCdnUrl where
+  urlTooltipsterJs (SomeFullStaticCdnUrl x) = urlTooltipsterJs x
+  urlTooltipsterCss (SomeFullStaticCdnUrl x) = urlTooltipsterCss x
 
-instance TimeagoCdnUrl SomeFullyFunctionalCdn where
-  urlTimeAgoJs (SomeFullyFunctionalCdn x) = urlTimeAgoJs x
-  urlTimeAgoLocalesJs (SomeFullyFunctionalCdn x) = urlTimeAgoLocalesJs x
+instance TimeagoCdnUrl SomeFullStaticCdnUrl where
+  urlTimeAgoJs (SomeFullStaticCdnUrl x) = urlTimeAgoJs x
+  urlTimeAgoLocalesJs (SomeFullStaticCdnUrl x) = urlTimeAgoLocalesJs x
 
