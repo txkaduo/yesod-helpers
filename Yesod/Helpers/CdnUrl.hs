@@ -674,3 +674,133 @@ instance TooltipsterCdnUrl StaticFileCdn where
        else "https://cdn.staticfile.org/tooltipster/3.3.0/css/tooltipster.css"
 
 
+
+type CoreFunctionalCdn a = (JqueryCdnUrl a, BootstrapCdnUrl a, FontAwesomeCdnUrl a, ZeptoCdnUrl a)
+
+type FullyFunctionalCdn a = ( CoreFunctionalCdn a
+                            , JqueryFormCdnUrl a
+                            , JqueryQrcodeCdnUrl a
+                            , HandlebarsCdnUrl a
+                            , OnePageScrollCssCdnUrl a
+                            , OnePageScrollJsJqueryCdnUrl a
+                            , JsCookieCdnUrl a
+                            , TypeaheadCdnUrl a
+                            , VideoJsCdnUrl a
+                            , VideoJsOverlayCdnUrl a
+                            , ClipboardJsCdnUrl a
+                            , FileSaverCdnUrl a
+                            , JsXlsxCdnUrl a
+                            , TableExportCdlUrl a
+                            , MomentCdnUrl a
+                            , SummerNoteCdnUrl a
+                            , PluploadCdnUrl a
+                            , MoxieCdnUrl a
+                            , Json3CdnUrl a
+                            , NodeUuidCdnUrl a
+                            , WeuiCdnUrl a
+                            , JqueryFancyTreeCdnUrl a
+                            , JqueryLoadingOverlayCdnUrl a
+                            , TooltipsterCdnUrl a
+                            )
+
+
+data SomeFullyFunctionalCdn = forall a. FullyFunctionalCdn a => SomeFullyFunctionalCdn a
+
+instance JqueryCdnUrl SomeFullyFunctionalCdn where
+  urlJqueryJsText (SomeFullyFunctionalCdn x)    = urlJqueryJsText x
+  urlJqueryUiJsText (SomeFullyFunctionalCdn x)  = urlJqueryUiJsText x
+  urlJqueryUiCssText (SomeFullyFunctionalCdn x) = urlJqueryUiCssText x
+
+instance JqueryFormCdnUrl SomeFullyFunctionalCdn where
+  urlJqueryFormJsText (SomeFullyFunctionalCdn x) = urlJqueryFormJsText x
+
+instance JqueryQrcodeCdnUrl SomeFullyFunctionalCdn where
+  urlJqueryQrcodeJs (SomeFullyFunctionalCdn x) = urlJqueryQrcodeJs x
+
+instance BootstrapCdnUrl SomeFullyFunctionalCdn where
+  urlBootstrapCssText (SomeFullyFunctionalCdn x) = urlBootstrapCssText x
+  urlBootstrapJsText (SomeFullyFunctionalCdn x) = urlBootstrapJsText x
+
+instance FontAwesomeCdnUrl SomeFullyFunctionalCdn where
+  urlFontAwesomeCssText (SomeFullyFunctionalCdn x) = urlFontAwesomeCssText x
+  urlFontAwesomeWebFontText (SomeFullyFunctionalCdn x) = urlFontAwesomeWebFontText x
+
+instance HandlebarsCdnUrl SomeFullyFunctionalCdn where
+  urlHandlebarsJsText (SomeFullyFunctionalCdn x) = urlHandlebarsJsText x
+  urlHandlebarsRuntimeJsText (SomeFullyFunctionalCdn x) = urlHandlebarsRuntimeJsText x
+
+instance ZeptoCdnUrl SomeFullyFunctionalCdn where
+  urlZeptoJsText (SomeFullyFunctionalCdn x) = urlZeptoJsText x
+
+instance OnePageScrollCssCdnUrl SomeFullyFunctionalCdn where
+  urlOnePageScrollCssText (SomeFullyFunctionalCdn x) = urlOnePageScrollCssText x
+
+instance OnePageScrollJsJqueryCdnUrl SomeFullyFunctionalCdn where
+  urlOnePageScrollJsJqueryText (SomeFullyFunctionalCdn x) = urlOnePageScrollJsJqueryText x
+
+instance JsCookieCdnUrl SomeFullyFunctionalCdn where
+  urlJsCookieJsText (SomeFullyFunctionalCdn x) = urlJsCookieJsText x
+
+instance TypeaheadCdnUrl SomeFullyFunctionalCdn where
+  urlTypeaheadBundleJs (SomeFullyFunctionalCdn x) = urlTypeaheadBundleJs x
+
+instance VideoJsCdnUrl SomeFullyFunctionalCdn where
+  urlVideoJs (SomeFullyFunctionalCdn x) = urlVideoJs x
+  urlVideoJsCss (SomeFullyFunctionalCdn x) = urlVideoJsCss x
+
+instance VideoJsOverlayCdnUrl SomeFullyFunctionalCdn where
+  urlVideoJsOverlay (SomeFullyFunctionalCdn x) = urlVideoJsOverlay x
+  urlVideoJsOverlayCss (SomeFullyFunctionalCdn x) = urlVideoJsOverlayCss x
+
+instance ClipboardJsCdnUrl SomeFullyFunctionalCdn where
+  urlClipboardJs (SomeFullyFunctionalCdn x) = urlClipboardJs x
+
+instance FileSaverCdnUrl SomeFullyFunctionalCdn where
+  urlFileSaverJs (SomeFullyFunctionalCdn x) = urlFileSaverJs x
+
+instance JsXlsxCdnUrl SomeFullyFunctionalCdn where
+  urlJsXlsxCore (SomeFullyFunctionalCdn x) = urlJsXlsxCore x
+  urlJsXlsxFull (SomeFullyFunctionalCdn x) = urlJsXlsxFull x
+
+instance TableExportCdlUrl SomeFullyFunctionalCdn where
+  urlTableExportJs (SomeFullyFunctionalCdn x) = urlTableExportJs x
+  urlTableExportCss (SomeFullyFunctionalCdn x) = urlTableExportCss x
+
+instance MomentCdnUrl SomeFullyFunctionalCdn where
+  urlMoment (SomeFullyFunctionalCdn x) = urlMoment x
+  urlMomentWithAllLocale (SomeFullyFunctionalCdn x) = urlMomentWithAllLocale x
+
+instance SummerNoteCdnUrl SomeFullyFunctionalCdn where
+  urlSummerNoteJs (SomeFullyFunctionalCdn x) = urlSummerNoteJs x
+  urlSummerNoteJsZhCn (SomeFullyFunctionalCdn x) = urlSummerNoteJsZhCn x
+  urlSummerNoteCss (SomeFullyFunctionalCdn x) = urlSummerNoteCss x
+
+instance PluploadCdnUrl SomeFullyFunctionalCdn where
+  urlPluploadFullJs (SomeFullyFunctionalCdn x) = urlPluploadFullJs x
+  urlPluploadJsZhCn (SomeFullyFunctionalCdn x) = urlPluploadJsZhCn x
+  urlPluploadUiJqueryJs (SomeFullyFunctionalCdn x) = urlPluploadUiJqueryJs x
+  urlPluploadUiJqueryCss (SomeFullyFunctionalCdn x) = urlPluploadUiJqueryCss x
+
+instance MoxieCdnUrl SomeFullyFunctionalCdn where
+  urlMoxieSwf (SomeFullyFunctionalCdn x) = urlMoxieSwf x
+
+instance Json3CdnUrl SomeFullyFunctionalCdn where
+  urlJson3Js (SomeFullyFunctionalCdn x) = urlJson3Js x
+
+instance NodeUuidCdnUrl SomeFullyFunctionalCdn where
+  urlNodeUuidJs (SomeFullyFunctionalCdn x) = urlNodeUuidJs x
+
+instance WeuiCdnUrl SomeFullyFunctionalCdn where
+  urlWeuiCss (SomeFullyFunctionalCdn x) = urlWeuiCss x
+
+instance JqueryFancyTreeCdnUrl SomeFullyFunctionalCdn where
+  urlJqueryFancyTreeJs (SomeFullyFunctionalCdn x) = urlJqueryFancyTreeJs x
+  urlJqueryFancyTreeSkinWin8Css (SomeFullyFunctionalCdn x) = urlJqueryFancyTreeSkinWin8Css x
+
+instance JqueryLoadingOverlayCdnUrl SomeFullyFunctionalCdn where
+  urlJqueryLoadingOverlayJs (SomeFullyFunctionalCdn x) = urlJqueryLoadingOverlayJs x
+
+instance TooltipsterCdnUrl SomeFullyFunctionalCdn where
+  urlTooltipsterJs (SomeFullyFunctionalCdn x) = urlTooltipsterJs x
+  urlTooltipsterCss (SomeFullyFunctionalCdn x) = urlTooltipsterCss x
+
