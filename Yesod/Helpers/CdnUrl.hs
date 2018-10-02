@@ -444,13 +444,13 @@ instance JqueryCdnUrl StaticFileCdn where
 
     urlJqueryUiJsText (StaticFileCdn min_ver) =
         if min_ver
-            then "https://cdn.staticfile.org/jqueryui/1.12.1/jquery-ui.min.css"
-            else "https://cdn.staticfile.org/jqueryui/1.12.1/jquery-ui.css"
+            then "https://cdn.staticfile.org/jqueryui/1.12.1/jquery-ui.min.js"
+            else "https://cdn.staticfile.org/jqueryui/1.12.1/jquery-ui.js"
 
     urlJqueryUiCssText (StaticFileCdn min_ver) =
         if min_ver
-            then "https://cdn.staticfile.org/jqueryui/1.12.1/themes/base/jquery-ui.min.css"
-            else "https://cdn.staticfile.org/jqueryui/1.12.1/themes/base/jquery-ui.css"
+            then "https://cdn.staticfile.org/jqueryui/1.12.1/jquery-ui.min.css"
+            else "https://cdn.staticfile.org/jqueryui/1.12.1/jquery-ui.css"
 
 
 instance JqueryFormCdnUrl StaticFileCdn where
