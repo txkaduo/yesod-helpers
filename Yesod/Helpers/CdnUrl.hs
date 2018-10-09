@@ -755,6 +755,7 @@ type FullStaticCdnUrl a = ( CoreStaticCdnUrl a
                           , JqueryFancyTreeCdnUrl a
                           , JqueryLoadingOverlayCdnUrl a
                           , TooltipsterCdnUrl a
+                          , DropzoneCdnUrl a
                           , TimeagoCdnUrl a
                           )
 
@@ -858,6 +859,10 @@ instance JqueryLoadingOverlayCdnUrl SomeFullStaticCdnUrl where
 instance TooltipsterCdnUrl SomeFullStaticCdnUrl where
   urlTooltipsterJs (SomeFullStaticCdnUrl x) = urlTooltipsterJs x
   urlTooltipsterCss (SomeFullStaticCdnUrl x) = urlTooltipsterCss x
+
+instance DropzoneCdnUrl SomeFullStaticCdnUrl where
+  urlDropzoneJs (SomeFullStaticCdnUrl x) = urlDropzoneJs x
+  urlDropzoneCss (SomeFullStaticCdnUrl x) = urlDropzoneCss x
 
 instance TimeagoCdnUrl SomeFullStaticCdnUrl where
   urlTimeAgoJs (SomeFullStaticCdnUrl x) = urlTimeAgoJs x
