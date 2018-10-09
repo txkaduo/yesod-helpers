@@ -145,6 +145,9 @@ class TooltipsterCdnUrl a where
   urlTooltipsterJs :: a -> Text
   urlTooltipsterCss :: a -> Text
 
+class DropzoneCdnUrl a where
+  urlDropzoneJs :: a -> Text
+  urlDropzoneCss :: a -> Text
 
 class TimeagoCdnUrl a where
   urlTimeAgoJs :: a -> Text
@@ -420,6 +423,16 @@ instance TooltipsterCdnUrl BootcssCdn where
        then "https://cdn.bootcss.com/tooltipster/3.3.0/css/tooltipster.min.css"
        else "https://cdn.bootcss.com/tooltipster/3.3.0/css/tooltipster.css"
 
+instance DropzoneCdnUrl BootcssCdn where
+  urlDropzoneJs (BootcssCdn min_ver) =
+    if min_ver
+       then "https://cdn.bootcss.com/dropzone/5.5.1/min/dropzone.min.js"
+       else "https://cdn.bootcss.com/dropzone/5.5.1/dropzone.js"
+
+  urlDropzoneCss (BootcssCdn min_ver) =
+    if min_ver
+       then "https://cdn.bootcss.com/dropzone/5.5.1/min/dropzone.min.css"
+       else "https://cdn.bootcss.com/dropzone/5.5.1/dropzone.css"
 
 instance TimeagoCdnUrl BootcssCdn where
   urlTimeAgoJs (BootcssCdn min_ver) =
@@ -691,6 +704,16 @@ instance TooltipsterCdnUrl StaticFileCdn where
        then "https://cdn.staticfile.org/tooltipster/3.3.0/css/tooltipster.min.css"
        else "https://cdn.staticfile.org/tooltipster/3.3.0/css/tooltipster.css"
 
+instance DropzoneCdnUrl StaticFileCdn where
+  urlDropzoneJs (StaticFileCdn min_ver) =
+    if min_ver
+       then "https://cdn.staticfile.com/dropzone/5.5.1/min/dropzone.min.js"
+       else "https://cdn.staticfile.com/dropzone/5.5.1/dropzone.js"
+
+  urlDropzoneCss (StaticFileCdn min_ver) =
+    if min_ver
+       then "https://cdn.staticfile.com/dropzone/5.5.1/min/dropzone.min.css"
+       else "https://cdn.staticfile.com/dropzone/5.5.1/dropzone.css"
 
 instance TimeagoCdnUrl StaticFileCdn where
   urlTimeAgoJs (StaticFileCdn min_ver) =
