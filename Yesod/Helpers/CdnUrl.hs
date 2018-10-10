@@ -707,13 +707,13 @@ instance TooltipsterCdnUrl StaticFileCdn where
 instance DropzoneCdnUrl StaticFileCdn where
   urlDropzoneJs (StaticFileCdn min_ver) =
     if min_ver
-       then "https://cdn.staticfile.com/dropzone/5.5.1/min/dropzone.min.js"
-       else "https://cdn.staticfile.com/dropzone/5.5.1/dropzone.js"
+       then "https://cdn.staticfile.org/dropzone/5.5.1/min/dropzone.min.js"
+       else "https://cdn.staticfile.org/dropzone/5.5.1/dropzone.js"
 
   urlDropzoneCss (StaticFileCdn min_ver) =
     if min_ver
-       then "https://cdn.staticfile.com/dropzone/5.5.1/min/dropzone.min.css"
-       else "https://cdn.staticfile.com/dropzone/5.5.1/dropzone.css"
+       then "https://cdn.staticfile.org/dropzone/5.5.1/min/dropzone.min.css"
+       else "https://cdn.staticfile.org/dropzone/5.5.1/dropzone.css"
 
 instance TimeagoCdnUrl StaticFileCdn where
   urlTimeAgoJs (StaticFileCdn min_ver) =
