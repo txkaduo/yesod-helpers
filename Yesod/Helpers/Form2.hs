@@ -15,7 +15,7 @@ module Yesod.Helpers.Form2
     , semreq, semopt, semreqOpt, semstatic, semstatic'
     , semview
     , addEMFieldError
-    , addEMOverallError
+    , addEMOverallError, addEMOverallError'
     , renderBootstrapES
     , renderBootstrapES'
     , renderBootstrap3ES
@@ -320,6 +320,16 @@ addEMOverallError :: (MonadHandler m, RenderMessage (HandlerSite m) msg)
 addEMOverallError msg = do
     mr <- lift getMessageRender
     W.tell $ overallFieldError (mr msg)
+
+
+addEMOverallError' :: (MonadHandler m, RenderMessage (HandlerSite m) msg)
+                   => msg
+                   -> EMForm m (FormResult ())
+addEMOverallError' msg = do
+    mr <- lift getMessageRender
+    let msg' = mr msg
+    W.tell $ overallFieldError msg'
+    return $ FormFailure [ msg' ]
 
 semreq ::
     (RenderMessage site FormMessage, HandlerSite m ~ site, MonadHandler m) =>
