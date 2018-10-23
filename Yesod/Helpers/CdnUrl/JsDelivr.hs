@@ -164,13 +164,13 @@ instance TableExportCdlUrl JsDelivrCdn where
 instance MomentCdnUrl JsDelivrCdn where
   urlMoment (JsDelivrCdn min_ver) =
     if min_ver
-       then jsDelivrCdnUrl "moment.js@2.22.2/moment.min.js"
-       else jsDelivrCdnUrl "moment.js@2.22.2/moment.js"
+       then jsDelivrCdnUrl "moment@2.22.2/moment.min.js"
+       else jsDelivrCdnUrl "moment@2.22.2/moment.js"
 
   urlMomentWithAllLocale (JsDelivrCdn min_ver) =
     if min_ver
-       then jsDelivrCdnUrl "moment.js@2.22.2/min/moment-with-locales.min.js"
-       else jsDelivrCdnUrl "moment.js@2.22.2/min/moment-with-locales.js"
+       then jsDelivrCdnUrl "moment@2.22.2/min/moment-with-locales.min.js"
+       else jsDelivrCdnUrl "moment@2.22.2/min/moment-with-locales.js"
 
 
 instance SummerNoteCdnUrl JsDelivrCdn where
