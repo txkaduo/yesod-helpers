@@ -69,6 +69,10 @@ library
                        Yesod.Helpers.Widget
                        Yesod.Helpers.SubSite
                        Yesod.Helpers.CdnUrl
+                       Yesod.Helpers.CdnUrl.Class
+                       Yesod.Helpers.CdnUrl.Bootcss
+                       Yesod.Helpers.CdnUrl.JsDelivr
+                       Yesod.Helpers.CdnUrl.Staticfile
                        Yesod.Helpers.ResumeState
                        Yesod.Helpers.Class
                        Yesod.Helpers.PersistDiff
