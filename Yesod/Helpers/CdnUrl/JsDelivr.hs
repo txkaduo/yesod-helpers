@@ -35,7 +35,7 @@ instance JqueryFormCdnUrl JsDelivrCdn where
 
 instance JqueryQrcodeCdnUrl JsDelivrCdn where
   urlJqueryQrcodeJs (JsDelivrCdn _min_ver) =
-    jsDelivrCdnUrl "jquery-qrcode@1.0.0/jquery.qrcode.min.js"
+    jsDelivrCdnUrl "jquery.qrcode@1.0.3/jquery.qrcode.min.js"
 
 
 instance BootstrapCdnUrl JsDelivrCdn where
