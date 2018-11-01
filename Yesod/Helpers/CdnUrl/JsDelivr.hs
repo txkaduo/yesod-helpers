@@ -135,8 +135,8 @@ instance ClipboardJsCdnUrl JsDelivrCdn where
 instance FileSaverCdnUrl JsDelivrCdn where
   urlFileSaverJs (JsDelivrCdn min_ver) =
     if min_ver
-       then jsDelivrCdnUrl "file-saver@1.3.8/dist/FileSaver.min.js"
-       else jsDelivrCdnUrl "file-saver@1.3.8/dist/FileSaver.js"
+       then jsDelivrCdnUrl "file-saver@1.3.8/FileSaver.min.js"
+       else jsDelivrCdnUrl "file-saver@1.3.8/FileSaver.js"
 
 
 instance JsXlsxCdnUrl JsDelivrCdn where
@@ -152,13 +152,13 @@ instance JsXlsxCdnUrl JsDelivrCdn where
 instance TableExportCdlUrl JsDelivrCdn where
   urlTableExportJs (JsDelivrCdn min_ver) =
     if min_ver
-       then jsDelivrCdnUrl "TableExport@5.0.2/dist/js/tableexport.min.js"
-       else jsDelivrCdnUrl "TableExport@5.0.2/dist/js/tableexport.js"
+       then jsDelivrCdnUrl "tableexport@5.0.2/dist/js/tableexport.min.js"
+       else jsDelivrCdnUrl "tableexport@5.0.2/dist/js/tableexport.js"
 
   urlTableExportCss (JsDelivrCdn min_ver) =
     if min_ver
-       then jsDelivrCdnUrl "TableExport@5.0.2/dist/css/tableexport.min.css"
-       else jsDelivrCdnUrl "TableExport@5.0.2/dist/css/tableexport.css"
+       then jsDelivrCdnUrl "tableexport@5.0.2/dist/css/tableexport.min.css"
+       else jsDelivrCdnUrl "tableexport@5.0.2/dist/css/tableexport.css"
 
 
 instance MomentCdnUrl JsDelivrCdn where
