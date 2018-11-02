@@ -324,7 +324,7 @@ addEMOverallError msg = do
 
 addEMOverallError' :: (MonadHandler m, RenderMessage (HandlerSite m) msg)
                    => msg
-                   -> EMForm m (FormResult ())
+                   -> EMForm m (FormResult a)
 addEMOverallError' msg = do
     mr <- lift getMessageRender
     let msg' = mr msg
