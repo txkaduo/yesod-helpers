@@ -4,9 +4,11 @@ module Yesod.Helpers.CdnUrl.Staticfile
   where
 
 import Yesod.Helpers.CdnUrl.Class
+import Data.Text (Text)
 
 data StaticFileCdn = StaticFileCdn Bool
 
+staticfileCdnUrl :: Text -> Text
 staticfileCdnUrl = (<>) "https://cdn.staticfile.org/"
 
 instance JqueryCdnUrl StaticFileCdn where

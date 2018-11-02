@@ -4,9 +4,11 @@ module Yesod.Helpers.CdnUrl.Bootcss
   where
 
 import Yesod.Helpers.CdnUrl.Class
+import Data.Text (Text)
 
 data BootcssCdn = BootcssCdn Bool
 
+bootcssCdnUrl :: Text -> Text
 bootcssCdnUrl = (<>) "https://cdn.bootcss.com/"
 
 instance JqueryCdnUrl BootcssCdn where
