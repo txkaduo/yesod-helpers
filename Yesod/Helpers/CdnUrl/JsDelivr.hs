@@ -63,13 +63,13 @@ instance FontAwesomeCdnUrl JsDelivrCdn where
 instance HandlebarsCdnUrl JsDelivrCdn where
     urlHandlebarsJsText (JsDelivrCdn min_ver) =
         if min_ver
-            then jsDelivrCdnUrl "handlebars.js@4.0.12/dist/handlebars.min.js"
-            else jsDelivrCdnUrl "handlebars.js@4.0.12/dist/handlebars.js"
+            then jsDelivrCdnUrl "handlebars@4.0.12/dist/handlebars.min.js"
+            else jsDelivrCdnUrl "handlebars@4.0.12/dist/handlebars.js"
 
     urlHandlebarsRuntimeJsText (JsDelivrCdn min_ver) =
         if min_ver
-            then jsDelivrCdnUrl "handlebars.js@4.0.12/dist/handlebars.runtime.min.js"
-            else jsDelivrCdnUrl "handlebars.js@4.0.12/dist/handlebars.runtime.js"
+            then jsDelivrCdnUrl "handlebars@4.0.12/dist/handlebars.runtime.min.js"
+            else jsDelivrCdnUrl "handlebars@4.0.12/dist/handlebars.runtime.js"
 
 
 instance ZeptoCdnUrl JsDelivrCdn where
