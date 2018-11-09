@@ -4,9 +4,11 @@ module Yesod.Helpers.CdnUrl.JsDelivr
   where
 
 import Yesod.Helpers.CdnUrl.Class
+import Data.Text (Text)
 
 data JsDelivrCdn = JsDelivrCdn Bool
 
+jsDelivrCdnUrl :: Text -> Text
 jsDelivrCdnUrl = (<>) "https://cdn.jsdelivr.net/npm/"
 
 instance JqueryCdnUrl JsDelivrCdn where
@@ -140,7 +142,7 @@ instance FileSaverCdnUrl JsDelivrCdn where
 
 
 instance JsXlsxCdnUrl JsDelivrCdn where
-  urlJsXlsxCore (JsDelivrCdn min_ver) =
+  urlJsXlsxCore (JsDelivrCdn _min_ver) =
     -- only 'min' version available
     jsDelivrCdnUrl "xlsx@0.14.0/dist/xlsx.core.min.js"
 
