@@ -133,6 +133,8 @@ sinkPagedListCount npp0 pn0 =
 class NumPerPage a where
   numPerPage :: a -> Int
 
+instance NumPerPage Int where
+  numPerPage = id
 
 
 -- vim: set foldmethod=marker:

@@ -664,6 +664,28 @@ handlerPagedPageWithForm def_so form get_data show_html = do
   handlerPagedPageWithForm' (return . fromMaybe def_so) form get_data show_html
 -- }}}1
 
+handlerSimplePagedPage :: (MonadHandler m, RenderMessage (HandlerSite m) FormMessage)
+                       => Int
+                       -> (Int -> Int -> m ((a, Value), Int))
+                       -> (PagedResult -> a -> Int -> m Html)
+                       -> m TypedContent
+-- {{{
+handlerSimplePagedPage npp get_data show_html = do
+  let pager_settings = PagerSettings npp pn_param
+  pn <- pagerGetCurrentPageNumGet pager_settings
+
+  ((result_list, json), total_num) <- get_data npp pn
+  paged <- runPager pager_settings pn total_num
+
+  selectRep $ do
+    provideRep $ do
+      show_html paged result_list total_num
+
+    provideRepJsendAndJsonp $ do
+      return $ JSendSuccess json
+
+  where pn_param = "p"
+-- }}}
 
 
 -- vim: set foldmethod=marker:
