@@ -282,3 +282,10 @@ instance TimeagoCdnUrl BootcssCdn where
        then bootcssCdnUrl "timeago.js/3.0.2/timeago.locales.min.js"
        else bootcssCdnUrl "timeago.js/3.0.2/timeago.locales.min.js"
 
+
+instance ReconnectingWebSocketCdnUrl BootcssCdn where
+  -- when implement this, bootcss is down, and the following urls are guessed
+  urlReconnectingWebSocketJs (BootcssCdn min_ver) =
+    if min_ver
+       then bootcssCdnUrl "reconnecting-websocket/1.0.0/reconnecting-websocket.min.js"
+       else bootcssCdnUrl "reconnecting-websocket/1.0.0/reconnecting-websocket.js"

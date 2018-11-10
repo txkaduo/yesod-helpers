@@ -285,3 +285,10 @@ instance TimeagoCdnUrl JsDelivrCdn where
        then jsDelivrCdnUrl "timeago.js@3.0.2/dist/timeago.locales.min.js"
        else jsDelivrCdnUrl "timeago.js@3.0.2/dist/timeago.locales.min.js"
 
+
+instance ReconnectingWebSocketCdnUrl JsDelivrCdn where
+  -- when implement this, bootcss is down, and the following urls are guessed
+  urlReconnectingWebSocketJs (JsDelivrCdn min_ver) =
+    if min_ver
+       then jsDelivrCdnUrl "reconnecting-websocket@4.1.10/dist/reconnecting-websocket-cjs.min.js"
+       else jsDelivrCdnUrl "reconnecting-websocket/1.0.0/reconnecting-websocket.js"

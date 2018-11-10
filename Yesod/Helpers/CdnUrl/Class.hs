@@ -159,6 +159,10 @@ class TimeagoCdnUrl a where
   urlTimeAgoLocalesJs :: a -> Text
 
 
+class ReconnectingWebSocketCdnUrl a where
+  urlReconnectingWebSocketJs :: a -> Text
+
+
 -- | To offload static files to CDN. See urlRenderOverride
 urlRenderOverrideStatic :: (Yesod site, Foldable t, RenderRoute a)
                         => site
@@ -210,6 +214,7 @@ type FullStaticCdnUrl a = ( CoreStaticCdnUrl a
                           , TooltipsterCdnUrl a
                           , DropzoneCdnUrl a
                           , TimeagoCdnUrl a
+                          , ReconnectingWebSocketCdnUrl a
                           )
 
 
@@ -321,3 +326,5 @@ instance TimeagoCdnUrl SomeFullStaticCdnUrl where
   urlTimeAgoJs (SomeFullStaticCdnUrl x) = urlTimeAgoJs x
   urlTimeAgoLocalesJs (SomeFullStaticCdnUrl x) = urlTimeAgoLocalesJs x
 
+instance ReconnectingWebSocketCdnUrl SomeFullStaticCdnUrl where
+  urlReconnectingWebSocketJs (SomeFullStaticCdnUrl x) = urlReconnectingWebSocketJs x

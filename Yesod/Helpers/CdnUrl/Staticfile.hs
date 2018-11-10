@@ -289,3 +289,9 @@ instance TimeagoCdnUrl StaticFileCdn where
        then staticfileCdnUrl "timeago.js/3.0.2/timeago.locales.min.js"
        else staticfileCdnUrl "timeago.js/3.0.2/timeago.locales.min.js"
 
+
+instance ReconnectingWebSocketCdnUrl StaticFileCdn where
+  urlReconnectingWebSocketJs (StaticFileCdn min_ver) =
+    if min_ver
+       then staticfileCdnUrl "reconnecting-websocket/1.0.0/reconnecting-websocket.min.js"
+       else staticfileCdnUrl "reconnecting-websocket/1.0.0/reconnecting-websocket.js"
