@@ -858,6 +858,8 @@ smToForm :: Monad m => SMForm m a -> MForm m a
 smToForm = flip SS.evalStateT []
 
 
+-- | Parse content of value as json-formatted text
+-- Example: "a"
 jsonTextField :: (FromJSON a, ToJSON a
                  , RenderMessage (HandlerSite m) FormMessage
                  , Monad m
@@ -869,6 +871,26 @@ jsonTextField = checkMMap parse_json (toStrict . decodeUtf8 . A.encode) stripped
     parse_json t = case A.eitherDecodeStrict (encodeUtf8 t) of
                      Left err -> return $ Left $ asText $ fromString err
                      Right x -> return $ Right x
+-- }}}1
+
+
+-- | Construct a 'Value' by the text value of input, parse 'Value' into result
+-- Error when 'toJSON' of result is not a String
+-- Example: input value may be 'a' (without quotes)
+aesonStringValueField :: (FromJSON a, ToJSON a
+                         , RenderMessage (HandlerSite m) FormMessage
+                         , Monad m
+                         )
+                      => Field m a
+-- {{{1
+aesonStringValueField = checkMMap parse_json from_json strippedTextField
+  where
+    from_json x = case toJSON x of
+                    A.String s -> s
+                    v -> error $ "unexpected json encoded value: " <> show v
+    parse_json t = case A.fromJSON (A.String t) of
+                     A.Error err -> return $ Left $ asText $ fromString err
+                     A.Success x -> return $ Right x
 -- }}}1
 
 
