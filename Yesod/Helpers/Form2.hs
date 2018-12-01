@@ -15,6 +15,7 @@ module Yesod.Helpers.Form2
     , semreq, semopt, semreqOpt, semstatic, semstatic'
     , semview
     , addEMFieldError
+    , overallFieldName
     , addEMOverallError, addEMOverallError'
     , renderBootstrapES
     , renderBootstrapES'
@@ -83,8 +84,11 @@ oneFieldError name fs msg = FieldErrors $ singletonMap
                                             (name, WrappedFieldSettings fs)
                                             (singletonSet msg)
 
+overallFieldName :: Text
+overallFieldName = "__all__"
+
 overallFieldError :: Text -> FieldErrors master
-overallFieldError msg = oneFieldError "__all__" (fieldSettingsLabel ("" :: Text)) msg
+overallFieldError msg = oneFieldError overallFieldName (fieldSettingsLabel ("" :: Text)) msg
 
 nullFieldErrors :: FieldErrors master -> Bool
 nullFieldErrors = null . unFieldErrors
