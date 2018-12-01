@@ -60,18 +60,27 @@ simpleFormPageWidgetEither' method (formWidget, formEnctype) action' m_err_msg f
                     url_render <- getUrlRender
                     return $ url_render r
   [whamlet|
-$maybe err_msg <- m_err_msg
-   <div .form-group>
-     <span .err_msg>_{err_msg}
-<ul>
-  $forall ((_name, fs), errs) <- fieldErrorsToList form_errs
-    <li>_{fsLabel fs}: #{intercalate ";" errs}
+<div .alert .alert-warning>
+  $maybe err_msg <- m_err_msg
+     <div .form-group>
+       <span .err_msg>_{err_msg}
+
+  $if not (null overall_errors)
+    <ul>输入数据错误
+      $forall (_, errs) <- overall_errors
+        <li>#{intercalate ";" errs}
+
+      $forall ((name, fs), errs) <- other_errors
+        <li> _{fsLabel fs}: #{intercalate ";" errs}
+
 <form method=#{decodeUtf8 method} action="#{action}" enctype=#{formEnctype} .form-horizontal>
   ^{formWidget}
   <div .form-group>
     <div .submit-btn-container .col-xs-offset-3 .col-xs-9>
       <input .btn .btn-primary type=submit value=_{MsgSubmitForm}>
   |]
+  where error_list = fieldErrorsToList form_errs
+        (overall_errors, other_errors) = partition ((== overallFieldName) . fst . fst) error_list
 -- }}}1
 
 
