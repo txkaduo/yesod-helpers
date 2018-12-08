@@ -98,4 +98,20 @@ simpleFormPageWidget (formWidget, formEnctype) action m_err_msg form_errs =
   simpleFormPageWidgetEither (formWidget, formEnctype) (Left action) m_err_msg form_errs
 
 
+-- | XXX: 因为现在的表单提交按键总是一句提交，又不能直接改
+--        暂时用js后期去修改
+jsSetSubmitButtonText :: Text -- ^ form selector
+                      -> Text -- ^ text to set
+                      -> JavascriptUrl url
+-- {{{1
+jsSetSubmitButtonText selector txt =
+  [julius|
+    $(function () {
+      var submits = $(#{toJSON selector}).find(':submit');
+      submits.filter('input').val(#{toJSON txt});
+      submits.filter('button').text(#{toJSON txt});
+    });
+  |]
+-- }}}1
+
 -- vim: set foldmethod=marker:
