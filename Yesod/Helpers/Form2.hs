@@ -16,7 +16,7 @@ module Yesod.Helpers.Form2
     , semview
     , addEMFieldError
     , overallFieldName
-    , addEMOverallError, addEMOverallError'
+    , addEMOverallError, addEMOverallError', addEMOverallErrorOfResult
     , renderBootstrapES
     , renderBootstrapES'
     , renderBootstrap3ES
@@ -334,6 +334,15 @@ addEMOverallError' msg = do
     let msg' = mr msg
     W.tell $ overallFieldError msg'
     return $ FormFailure [ msg' ]
+
+
+
+addEMOverallErrorOfResult :: MonadHandler m => FormResult a -> EMForm m ()
+addEMOverallErrorOfResult field_result =
+  case field_result of
+    FormFailure errs -> mapM_ addEMOverallError errs
+    _                -> return ()
+
 
 semreq ::
     (RenderMessage site FormMessage, HandlerSite m ~ site, MonadHandler m) =>
