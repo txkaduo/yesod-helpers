@@ -70,7 +70,7 @@ simpleFormPageWidgetEither' method (formWidget, formEnctype) action' m_err_msg f
       $forall (_, errs) <- overall_errors
         <li>#{intercalate ";" errs}
 
-      $forall ((name, fs), errs) <- other_errors
+      $forall ((_name, fs), errs) <- other_errors
         <li> _{fsLabel fs}: #{intercalate ";" errs}
 
 <form method=#{decodeUtf8 method} action="#{action}" enctype=#{formEnctype} .form-horizontal>
