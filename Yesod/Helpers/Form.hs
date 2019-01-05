@@ -1,5 +1,6 @@
 -- {{{1 language options
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 -- }}}1
 module Yesod.Helpers.Form where
 
@@ -51,6 +52,18 @@ import Yesod.Helpers.Parsec
 import Yesod.Helpers.Utils                  (normalizeChineseMobileNum)
 -- }}}1
 
+
+-- appendWidgetFormViewFunc :: FieldViewFunc m a -> FieldViewFunc m a -> FieldViewFunc m a
+appendWidgetFieldViewFunc :: Monad m
+                          => (t1 -> t2 -> t3 -> t4 -> t5 -> m ())
+                          -> (t1 -> t2 -> t3 -> t4 -> t5 -> m ())
+                          -> (t1 -> t2 -> t3 -> t4 -> t5 -> m ())
+appendWidgetFieldViewFunc f1 f2 x1 x2 x3 x4 x5 =
+  f1 x1 x2 x3 x4 x5 >> f2 x1 x2 x3 x4 x5
+
+
+addWidgetToField :: FieldViewFunc m a -> Field m a -> Field m a
+addWidgetToField f field = field { fieldView = fieldView field `appendWidgetFieldViewFunc` f }
 
 
 nameIdToFs :: Text -> Text -> FieldSettings site
