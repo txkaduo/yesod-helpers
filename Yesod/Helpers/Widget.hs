@@ -2,6 +2,7 @@ module Yesod.Helpers.Widget where
 
 -- {{{1 imports
 import ClassyPrelude.Yesod
+import Text.Blaze (ToMarkup)
 
 import Yesod.Helpers.Message
 import Yesod.Helpers.Form2
@@ -113,5 +114,9 @@ jsSetSubmitButtonText selector txt =
     });
   |]
 -- }}}1
+
+
+wshow :: (ToMarkup a, MonadWidget m) => a -> m ()
+wshow = toWidget . toHtml
 
 -- vim: set foldmethod=marker:
