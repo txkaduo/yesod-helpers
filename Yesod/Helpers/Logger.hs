@@ -339,6 +339,20 @@ instance LoggingTRunner LogHandlerV where
     runLoggingTWith v = flip runLoggingT (logFuncByHandlerV v)
 
 
+-- | Used to implement instance of MonadLogger for (HandlerT site m)
+monadLoggerLogHandlerV :: (MonadIO m, ToLogStr msg)
+                       => (site -> LogHandlerV)
+                       -> Loc -> LogSource -> LogLevel -> msg -> HandlerT site m ()
+monadLoggerLogHandlerV get_logger_v loc src level msg = HandlerT $ \ hd ->
+  liftIO $ logFuncByHandlerV (get_logger_v $ rheSite $ handlerEnv hd) loc src level (toLogStr msg)
+
+
+-- | Used to implement instance of MonadLoggerIO for (HandlerT site m)
+askLoggerIoHandlerV :: (MonadIO m) => (site -> LogHandlerV) -> HandlerT site m LoggingFunc
+askLoggerIoHandlerV get_logger_v = HandlerT $ \ hd ->
+    return $ logFuncByHandlerV (get_logger_v (rheSite $ handlerEnv hd))
+
+
 withLogFuncInHandlerT ::
     LoggingFunc
     -> HandlerT site m a
