@@ -123,9 +123,10 @@ humanParseFuzzyDay = do
                             else y
         p_sep x = do
             (try $ fmap Left $ choice
-                        [ try $ string "."
+                        [ try $ string "-"
+                        , try $ string "－"
                         , try $ string "/"
-                        , try $ string "-"
+                        , try $ string "."
                         ]) <|> (fmap Right $ string x)
 
         cmp_sep (Left x) (Left y)   = x == y
