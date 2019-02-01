@@ -53,6 +53,14 @@ import Yesod.Helpers.Utils                  (normalizeChineseMobileNum)
 -- }}}1
 
 
+#if MIN_VERSION_persistent(2, 0, 0)
+#if MIN_VERSION_persistent(2, 5, 0)
+#else
+type PersistRecordBackend record backend = (PersistEntity record, PersistEntityBackend record ~ BaseBackend backend)
+#endif
+#endif
+
+
 -- appendWidgetFormViewFunc :: FieldViewFunc m a -> FieldViewFunc m a -> FieldViewFunc m a
 appendWidgetFieldViewFunc :: Monad m
                           => (t1 -> t2 -> t3 -> t4 -> t5 -> m ())
@@ -261,19 +269,11 @@ simpleEncodedField' mk_msg old_field = checkMMap f (T.pack . simpleEncode) old_f
                 Left err -> return $ Left $ mk_msg $ show err
                 Right x -> return $ Right x
 
-
 entityField ::
     ( RenderMessage site msg
     , RenderMessage site FormMessage
 #if MIN_VERSION_persistent(2, 0, 0)
-
-#if MIN_VERSION_persistent(2, 5, 0)
     , PersistRecordBackend val (YesodPersistBackend site)
-#else
-    , PersistEntityBackend val ~ YesodPersistBackend site
-    , PersistEntity val
-#endif
-
     , PersistStore (YesodPersistBackend site)
 #else
     , PersistMonadBackend (YesodDB site) ~ PersistEntityBackend val
@@ -292,18 +292,12 @@ entityField invalid_msg not_found_msg =
             k <- maybe (throwError invalid_msg) return $ fromPathPiece t
             (lift $ runDB $ get k) >>= maybe (throwError not_found_msg) (return . Entity k)
 
+
 entityKeyField ::
     ( RenderMessage site msg
     , RenderMessage site FormMessage
 #if MIN_VERSION_persistent(2, 0, 0)
-
-#if MIN_VERSION_persistent(2, 5, 0)
     , PersistRecordBackend val (YesodPersistBackend site)
-#else
-    , PersistEntityBackend val ~ YesodPersistBackend site
-    , PersistEntity val
-#endif
-
     , PersistStore (YesodPersistBackend site)
 #else
     , PersistMonadBackend (YesodDB site) ~ PersistEntityBackend val
@@ -324,14 +318,7 @@ entityKeyHiddenField ::
     ( RenderMessage site msg
     , RenderMessage site FormMessage
 #if MIN_VERSION_persistent(2, 0, 0)
-
-#if MIN_VERSION_persistent(2, 5, 0)
     , PersistRecordBackend val (YesodPersistBackend site)
-#else
-    , PersistEntityBackend val ~ YesodPersistBackend site
-    , PersistEntity val
-#endif
-
     , PersistStore (YesodPersistBackend site)
 #else
     , PersistMonadBackend (YesodDB site) ~ PersistEntityBackend val
@@ -355,14 +342,7 @@ entityUniqueKeyField ::
     ( RenderMessage site msg
     , RenderMessage site FormMessage
 #if MIN_VERSION_persistent(2, 0, 0)
-
-#if MIN_VERSION_persistent(2, 5, 0)
     , PersistRecordBackend val (YesodPersistBackend site)
-#else
-    , PersistEntityBackend val ~ YesodPersistBackend site
-    , PersistEntity val
-#endif
-
     , PersistUnique (YesodPersistBackend site)
 #else
     , PersistMonadBackend (YesodDB site) ~ PersistEntityBackend val
@@ -610,14 +590,7 @@ checkFieldDBUnique2 ::
     ( YesodPersist site
     , RenderMessage site msg
 #if MIN_VERSION_persistent(2, 0, 0)
-
-#if MIN_VERSION_persistent(2, 5, 0)
     , PersistRecordBackend val (YesodPersistBackend site)
-#else
-    , PersistEntityBackend val ~ YesodPersistBackend site
-    , PersistEntity val
-#endif
-
     , PersistUnique (YesodPersistBackend site)
 #else
     , PersistUnique (YesodDB site)
@@ -648,14 +621,7 @@ checkFieldDBUnique ::
     ( YesodPersist site
     , RenderMessage site msg
 #if MIN_VERSION_persistent(2, 0, 0)
-
-#if MIN_VERSION_persistent(2, 5, 0)
     , PersistRecordBackend val (YesodPersistBackend site)
-#else
-    , PersistEntityBackend val ~ YesodPersistBackend site
-    , PersistEntity val
-#endif
-
     , PersistUnique (YesodPersistBackend site)
 #else
     , PersistUnique (YesodDB site)
