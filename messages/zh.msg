@@ -1,5 +1,7 @@
 PageTitleSep: #{asText " | "}
 SubmitForm: 提交
+ObjectNotFoundById: 找不到对应此id的数据库记录
+InvalidDbObjectId: 无效的数据库记录id
 FormMsgInvalidInteger t@Text: 无效的整数: #{t}
 FormMsgInvalidNumber t@Text: 无效的数字: #{t}
 FormMsgInvalidEntry t@Text: 无效的条目: #{t}

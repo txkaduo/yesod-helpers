@@ -1,5 +1,7 @@
 PageTitleSep: #{asText " | "}
 SubmitForm: Submit
+ObjectNotFoundById: Database record not found by the id
+InvalidDbObjectId: Invalid database record id
 FormMsgInvalidInteger t@Text: Invalid Integer: #{t}
 FormMsgInvalidNumber t@Text: Invalid Number: #{t}
 FormMsgInvalidEntry t@Text: Invalid Entry: #{t}

@@ -293,6 +293,22 @@ entityField invalid_msg not_found_msg =
             (lift $ runDB $ get k) >>= maybe (throwError not_found_msg) (return . Entity k)
 
 
+entityFieldDefault ::
+    ( RenderMessage site YHCommonMessage
+    , RenderMessage site FormMessage
+#if MIN_VERSION_persistent(2, 0, 0)
+    , PersistRecordBackend val (YesodPersistBackend site)
+    , PersistStore (YesodPersistBackend site)
+#else
+    , PersistMonadBackend (YesodDB site) ~ PersistEntityBackend val
+    , PersistStore (YesodDB site)
+#endif
+    , YesodPersist site
+    , PathPiece (Key val)
+    ) => Field (HandlerT site IO) (Entity val)
+entityFieldDefault = entityField MsgInvalidDbObjectId MsgObjectNotFoundById
+
+
 entityKeyField ::
     ( RenderMessage site msg
     , RenderMessage site FormMessage
@@ -311,8 +327,26 @@ entityKeyField ::
     -> Field (HandlerT site IO) (Key val)
 entityKeyField = (convertToEntityKeyField .) . entityField
 
+
+entityKeyFieldDefault ::
+    ( RenderMessage site YHCommonMessage
+    , RenderMessage site FormMessage
+#if MIN_VERSION_persistent(2, 0, 0)
+    , PersistRecordBackend val (YesodPersistBackend site)
+    , PersistStore (YesodPersistBackend site)
+#else
+    , PersistMonadBackend (YesodDB site) ~ PersistEntityBackend val
+    , PersistStore (YesodDB site)
+#endif
+    , YesodPersist site
+    , PathPiece (Key val)
+    ) => Field (HandlerT site IO) (Key val)
+entityKeyFieldDefault = entityKeyField MsgInvalidDbObjectId MsgObjectNotFoundById
+
+
 convertToEntityKeyField :: (PersistEntity a, Functor m) => Field m (Entity a) -> Field m (Key a)
 convertToEntityKeyField = convertField entityKey $ flip Entity (error "fake entity value")
+
 
 entityKeyHiddenField ::
     ( RenderMessage site msg
@@ -336,6 +370,22 @@ entityKeyHiddenField invalid_msg not_found_msg =
         f t = runExceptT $ do
             k <- maybe (throwError invalid_msg) return $ fromPathPiece t
             (lift $ runDB $ get k) >>= maybe (throwError not_found_msg) (const $ return k)
+
+
+entityKeyHiddenFieldDefault ::
+    ( RenderMessage site YHCommonMessage
+    , RenderMessage site FormMessage
+#if MIN_VERSION_persistent(2, 0, 0)
+    , PersistRecordBackend val (YesodPersistBackend site)
+    , PersistStore (YesodPersistBackend site)
+#else
+    , PersistMonadBackend (YesodDB site) ~ PersistEntityBackend val
+    , PersistStore (YesodDB site)
+#endif
+    , YesodPersist site
+    , PathPiece (Key val)
+    ) => Field (HandlerT site IO) (Key val)
+entityKeyHiddenFieldDefault = entityKeyHiddenField MsgInvalidDbObjectId MsgObjectNotFoundById
 
 
 entityUniqueKeyField ::
