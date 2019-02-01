@@ -22,9 +22,9 @@ import Yesod.Helpers.Form
 -- }}}1
 
 
-data FuzzyDay = FuzzyDayY Int
-                | FuzzyDayYM Int Int
-                | FuzzyDayYMD Int Int Int
+data FuzzyDay = FuzzyDayY Integer
+                | FuzzyDayYM Integer Int
+                | FuzzyDayYMD Integer Int Int
                 deriving (Show, Read, Eq, Generic)
 
 -- {{{1 instances
