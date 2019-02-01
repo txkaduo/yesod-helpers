@@ -19,6 +19,7 @@ import Yesod.Helpers.Parsec
 import Yesod.Helpers.Aeson                  (parseTextByParsec)
 import Yesod.Helpers.SafeCopy
 import Yesod.Helpers.Form
+import Yesod.Helpers.Message
 -- }}}1
 
 
@@ -233,6 +234,14 @@ fuzzyDayField err_msg = checkMMap from_str to_str strippedTextField
         Left _ -> return $ Left $ err_msg
         Right x -> return $ Right x
 -- }}}1
+
+
+fuzzyDayFieldDefault :: ( RenderMessage (HandlerSite m) FormMessage
+                        , RenderMessage (HandlerSite m) YHCommonMessage
+                        , Monad m
+                        )
+                     => Field m FuzzyDay
+fuzzyDayFieldDefault = fuzzyDayField MsgInvalidFuzzyDay
 
 
 data FuzzyAge = FuzzyAgeY Int

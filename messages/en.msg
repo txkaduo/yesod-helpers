@@ -2,6 +2,7 @@ PageTitleSep: #{asText " | "}
 SubmitForm: Submit
 ObjectNotFoundById: Database record not found by the id
 InvalidDbObjectId: Invalid database record id
+InvalidFuzzyDay: Invalid fuzzy day．Acceptable value examples: 2008 or 2008-12 or 2008-12-30
 FormMsgInvalidInteger t@Text: Invalid Integer: #{t}
 FormMsgInvalidNumber t@Text: Invalid Number: #{t}
 FormMsgInvalidEntry t@Text: Invalid Entry: #{t}
