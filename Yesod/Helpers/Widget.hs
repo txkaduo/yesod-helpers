@@ -3,10 +3,12 @@ module Yesod.Helpers.Widget where
 -- {{{1 imports
 import ClassyPrelude.Yesod
 import Text.Blaze (ToMarkup)
+import Data.Time
 
 import Yesod.Helpers.Message
 import Yesod.Helpers.Form2
 import Yesod.Helpers.Handler
+import Yesod.Helpers.Utils
 -- }}}1
 
 
@@ -114,6 +116,25 @@ jsSetSubmitButtonText selector txt =
     });
   |]
 -- }}}1
+
+
+zhCnFormatUtcWidget :: (MonadIO m, MonadBaseControl IO m, MonadThrow m)
+                    => String
+                    -> UTCTime
+                    -> WidgetT site m ()
+zhCnFormatUtcWidget fmt time = do
+  localTime <- liftBase $ utcToLocalZonedTime time
+  [whamlet|
+    <time datetime=#{formatTime defaultTimeLocale iso8601 time}>
+      #{formatTime zhCnTimeLocale fmt localTime}
+  |]
+  where iso8601 = "%Y-%m-%dT%H:%M:%SZ"
+
+
+zhCnFormatUtcWidgetDefault :: (MonadIO m, MonadBaseControl IO m, MonadThrow m)
+                           => UTCTime
+                           -> WidgetT site m ()
+zhCnFormatUtcWidgetDefault = zhCnFormatUtcWidget "%Y-%m-%d %H:%M:%S"
 
 
 wshow :: (ToMarkup a, MonadWidget m) => a -> m ()
