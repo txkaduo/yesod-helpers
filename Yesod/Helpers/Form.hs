@@ -16,6 +16,7 @@ import Yesod.Core.Types                     (fileSourceRaw)
 
 import qualified Data.Text.Encoding         as TE
 import qualified Data.Text                  as T
+import qualified Data.Text.Lazy             as LT
 import qualified Data.ByteString.Lazy       as LB
 import qualified Data.ByteString            as B
 import qualified Data.ByteString.Char8      as C8
@@ -59,6 +60,29 @@ import Yesod.Helpers.Utils                  (normalizeChineseMobileNum)
 type PersistRecordBackend record backend = (PersistEntity record, PersistEntityBackend record ~ BaseBackend backend)
 #endif
 #endif
+
+
+data FormOption = FormOption
+  { formOptionDisplay       :: Text
+  , formOptionExternalValue :: Text
+  }
+
+class ToFormOption a where
+  toFormOption :: a -> FormOption
+
+instance ToFormOption (Option a) where
+  toFormOption (Option {..}) = FormOption optionDisplay optionExternalValue
+
+instance ToFormOption Text where toFormOption t = FormOption t t
+
+instance ToFormOption LT.Text where toFormOption t = let t' = toStrict t in FormOption t' t'
+
+instance ToFormOption String where toFormOption s = let t = fromString s in FormOption t t
+
+
+mkOptionList' :: ToFormOption a => [a] -> OptionList a
+mkOptionList' = mkOptionList . map (f . (id &&& toFormOption))
+  where f (x, FormOption {..}) = Option formOptionDisplay x formOptionExternalValue
 
 
 -- appendWidgetFormViewFunc :: FieldViewFunc m a -> FieldViewFunc m a -> FieldViewFunc m a
