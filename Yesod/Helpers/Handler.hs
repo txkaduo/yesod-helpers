@@ -633,10 +633,10 @@ handlerPagedPageWithForm' mk_def_so form get_data show_html = do
   pn <- pagerGetCurrentPageNumGet pager_settings
 
   ((result_list, json), total_num) <- get_data so npp pn
-  paged <- runPager pager_settings pn total_num
 
   selectRep $ do
     provideRep $ do
+      paged <- runPager pager_settings pn total_num
       let showf merr results = do
             m_add_err <- liftM (fromMaybe mempty) $ forM merr $ \err -> do
                             return $ overallFieldError err
@@ -652,17 +652,15 @@ handlerPagedPageWithForm' mk_def_so form get_data show_html = do
 -- }}}1
 
 
-
 handlerPagedPageWithForm :: (NumPerPage so, Yesod site, RenderMessage site FormMessage)
                          => so
                          -> MkEMForm site IO so
                          -> (so -> Int -> Int -> HandlerT site IO ((a, Value), Int))
                          -> PagedPage site a
                          -> HandlerT site IO TypedContent
--- {{{1
 handlerPagedPageWithForm def_so form get_data show_html = do
   handlerPagedPageWithForm' (return . fromMaybe def_so) form get_data show_html
--- }}}1
+
 
 handlerSimplePagedPage :: (MonadHandler m, RenderMessage (HandlerSite m) FormMessage)
                        => Int
