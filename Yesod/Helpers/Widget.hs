@@ -27,6 +27,53 @@ mergePageTitles parts = do
 -- }}}1
 
 
+formOverallErrorMessageWidget :: (RenderMessage site a, MonadIO m, MonadThrow m, MonadBaseControl IO m)
+                              => Maybe a
+                              -> FieldErrors site
+                              -> WidgetT site m ()
+-- {{{1
+formOverallErrorMessageWidget m_err_msg form_errs =
+  [whamlet|
+    $if isJust m_err_msg || not (null overall_errors)
+      <div .alert .alert-warning>
+        $maybe err_msg <- m_err_msg
+           <div .form-group>
+             <span .err_msg>_{err_msg}
+
+        $if not (null overall_errors)
+          <ul>输入数据错误
+            $forall (_, errs) <- overall_errors
+              <li>#{intercalate ";" errs}
+
+            $forall ((_name, fs), errs) <- other_errors
+              <li> _{fsLabel fs}: #{intercalate ";" errs}
+  |]
+  where error_list = fieldErrorsToList form_errs
+        (overall_errors, other_errors) = partition ((== overallFieldName) . fst . fst) error_list
+-- }}}1
+
+
+simpleShowFormWidget :: (MonadIO m, MonadThrow m, MonadBaseControl IO m, RenderMessage master msg)
+                     => ByteString
+                     -> Either (Route master) Text
+                     -> GenFormData master
+                     -> msg
+                     -> WidgetT master m ()
+simpleShowFormWidget method action' (formWidget, formEnctype) submit_msg = do
+  action <- case action' of
+                  Right x -> return x
+                  Left r -> do
+                    url_render <- getUrlRender
+                    return $ url_render r
+  [whamlet|
+    <form method=#{decodeUtf8 method} action="#{action}" enctype=#{formEnctype} .form-horizontal>
+      ^{formWidget}
+      <div .form-group>
+        <div .submit-btn-container .col-xs-offset-3 .col-xs-9>
+          <input .btn .btn-primary type=submit value=_{submit_msg}>
+  |]
+
+
 -- | A simple widget to show a html POST form
 simpleFormPageWidgetEither :: ( MonadIO m, MonadThrow m
                               , MonadBaseControl IO m
@@ -57,33 +104,10 @@ simpleFormPageWidgetEither' :: ( MonadIO m, MonadThrow m
                             -> WidgetT master m ()
 -- {{{1
 simpleFormPageWidgetEither' method (formWidget, formEnctype) action' m_err_msg form_errs = do
-  action <- case action' of
-                  Right x -> return x
-                  Left r -> do
-                    url_render <- getUrlRender
-                    return $ url_render r
   [whamlet|
-<div .alert .alert-warning>
-  $maybe err_msg <- m_err_msg
-     <div .form-group>
-       <span .err_msg>_{err_msg}
-
-  $if not (null overall_errors)
-    <ul>输入数据错误
-      $forall (_, errs) <- overall_errors
-        <li>#{intercalate ";" errs}
-
-      $forall ((_name, fs), errs) <- other_errors
-        <li> _{fsLabel fs}: #{intercalate ";" errs}
-
-<form method=#{decodeUtf8 method} action="#{action}" enctype=#{formEnctype} .form-horizontal>
-  ^{formWidget}
-  <div .form-group>
-    <div .submit-btn-container .col-xs-offset-3 .col-xs-9>
-      <input .btn .btn-primary type=submit value=_{MsgSubmitForm}>
+    ^{formOverallErrorMessageWidget m_err_msg form_errs}
+    ^{simpleShowFormWidget method action' (formWidget, formEnctype) MsgSubmitForm}
   |]
-  where error_list = fieldErrorsToList form_errs
-        (overall_errors, other_errors) = partition ((== overallFieldName) . fst . fst) error_list
 -- }}}1
 
 
