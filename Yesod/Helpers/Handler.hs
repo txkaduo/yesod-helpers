@@ -89,6 +89,10 @@ clientOriginalIp = do
   return $ f1 <|> f2 <|> f3
 
 
+getCurrentRoute' :: MonadHandler m => m (Route (HandlerSite m))
+getCurrentRoute' = getCurrentRoute >>= maybe (fail "getCurrentRoute failed") return
+
+
 getCurrentUrl :: MonadHandler m => m Text
 getCurrentUrl = do
     req <- waiRequest
