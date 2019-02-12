@@ -28,17 +28,27 @@ mergePageTitles parts = do
 
 
 formOverallErrorMessageWidget :: (RenderMessage site a, MonadIO m, MonadThrow m, MonadBaseControl IO m)
-                              => Maybe a
+                              => Maybe a  -- ^ overall message
                               -> FieldErrors site
                               -> WidgetT site m ()
+formOverallErrorMessageWidget = formOverallErrorMessageWidget' . fmap w_msg
+  where w_msg t = [whamlet|
+                    <div .form-group>
+                      <span .err_msg>_{t}
+                  |]
+
+
+formOverallErrorMessageWidget' :: (ToWidget site a, MonadIO m, MonadThrow m, MonadBaseControl IO m)
+                               => Maybe a -- ^ overall message
+                               -> FieldErrors site
+                               -> WidgetT site m ()
 -- {{{1
-formOverallErrorMessageWidget m_err_msg form_errs =
+formOverallErrorMessageWidget' m_err_msg form_errs =
   [whamlet|
     $if isJust m_err_msg || not (null overall_errors)
       <div .alert .alert-warning>
         $maybe err_msg <- m_err_msg
-           <div .form-group>
-             <span .err_msg>_{err_msg}
+          ^{err_msg}
 
         $if not (null overall_errors)
           <ul>输入数据错误
@@ -59,6 +69,7 @@ simpleShowFormWidget :: (MonadIO m, MonadThrow m, MonadBaseControl IO m, RenderM
                      -> GenFormData master
                      -> msg
                      -> WidgetT master m ()
+-- {{{1
 simpleShowFormWidget method action' (formWidget, formEnctype) submit_msg = do
   action <- case action' of
                   Right x -> return x
@@ -72,6 +83,7 @@ simpleShowFormWidget method action' (formWidget, formEnctype) submit_msg = do
         <div .submit-btn-container .col-xs-offset-3 .col-xs-9>
           <input .btn .btn-primary type=submit value=_{submit_msg}>
   |]
+-- }}}1
 
 
 -- | A simple widget to show a html POST form
@@ -85,9 +97,7 @@ simpleFormPageWidgetEither :: ( MonadIO m, MonadThrow m
                            -> Maybe a       -- ^ any global error message
                            -> FieldErrors master  -- ^ error messages for form fields
                            -> WidgetT master m ()
--- {{{1
 simpleFormPageWidgetEither = simpleFormPageWidgetEither' "POST"
--- }}}1
 
 
 -- | A simple widget to show a html form
@@ -163,5 +173,12 @@ zhCnFormatUtcWidgetDefault = zhCnFormatUtcWidget "%Y-%m-%d %H:%M:%S"
 
 wshow :: (ToMarkup a, MonadWidget m) => a -> m ()
 wshow = toWidget . toHtml
+
+
+wMessage :: (RenderMessage site a, MonadIO m, MonadThrow m, MonadBaseControl IO m)
+         => a
+         -> WidgetT site m ()
+wMessage x = [whamlet|_{x}|]
+
 
 -- vim: set foldmethod=marker:
