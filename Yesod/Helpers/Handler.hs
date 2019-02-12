@@ -606,70 +606,16 @@ defaultLangs def_lang = do
         then languages
         else return [ def_lang ]
 
+
 defaultZhCnLangs :: MonadHandler m
                 => m [Lang]
 defaultZhCnLangs = defaultLangs "zh-CN"
 
 
-type PagedPage site a = Maybe Text
-                     -> PagedResult
-                     -> a
-                     -> Int
-                     -> EFormHandlerT site IO Html
-
-
-handlerPagedPageWithForm' :: (NumPerPage so, Yesod site, RenderMessage site FormMessage)
-                          => (Maybe so -> HandlerT site IO so)
-                          -> MkEMForm site IO so
-                          -> (so -> Int -> Int -> HandlerT site IO ((a, Value), Int))
-                          -> PagedPage site a
-                          -> HandlerT site IO TypedContent
--- {{{1
-handlerPagedPageWithForm' mk_def_so form get_data show_html = do
-  (((result, formWidget), formEnctype), form_errs) <- runEMFormGet form
-
-  so <- mk_def_so $ case result of
-                      FormSuccess x -> Just x
-                      _ -> Nothing
-
-  let npp = numPerPage so
-  let pager_settings = PagerSettings npp pn_param
-  pn <- pagerGetCurrentPageNumGet pager_settings
-
-  ((result_list, json), total_num) <- get_data so npp pn
-
-  selectRep $ do
-    provideRep $ do
-      paged <- runPager pager_settings pn total_num
-      let showf merr results = do
-            m_add_err <- liftM (fromMaybe mempty) $ forM merr $ \err -> do
-                            return $ overallFieldError err
-            flip runReaderT ((formWidget, formEnctype), form_errs <> m_add_err) $ do
-              show_html merr paged results total_num
-
-      showf Nothing result_list
-
-    provideRepJsendAndJsonp $ do
-      return $ JSendSuccess json
-
-  where pn_param = "p"
--- }}}1
-
-
-handlerPagedPageWithForm :: (NumPerPage so, Yesod site, RenderMessage site FormMessage)
-                         => so
-                         -> MkEMForm site IO so
-                         -> (so -> Int -> Int -> HandlerT site IO ((a, Value), Int))
-                         -> PagedPage site a
-                         -> HandlerT site IO TypedContent
-handlerPagedPageWithForm def_so form get_data show_html = do
-  handlerPagedPageWithForm' (return . fromMaybe def_so) form get_data show_html
-
-
 handlerSimplePagedPage :: (MonadHandler m, RenderMessage (HandlerSite m) FormMessage)
                        => Int
                        -> (Int -> Int -> m ((a, Value), Int))
-                       -> (PagedResult -> a -> Int -> m Html)
+                       -> (PagedResult -> Int -> a -> m Html)
                        -> m TypedContent
 -- {{{
 handlerSimplePagedPage npp get_data show_html = do
@@ -681,7 +627,7 @@ handlerSimplePagedPage npp get_data show_html = do
 
   selectRep $ do
     provideRep $ do
-      show_html paged result_list total_num
+      show_html paged total_num result_list
 
     provideRepJsendAndJsonp $ do
       return $ JSendSuccess json
