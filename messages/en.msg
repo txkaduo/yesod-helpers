@@ -1,5 +1,4 @@
 PageTitleSep: #{asText " | "}
-WrapText t@Text: #{t}
 SubmitForm: Submit
 FormMsgInvalidInteger t@Text: Invalid Integer: #{t}
 FormMsgInvalidNumber t@Text: Invalid Number: #{t}

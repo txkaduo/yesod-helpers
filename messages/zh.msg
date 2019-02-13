@@ -1,5 +1,4 @@
 PageTitleSep: #{asText " | "}
-WrapText t@Text: #{t}
 SubmitForm: 提交
 FormMsgInvalidInteger t@Text: 无效的整数: #{t}
 FormMsgInvalidNumber t@Text: 无效的数字: #{t}
