@@ -85,6 +85,15 @@ mkOptionList' = mkOptionList . map (f . (id &&& toFormOption))
   where f (x, FormOption {..}) = Option formOptionDisplay x formOptionExternalValue
 
 
+-- | As an item for JqueryUi autocomplete data source array
+mkJqueryUiAutocompleteItem :: ToFormOption a => a -> Value
+mkJqueryUiAutocompleteItem x =
+  object [ "label" .= formOptionDisplay fo
+         , "value" .= formOptionExternalValue fo
+         ]
+  where fo = toFormOption x
+
+
 -- appendWidgetFormViewFunc :: FieldViewFunc m a -> FieldViewFunc m a -> FieldViewFunc m a
 appendWidgetFieldViewFunc :: Monad m
                           => (t1 -> t2 -> t3 -> t4 -> t5 -> m ())
