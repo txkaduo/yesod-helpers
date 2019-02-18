@@ -117,26 +117,16 @@ instance Monoid (FieldErrors master) where
 instance Semigroup (FieldErrors master) where
     (<>) = mappend
 
-type EMForm m a = WriterT
-                        (FieldErrors (HandlerSite m))
-                        (RWST (Maybe (Env, FileEnv), HandlerSite m, [Lang]) Enctype Ints m)
-                        a
+
+type EMForm m = WriterT
+                  (FieldErrors (HandlerSite m))
+                  (RWST (Maybe (Env, FileEnv), HandlerSite m, [Lang]) Enctype Ints m)
 
 
--- | the following long type synonym actually says:
--- type SEMForm site m a = SS.StateT [FieldView site] (EMForm m) a
--- but haskell does not allow partially applied synonym in the above line,
--- we have the expand the synonym manually.
---
--- Usage: With the following helpers (smreq, smopt), all FieldView's are remembered.
+-- | Usage: With the following helpers (smreq, smopt), all FieldView's are remembered.
 -- So usually we don't need to name all FieldView's one by one,
 -- which simplify code a little.
-type SEMForm m a = SS.StateT [FieldView (HandlerSite m)]
-                    (WriterT
-                        (FieldErrors (HandlerSite m))
-                        (RWST (Maybe (Env, FileEnv), HandlerSite m, [Lang]) Enctype Ints m)
-                    )
-                    a
+type SEMForm m a = SS.StateT [FieldView (HandlerSite m)] (EMForm m) a
 
 
 -- | This function is used to both initially render a form and to later extract

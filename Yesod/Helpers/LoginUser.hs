@@ -1,5 +1,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-module Yesod.Helpers.LoginUser where
+module Yesod.Helpers.LoginUser
+  ( module Yesod.Helpers.LoginUser
+  , loginParamNames, loginMsgParamName, returnUrlParamName, returnUrl2ParamName
+  ) where
 
 import ClassyPrelude.Yesod hiding (Proxy)
 import qualified Network.HTTP.Types         as H
@@ -11,7 +14,7 @@ import Control.Monad.Catch                  (MonadThrow)
 import Yesod.Helpers.Json                   (jsonDecodeKey, jsonEncodeKey)
 import Yesod.Helpers.Form                   (nameToFs)
 import Yesod.Helpers.Handler                (lookupReqAccept, matchMimeType, retainHttpParams)
-import Yesod.Helpers.ResumeState            (savedReqStateParamName)
+import Yesod.Helpers.ParamNames
 
 -- | Any logged-in user on Web
 -- 本意是要打算支持多种类型用户互相独立地登录
@@ -205,31 +208,4 @@ loginParamHiddenFormParts = do
 getLoginUrlRender :: MonadHandler m => m (Route (HandlerSite m) -> Text)
 getLoginUrlRender = do
   flip <$> getUrlRenderParams <*> retainHttpParams loginParamNames
-
-redirectToReturnUrl :: MonadHandler m => Route (HandlerSite m) -> m a
-redirectToReturnUrl = do
-  (lk returnUrlParamName >>=) . flip maybe redirect . redirect
-  where
-      lk x = lookupPostParam x >>= maybe (lookupGetParam x) (return . Just)
-
-loginParamNames :: [Text]
-loginParamNames =   [ savedReqStateParamName
-                    , returnUrlParamName
-                    , returnUrl2ParamName
-                    , loginMsgParamName
-                    ]
-
-loginMsgParamName :: Text
-loginMsgParamName = "login_msg"
-
-returnUrlParamName :: Text
-returnUrlParamName = "return_url"
-
--- | 这是打算用于登录取消或失败时返回的地址，但这里的代码暂时没有直接用到
--- 定义这个变量名是方便多项目统一
-returnUrl2ParamName :: Text
-returnUrl2ParamName = "return_url2"
-
-------------------------------------------------------------------------------
-
 

@@ -1,6 +1,9 @@
 -- | 实现: 在 web 服务器处理时，把用户引导到其它网站后，回来继续原来的处理
 -- 通常用于处理过程中，发现用户需要登录，登录后可以继续原来的请求
-module Yesod.Helpers.ResumeState where
+module Yesod.Helpers.ResumeState
+  ( module Yesod.Helpers.ResumeState
+  , savedReqStateParamName
+  ) where
 
 import Prelude
 -- import Data.Proxy
@@ -8,7 +11,6 @@ import Data.Map.Strict                      (Map)
 import Data.ByteString                      (ByteString)
 import Control.Monad.State hiding (forM, mapM)
 import Data.Default                         (Default(..))
-import Data.String                          (IsString(..))
 import Control.DeepSeq                      (NFData(..))
 import Data.Aeson
 import Data.Time
@@ -18,6 +20,7 @@ import Data.Acid
 #endif
 import Data.SafeCopy
 
+import Yesod.Helpers.ParamNames
 import Yesod.Helpers.Types                  (UrlText)
 import Yesod.Helpers.SafeCopy               (SafeCopyJsonVal(..))
 
@@ -40,11 +43,6 @@ class ReqSaveState a where
     popReqState  :: a -> ReqSaveKey a -> IO (Maybe (ReqSaveVal a, UTCTime))
 
     cleanupReqState :: a -> NominalDiffTime -> IO ()
-
-
--- | use this name to pass get parameter, value of which is save state key
-savedReqStateParamName :: IsString a => a
-savedReqStateParamName = fromString "_SRS"
 
 
 type family HandlingStateOutput s :: *
