@@ -21,6 +21,7 @@ import Text.Blaze                           (Markup)
 import Data.List                            (findIndex)
 import Data.Aeson.Types                     (Pair)
 
+import Yesod.Helpers.Form
 import Yesod.Helpers.Form2
 import Yesod.Helpers.Form                   (jsonOrHtmlOutputForm')
 import Yesod.Helpers.Utils                  (nullToNothing, encodeUtf8Rfc5987)
@@ -556,6 +557,15 @@ retainHttpParams param_names = do
       f n = runMaybeT $ do
               val <- MaybeT (lookupPostParam n) <|> MaybeT (lookupGetParam n)
               return (n, val)
+
+
+semHiddenRetainParams :: (RenderMessage (HandlerSite m) FormMessage, MonadHandler m)
+                      => [Text]
+                      -> SEMForm m ()
+semHiddenRetainParams names = do
+  retain_params <- retainHttpParams names
+  forM_ retain_params $ \ (n, v) -> do
+    void $ semopt hiddenField (nameToFs n) (Just $ Just v)
 
 
 redirectToReturnUrl :: MonadHandler m => Route (HandlerSite m) -> m a
