@@ -73,6 +73,7 @@ library
                        Yesod.Helpers.PersistDiff
                        Yesod.Helpers.VirtualHost
                        Yesod.Helpers.Pager
+                       Yesod.Helpers.ParamNames
 
   -- other-modules:       
   default-extensions:  CPP

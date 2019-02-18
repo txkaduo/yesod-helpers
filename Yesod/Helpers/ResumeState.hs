@@ -8,7 +8,6 @@ import Data.Map.Strict                      (Map)
 import Data.ByteString                      (ByteString)
 import Control.Monad.State hiding (forM, mapM)
 import Data.Default                         (Default(..))
-import Data.String                          (IsString(..))
 import Control.DeepSeq                      (NFData(..))
 import Data.Aeson
 import Data.Time
@@ -40,11 +39,6 @@ class ReqSaveState a where
     popReqState  :: a -> ReqSaveKey a -> IO (Maybe (ReqSaveVal a, UTCTime))
 
     cleanupReqState :: a -> NominalDiffTime -> IO ()
-
-
--- | use this name to pass get parameter, value of which is save state key
-savedReqStateParamName :: IsString a => a
-savedReqStateParamName = fromString "_SRS"
 
 
 type family HandlingStateOutput s :: *
