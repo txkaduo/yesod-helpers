@@ -384,21 +384,7 @@ semstatic' = flip $ flip . semstatic
 
 semview :: (HandlerSite m ~ site, MonadHandler m)
         => Text -> FieldSettings site -> SEMForm m ()
-semview text (FieldSettings fsLabel fsTooltip fsId _fsName fsAttrs) = do
-  theId <- lift $ lift $ maybe newIdent return fsId
-  (_, site, langs) <- lift $ ask
-  let mr2 = renderMessage site langs
-      view = FieldView
-        { fvLabel = toHtml $ mr2 fsLabel
-        , fvTooltip = fmap toHtml $ fmap mr2 fsTooltip
-        , fvId = theId
-        , fvInput = toWidget
-          [shamlet|<p id="#{theId}" *{fsAttrs} .form-control-static>#{text}|]
-        , fvErrors = Nothing
-        , fvRequired = False
-        }
-
-  SS.modify ( view : )
+semview t fs = void $ semstatic fs () t
 
 -- | Use `semreq` internally, but make the signature like `semopt`.
 -- Useful when whether some fields is required depends on other conditions.
