@@ -1,5 +1,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-module Yesod.Helpers.LoginUser where
+module Yesod.Helpers.LoginUser
+  ( module Yesod.Helpers.LoginUser
+  , loginParamNames, loginMsgParamName, returnUrlParamName, returnUrl2ParamName
+  ) where
 
 import ClassyPrelude.Yesod hiding (Proxy)
 import qualified Network.HTTP.Types         as H
@@ -205,10 +208,4 @@ loginParamHiddenFormParts = do
 getLoginUrlRender :: MonadHandler m => m (Route (HandlerSite m) -> Text)
 getLoginUrlRender = do
   flip <$> getUrlRenderParams <*> retainHttpParams loginParamNames
-
-redirectToReturnUrl :: MonadHandler m => Route (HandlerSite m) -> m a
-redirectToReturnUrl = do
-  (lk returnUrlParamName >>=) . flip maybe redirect . redirect
-  where
-      lk x = lookupPostParam x >>= maybe (lookupGetParam x) (return . Just)
 

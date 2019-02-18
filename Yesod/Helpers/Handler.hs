@@ -25,6 +25,7 @@ import Yesod.Helpers.Form2
 import Yesod.Helpers.Form                   (jsonOrHtmlOutputForm')
 import Yesod.Helpers.Utils                  (nullToNothing, encodeUtf8Rfc5987)
 import Yesod.Helpers.Pager
+import Yesod.Helpers.ParamNames
 
 import Yesod.Helpers.JSend                  (provideRepJsendAndJsonp, JSendMsg(JSendSuccess))
 -- }}}1
@@ -550,26 +551,35 @@ validateParam pn f pr = do
 -- | 用于保持某些 get/post 变量，以便在 redirect 和 提交表单时可以传送給下一个服务器地址
 retainHttpParams :: MonadHandler m => [Text] -> m [(Text, Text)]
 retainHttpParams param_names = do
-    fmap catMaybes $ mapM f param_names
-    where
-        f n = runMaybeT $ do
-                val <- MaybeT (lookupPostParam n) <|> MaybeT (lookupGetParam n)
-                return (n, val)
+  fmap catMaybes $ mapM f param_names
+  where
+      f n = runMaybeT $ do
+              val <- MaybeT (lookupPostParam n) <|> MaybeT (lookupGetParam n)
+              return (n, val)
 
 
-reqPathPieceParamPostGet :: (PathPiece a, MonadHandler m) =>
-                            Text
-                            -> m a
+redirectToReturnUrl :: MonadHandler m => Route (HandlerSite m) -> m a
+redirectToReturnUrl = do
+  (lk returnUrlParamName >>=) . flip maybe redirect . redirect
+  where
+      lk x = lookupPostParam x >>= maybe (lookupGetParam x) (return . Just)
+
+
+reqPathPieceParamPostGet :: (PathPiece a, MonadHandler m)
+                         => Text
+                         -> m a
 reqPathPieceParamPostGet pname =
     optPathPieceParamPostGet pname >>= maybe (invalidArgs [pname]) return
 
-optPathPieceParamPostGet :: (PathPiece a, MonadHandler m) =>
-                            Text
-                            -> m (Maybe a)
+
+optPathPieceParamPostGet :: (PathPiece a, MonadHandler m)
+                         => Text
+                         -> m (Maybe a)
 optPathPieceParamPostGet pname =
     (fmap (join . fmap fromPathPiece) $ runMaybeT $
                 (MaybeT $ join . fmap nullToNothing <$> lookupPostParam pname)
                 <|> (MaybeT $ join . fmap nullToNothing <$> lookupGetParam pname))
+
 
 getUrlRenderParamsIO :: Yesod site => site -> IO (Route site -> [(Text, Text)] -> Text)
 getUrlRenderParamsIO foundation = do

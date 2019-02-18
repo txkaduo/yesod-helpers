@@ -1,6 +1,9 @@
 -- | 实现: 在 web 服务器处理时，把用户引导到其它网站后，回来继续原来的处理
 -- 通常用于处理过程中，发现用户需要登录，登录后可以继续原来的请求
-module Yesod.Helpers.ResumeState where
+module Yesod.Helpers.ResumeState
+  ( module Yesod.Helpers.ResumeState
+  , savedReqStateParamName
+  ) where
 
 import Prelude
 -- import Data.Proxy
@@ -17,6 +20,7 @@ import Data.Acid
 #endif
 import Data.SafeCopy
 
+import Yesod.Helpers.ParamNames
 import Yesod.Helpers.Types                  (UrlText)
 import Yesod.Helpers.SafeCopy               (SafeCopyJsonVal(..))
 
