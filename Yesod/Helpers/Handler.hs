@@ -8,6 +8,7 @@ import qualified Control.Monad.Trans.Reader as R
 import qualified Data.ByteString.Char8      as B8
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as TE
+import qualified Data.Vault.Lazy            as V
 #if MIN_VERSION_yesod_core(1,4,0)
 import Yesod.Core.Unsafe                    (runFakeHandler)
 #else
@@ -16,7 +17,7 @@ import Yesod.Core                           (runFakeHandler)
 import qualified Data.Map.Strict            as Map
 import Control.Monad.Trans.Maybe
 
-import Network.Wai                          (requestHeaders, rawQueryString, requestMethod)
+import Network.Wai                          (requestHeaders, rawQueryString, requestMethod, vault)
 import Text.Blaze                           (Markup)
 import Data.List                            (findIndex)
 import Data.Aeson.Types                     (Pair)
@@ -450,7 +451,7 @@ lookupReqAccept lst = do
 -- XXX: getHelper auto add _hasdata to the form.
 -- It'd better to add to params by yourself if submit by AJAX.
 withHasDataGetParam :: HandlerT site m a -> HandlerT site m a
-withHasDataGetParam f = withAlteredYesodRequest add_has_data_req f
+withHasDataGetParam f = localYesodRequest add_has_data_req f
     where
         getKey = "_hasdata"     -- 这个值 Yesod 没有 export 出来
 
@@ -462,12 +463,26 @@ withHasDataGetParam f = withAlteredYesodRequest add_has_data_req f
 
 
 -- | modify YesodRequest before executing inner Handler code
-withAlteredYesodRequest ::
-    (YesodRequest -> YesodRequest)
-    -> HandlerT site m a -> HandlerT site m a
-withAlteredYesodRequest change f = HandlerT $ unHandlerT f . modify_hd
-    where
-        modify_hd hd = hd { handlerRequest = change $ handlerRequest hd }
+{-# DEPRECATED withAlteredYesodRequest "use localYesodRequest instead" #-}
+withAlteredYesodRequest :: (YesodRequest -> YesodRequest)
+                        -> HandlerT site m a
+                        -> HandlerT site m a
+withAlteredYesodRequest = localYesodRequest
+
+
+localYesodRequest :: (YesodRequest -> YesodRequest)
+                  -> HandlerT site m a
+                  -> HandlerT site m a
+localYesodRequest change f = HandlerT $ unHandlerT f . modify_hd
+  where modify_hd hd = hd { handlerRequest = change $ handlerRequest hd }
+
+
+localVault :: (V.Vault -> V.Vault)
+           -> HandlerT site m a
+           -> HandlerT site m a
+localVault update_v = localYesodRequest f
+  where f yr = yr { reqWaiRequest = g (reqWaiRequest yr) }
+        g wai_req = wai_req { vault = update_v (vault wai_req) }
 
 
 -- | like FormResult, but used when you want to manually validate get/post params
