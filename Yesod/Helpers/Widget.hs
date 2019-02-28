@@ -9,6 +9,7 @@ import Yesod.Helpers.Message
 import Yesod.Helpers.Form2
 import Yesod.Helpers.Handler
 import Yesod.Helpers.Utils
+import Yesod.Helpers.FuzzyDay
 -- }}}1
 
 
@@ -170,6 +171,8 @@ zhCnFormatUtcWidgetDefault :: (MonadIO m, MonadBaseControl IO m, MonadThrow m)
                            -> WidgetT site m ()
 zhCnFormatUtcWidgetDefault = zhCnFormatUtcWidget "%Y-%m-%d %H:%M:%S"
 
+fuzzyDayWidget :: (MonadIO m, MonadBaseControl IO m, MonadThrow m) => FuzzyDay -> WidgetT site m ()
+fuzzyDayWidget fd = [whamlet|<time datetime=#{toPathPiece fd}>#{toPathPiece fd}|]
 
 wshow :: (ToMarkup a, MonadWidget m) => a -> m ()
 wshow = toWidget . toHtml
