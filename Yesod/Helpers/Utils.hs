@@ -21,6 +21,7 @@ import Data.Time                            (parseTimeM)
 import Data.Time                            (parseTime)
 #endif
 import Control.Monad.Logger
+import qualified Control.Monad.Logger.CallStack as LCS
 import System.Random                        (randomIO)
 #if !MIN_VERSION_classy_prelude(1, 0, 0)
 import Control.Monad.Trans.Control          (MonadBaseControl)
@@ -37,6 +38,8 @@ import qualified Blaze.ByteString.Builder   as BBB
 import qualified Data.ByteString.UTF8       as UTF8
 import qualified Data.ByteString.Lazy       as LB
 import qualified Data.ByteString.Base64.Lazy as LB64
+
+import GHC.Stack
 -- }}}1
 
 
@@ -220,12 +223,12 @@ checkExitTVarOrElse exit_var f = do
 
 
 -- | 配合 startBgThreadIdentW 及 foreverWithExitCheck 使用的小工具
-logExcWithThreadIdent :: MonadLogger m => Text -> SomeException -> m ()
+logExcWithThreadIdent :: (HasCallStack, MonadLogger m) => Text -> SomeException -> m ()
 -- {{{1
 logExcWithThreadIdent thr_ident e = do
     if null thr_ident
-       then $logError $ "Got exception in loop: " <> tshow e
-       else $logError $ "Thread of " <> thr_ident <> ": Got exception in loop: " <> tshow e
+       then LCS.logError $ "Got exception in loop: " <> tshow e
+       else LCS.logError $ "Thread of " <> thr_ident <> ": Got exception in loop: " <> tshow e
 -- }}}1
 
 
