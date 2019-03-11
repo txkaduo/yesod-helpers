@@ -171,8 +171,17 @@ zhCnFormatUtcWidgetDefault :: (MonadIO m, MonadBaseControl IO m, MonadThrow m)
                            -> WidgetT site m ()
 zhCnFormatUtcWidgetDefault = zhCnFormatUtcWidget "%Y-%m-%d %H:%M:%S"
 
+
 fuzzyDayWidget :: (MonadIO m, MonadBaseControl IO m, MonadThrow m) => FuzzyDay -> WidgetT site m ()
 fuzzyDayWidget fd = [whamlet|<time datetime=#{toPathPiece fd}>#{toPathPiece fd}|]
+
+
+dayWidget :: (MonadIO m, MonadBaseControl IO m, MonadThrow m)
+          => (Day -> String)  -- ^ how to shou day
+          -> Day
+          -> WidgetT site m ()
+dayWidget show_day d = [whamlet|<time datetime=#{show d}>#{show_day d}|]
+
 
 wshow :: (ToMarkup a, MonadWidget m) => a -> m ()
 wshow = toWidget . toHtml
