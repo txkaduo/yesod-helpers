@@ -589,6 +589,10 @@ redirectToReturnUrl = do
   where
       lk x = lookupPostParam x >>= maybe (lookupGetParam x) (return . Just)
 
+withReturnUrl :: Route site -> WidgetT site IO ()
+withReturnUrl r = do
+  ret <- getCurrentUrl
+  [whamlet|@?{(r, [(returnUrlParamName, ret)])}|]
 
 reqPathPieceParamPostGet :: (PathPiece a, MonadHandler m)
                          => Text
