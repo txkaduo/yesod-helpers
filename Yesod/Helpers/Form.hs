@@ -124,12 +124,17 @@ fsSetAttr :: Text -> Text -> FieldSettings site -> FieldSettings site
 fsSetAttr attr_name attr_val (fs@FieldSettings{ fsAttrs = attrs }) =
   fs { fsAttrs = insertMap attr_name attr_val attrs }
 
+
 fsSetPlaceholder :: Text -> FieldSettings site -> FieldSettings site
 fsSetPlaceholder = fsSetAttr "placeholder"
 
 
 fsSetReadOnly :: FieldSettings site -> FieldSettings site
 fsSetReadOnly = fsSetAttr "readonly" "readonly"
+
+
+fsSetAutocomplete :: Bool -> FieldSettings site -> FieldSettings site
+fsSetAutocomplete = fsSetAttr "autocomplete" . bool "off" "on"
 
 
 labelNameToFs :: RenderMessage site message => message -> Text -> FieldSettings site
