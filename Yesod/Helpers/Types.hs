@@ -380,3 +380,11 @@ instance (PathPiece a, PathPiece b) => PathPiece (PathPieceTuple a b) where
     y <- fromPathPiece ys
     return $ PathPieceTuple (x, y)
     where (xs, ys1) = T.breakOn "," s
+
+
+newtype CommaSepPathPieces a = CommaSepPathPieces { unCommaSepPathPieces :: [ a ] }
+
+instance PathPiece a => PathPiece (CommaSepPathPieces a) where
+  toPathPiece = intercalate "," . map toPathPiece . unCommaSepPathPieces
+  fromPathPiece = fmap CommaSepPathPieces . sequence . map fromPathPiece . T.splitOn ","
+
