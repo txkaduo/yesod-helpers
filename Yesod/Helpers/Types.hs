@@ -370,6 +370,7 @@ instance (PathPiece k, PathPiece i) => PathPiece (KeyOrIdent k i) where
 -- | 两个 PathPiece 用逗号分开: 常用于一对出现才有意义情况
 -- 例如: 第一个元素表示类型，第二个元素表示该类型下的对象id
 newtype PathPieceTuple a b = PathPieceTuple { unPathPieceTuple :: (a, b) }
+                              deriving (Show, Read, Eq)
 
 instance (PathPiece a, PathPiece b) => PathPiece (PathPieceTuple a b) where
   toPathPiece (PathPieceTuple (x, y)) = toPathPiece x <> "," <> toPathPiece y
@@ -383,6 +384,7 @@ instance (PathPiece a, PathPiece b) => PathPiece (PathPieceTuple a b) where
 
 
 newtype CommaSepPathPieces a = CommaSepPathPieces { unCommaSepPathPieces :: [ a ] }
+                               deriving (Show, Read, Eq)
 
 instance PathPiece a => PathPiece (CommaSepPathPieces a) where
   toPathPiece = intercalate "," . map toPathPiece . unCommaSepPathPieces
