@@ -11,9 +11,9 @@ module Yesod.Helpers.Form2
     , generateEMFormPost
     , generateEMFormGet'
     , generateEMFormGet
-    , emreq, emopt, emstatic
-    , semreq, semopt, semreqOpt, semstatic, semstatic'
-    , semview
+    , emreq, emopt, emstatic, emstaticW
+    , semreq, semopt, semreqOpt, semstatic, semstatic', semstaticW
+    , semview, semviewW
     , addEMFieldError
     , overallFieldName
     , addEMOverallError, addEMOverallError', addEMOverallErrorOfResult
@@ -299,6 +299,27 @@ emstatic (FieldSettings {..}) v text = do
         , fvRequired = False
         })
 
+
+emstaticW :: (site ~ HandlerSite m, MonadHandler m, ToWidget site w)
+          => FieldSettings site
+          -> a
+          -> w
+          -> EMForm m (FormResult a, FieldView site)
+emstaticW (FieldSettings {..}) v msg = do
+    theId <- lift $ lift $ maybe newIdent return fsId
+    (_, site, langs) <- lift $ ask
+    let mr2 = renderMessage site langs
+    return (FormSuccess v, FieldView
+        { fvLabel = toHtml $ mr2 fsLabel
+        , fvTooltip = fmap toHtml $ fmap mr2 fsTooltip
+        , fvId = theId
+        , fvInput = toWidget
+            [whamlet|<p id="#{theId}" *{fsAttrs} .form-control-static>^{msg}|]
+        , fvErrors = Nothing
+        , fvRequired = False
+        })
+
+
 addEMFieldError :: (MonadHandler m, RenderMessage (HandlerSite m) msg)
                 => Text
                 -> FieldSettings (HandlerSite m)
@@ -371,6 +392,25 @@ semstatic' :: (HandlerSite m ~ site, MonadHandler m)
     -> a
     -> SEMForm m (FormResult a)
 semstatic' = flip $ flip . semstatic
+
+
+semstaticW :: (site ~ HandlerSite m, MonadHandler m, ToWidget site w)
+           => FieldSettings site
+           -> a
+           -> w
+           -> SEMForm m (FormResult a)
+semstaticW fs v w = do
+  (res, view) <- lift $ emstaticW fs v w
+  SS.modify ( view : )
+  return res
+
+
+semviewW :: (site ~ HandlerSite m, MonadHandler m, ToWidget site w)
+         => w
+         -> FieldSettings site
+         -> SEMForm m ()
+semviewW t fs = void $ semstaticW fs () t
+
 
 semview :: (HandlerSite m ~ site, MonadHandler m)
         => Text -> FieldSettings site -> SEMForm m ()
