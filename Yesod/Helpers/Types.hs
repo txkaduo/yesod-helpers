@@ -384,7 +384,7 @@ instance (PathPiece a, PathPiece b) => PathPiece (PathPieceTuple a b) where
 
 
 newtype CommaSepPathPieces a = CommaSepPathPieces { unCommaSepPathPieces :: [ a ] }
-                               deriving (Show, Read, Eq)
+                               deriving (Show, Read, Eq, Monoid)
 
 instance PathPiece a => PathPiece (CommaSepPathPieces a) where
   toPathPiece = intercalate "," . map toPathPiece . unCommaSepPathPieces
