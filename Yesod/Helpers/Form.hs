@@ -307,6 +307,15 @@ simpleEncodedField' mk_msg old_field = checkMMap f (T.pack . simpleEncode) old_f
                 Left err -> return $ Left $ mk_msg $ show err
                 Right x -> return $ Right x
 
+
+-- | 根据 PathPiece 的方法解释输入
+pathPieceField :: (PathPiece a, Monad m, RenderMessage (HandlerSite m) msg, RenderMessage (HandlerSite m) FormMessage)
+               => msg
+               -> Field m a
+pathPieceField invalid_msg = checkMMap f toPathPiece strippedTextField
+  where f t = runExceptT $ maybe (throwError invalid_msg) return $ fromPathPiece t
+
+
 entityField ::
     ( RenderMessage site msg
     , RenderMessage site FormMessage
