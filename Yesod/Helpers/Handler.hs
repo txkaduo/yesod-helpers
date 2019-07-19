@@ -3,7 +3,7 @@ module Yesod.Helpers.Handler where
 
 -- {{{1 imports
 import ClassyPrelude.Yesod hiding (runFakeHandler, requestHeaders)
-import Yesod.Core.Types                     (HandlerT(..), handlerRequest)
+import Yesod.Core.Types
 import qualified Control.Monad.Trans.Reader as R
 import qualified Data.ByteString.Char8      as B8
 import qualified Data.Text                  as T
@@ -30,6 +30,12 @@ import Yesod.Helpers.Pager
 import Yesod.Helpers.ParamNames
 
 import Yesod.Helpers.JSend                  (provideRepJsendAndJsonp, JSendMsg(JSendSuccess))
+
+#if MIN_VERSION_yesod_core(1, 6, 0)
+import Yesod.Core.Types                     (HandlerFor(..))
+#endif
+
+import Yesod.Compat
 -- }}}1
 
 
@@ -42,7 +48,7 @@ neverCache = do
   addHeader "Expires" "0"
 
 
-setLastModified :: UTCTime -> HandlerT site IO ()
+setLastModified :: UTCTime -> HandlerOf site ()
 setLastModified = addHeader "Last-Modified" . formatRFC1123
 
 
@@ -115,21 +121,21 @@ getCurrentUrlExtraQS qs = do
                     else x <> "&" <> qs
 
 -- | form function type synonym
-type MkForm site m a = Markup -> MForm (HandlerT site m) (FormResult a, WidgetT site IO ())
+type MkForm site a = Markup -> MForm (HandlerOf site) (FormResult a, WidgetOf site)
 
-type MkEMForm site m a = Markup -> EMForm (HandlerT site m) (FormResult a, WidgetT site IO ())
+type MkEMForm site a = Markup -> EMForm (HandlerOf site) (FormResult a, WidgetOf site)
 
-type FormHandlerT site m a = R.ReaderT (WidgetT site IO (), Enctype) (HandlerT site m) a
+type FormHandlerOf site a = R.ReaderT (WidgetOf site, Enctype) (HandlerOf site) a
 
-type GenFormData site = (WidgetT site IO (), Enctype)
-type EFormHandlerT site m a = R.ReaderT (GenFormData site, FieldErrors site) (HandlerT site m) a
+type GenFormData site = (WidgetOf site, Enctype)
+type EFormHandlerOf site a = R.ReaderT (GenFormData site, FieldErrors site) (HandlerOf site) a
 
 
 handleGetPostEMFormTc :: (Yesod site, RenderMessage site FormMessage)
-                      => MkEMForm site IO a
-                      -> (Maybe e -> EFormHandlerT site IO Html)
-                      -> ((Maybe e -> HandlerT site IO TypedContent) -> a -> HandlerT site IO TypedContent)
-                      -> HandlerT site IO TypedContent
+                      => MkEMForm site a
+                      -> (Maybe e -> EFormHandlerOf site Html)
+                      -> ((Maybe e -> HandlerOf site TypedContent) -> a -> HandlerOf site TypedContent)
+                      -> HandlerOf site TypedContent
 -- {{{1
 handleGetPostEMFormTc form show_form handle_form_data = do
   handleGetPostEMForm form show_form' handle_form_data
@@ -147,11 +153,11 @@ handleGetPost get_func post_func = do
     _ -> sendResponseStatus methodNotAllowed405 (asText "Method Not Allowed!")
 
 
-handleGetPostEMForm :: (Yesod site, RenderMessage site FormMessage)
-                    => MkEMForm site IO a
-                    -> (Maybe e -> EFormHandlerT site IO c)
-                    -> ((Maybe e -> HandlerT site IO c) -> a -> HandlerT site IO c)
-                    -> HandlerT site IO c
+handleGetPostEMForm :: (RenderMessage site FormMessage)
+                    => MkEMForm site a
+                    -> (Maybe e -> EFormHandlerOf site c)
+                    -> ((Maybe e -> HandlerOf site c) -> a -> HandlerOf site c)
+                    -> HandlerOf site c
 -- {{{1
 handleGetPostEMForm form show_form handle_form_data = do
   handleGetPost on_get on_post
@@ -172,10 +178,10 @@ handleGetPostEMForm form show_form handle_form_data = do
 
 
 handleGetPostEMFormNoTokenTc :: (Yesod site, RenderMessage site FormMessage)
-                             => MkEMForm site IO a
-                             -> (Maybe Text -> EFormHandlerT site IO Html)
-                             -> ((Maybe Text -> HandlerT site IO TypedContent) -> a -> HandlerT site IO TypedContent)
-                             -> HandlerT site IO TypedContent
+                             => MkEMForm site a
+                             -> (Maybe Text -> EFormHandlerOf site Html)
+                             -> ((Maybe Text -> HandlerOf site TypedContent) -> a -> HandlerOf site TypedContent)
+                             -> HandlerOf site TypedContent
 -- {{{1
 handleGetPostEMFormNoTokenTc form show_form handle_form_data = do
   handleGetPostEMFormNoToken form show_form' handle_form_data
@@ -184,11 +190,11 @@ handleGetPostEMFormNoTokenTc form show_form handle_form_data = do
 -- }}}1
 
 
-handleGetPostEMFormNoToken :: (Yesod site, RenderMessage site FormMessage)
-                           => MkEMForm site IO a
-                           -> (Maybe Text -> EFormHandlerT site IO c)
-                           -> ((Maybe Text -> HandlerT site IO c) -> a -> HandlerT site IO c)
-                           -> HandlerT site IO c
+handleGetPostEMFormNoToken :: (RenderMessage site FormMessage)
+                           => MkEMForm site a
+                           -> (Maybe Text -> EFormHandlerOf site c)
+                           -> ((Maybe Text -> HandlerOf site c) -> a -> HandlerOf site c)
+                           -> HandlerOf site c
 -- {{{1
 handleGetPostEMFormNoToken form show_form handle_form_data = do
   handleGetPost on_get on_post
@@ -213,7 +219,7 @@ handleGetPostEMFormNoToken form show_form handle_form_data = do
 
 -- | Handler a GET form
 -- If form failed/missing, abort processing and output empty widget (except the form widget)
-handleGetEMForm :: (ToTypedContent b, MonadHandler m, w ~ WidgetT site IO ())
+handleGetEMForm :: (ToTypedContent b, MonadHandler m, w ~ WidgetOf site)
                 => (Html -> EMForm m (FormResult a, w))
                 -- ^ 'MkEMForm a', the form function
                 -> ((w, Enctype) -> FieldErrors (HandlerSite m) -> Maybe Text -> Maybe w -> m b)
@@ -240,7 +246,7 @@ handleGetEMForm form show_widget f = do
 
 -- | Handler a GET form
 -- Form result can be 'missing'
-handleGetEMFormMaybe :: (ToTypedContent b, MonadHandler m, w ~ WidgetT site IO ())
+handleGetEMFormMaybe :: (ToTypedContent b, MonadHandler m, w ~ WidgetOf site)
                      => (Html -> EMForm m (FormResult a, w))
                      -- ^ 'MkEMForm a', the form function
                      -> ((w, Enctype) -> FieldErrors (HandlerSite m) -> Maybe Text -> Maybe w -> m b)
@@ -286,78 +292,62 @@ handleGetEMFormMaybe form show_widget f = do
 --     runFormPostHandlerJH xxxForm showXXXPage $
 --         (\result -> undefined) :: (XXX -> Handler (Either [msg] TypedContent))
 
-generateFormPostHandler ::
-    ( Monad m, MonadThrow m, MonadBaseControl IO m, MonadIO m
-    , RenderMessage site FormMessage
-    ) =>
-    MkForm site m r
-    -> FormHandlerT site m a
-    -> HandlerT site m a
+generateFormPostHandler :: (RenderMessage site FormMessage, MonadHandler m, HandlerSite m ~ site)
+                        => MkForm site r
+                        -> FormHandlerOf site a
+                        -> m a
 generateFormPostHandler form_func fh = do
-    generateFormPost form_func >>= R.runReaderT fh
+  liftMonadHandler $ generateFormPost form_func >>= R.runReaderT fh
 
-generateEMFormPostHandler ::
-    ( Monad m, MonadThrow m, MonadBaseControl IO m, MonadIO m
-    , RenderMessage site FormMessage
-    ) =>
-    MkEMForm site m r
-    -> EFormHandlerT site m a
-    -> HandlerT site m a
+generateEMFormPostHandler :: (RenderMessage site FormMessage, MonadHandler m, HandlerSite m ~ site)
+                          => MkEMForm site r
+                          -> EFormHandlerOf site a
+                          -> m a
 generateEMFormPostHandler form_func fh = do
-    generateEMFormPost form_func >>= R.runReaderT fh
+  liftMonadHandler $ generateEMFormPost form_func >>= R.runReaderT fh
 
-generateFormPostHandlerJH ::
-    ( Yesod site, RenderMessage site FormMessage
-    , MonadIO m, MonadThrow m, MonadBaseControl IO m
-    ) =>
-    MkForm site m r
-    -> ([Text] -> FormHandlerT site m Html)
-    -> HandlerT site m TypedContent
+generateFormPostHandlerJH :: (Yesod site, RenderMessage site FormMessage, MonadHandler m, HandlerSite m ~ site)
+                          => MkForm site r
+                          -> ([Text] -> FormHandlerOf site Html)
+                          -> m TypedContent
 generateFormPostHandlerJH form_func show_page = do
     generateFormPostHandler form_func $ do
         jsonOrHtmlOutputFormX show_page []
 
-generateEMFormPostHandlerJH ::
-    ( Yesod site, RenderMessage site FormMessage
-    , MonadIO m, MonadThrow m, MonadBaseControl IO m
-    ) =>
-    MkEMForm site m r
-    -> (EFormHandlerT site m Html)
-    -> HandlerT site m TypedContent
+
+generateEMFormPostHandlerJH :: (Yesod site, RenderMessage site FormMessage, MonadHandler m, HandlerSite m ~ site)
+                            => MkEMForm site r
+                            -> (EFormHandlerOf site Html)
+                            -> m TypedContent
 generateEMFormPostHandlerJH form_func show_page = do
     generateEMFormPostHandler form_func $ do
         jsonOrHtmlOutputFormEX [] show_page
 
-runFormPostHandler ::
-    ( Monad m, MonadThrow m, MonadBaseControl IO m, MonadIO m
-    , RenderMessage site FormMessage
-    ) =>
-    MkForm site m r
-    -> (FormResult r -> FormHandlerT site m a)
-    -> HandlerT site m a
+
+runFormPostHandler :: (RenderMessage site FormMessage)
+                   => MkForm site r
+                   -> (FormResult r -> FormHandlerOf site a)
+                   -> HandlerOf site a
 runFormPostHandler form_func fh = do
     ((result, formWidget), formEnctype) <- runFormPost form_func
     R.runReaderT (fh result) (formWidget, formEnctype)
 
-runFormPostHandlerJH ::
-    (RenderMessage site FormMessage, RenderMessage site msg, Yesod site
-    , MonadIO m, MonadBaseControl IO m, MonadThrow m
-    ) =>
-    MkForm site m r                 -- ^ form function
-    -> ([Text] -> FormHandlerT site m Html)
-                                    -- ^ show html page function
-    -> (r -> HandlerT site m (Either [msg] TypedContent))
-                                    -- ^ function to handler success form result
-    -> HandlerT site m TypedContent
+
+runFormPostHandlerJH :: (RenderMessage site FormMessage, RenderMessage site msg, Yesod site)
+                     => MkForm site r                 -- ^ form function
+                     -> ([Text] -> FormHandlerOf site Html)
+                                                    -- ^ show html page function
+                     -> (r -> HandlerOf site (Either [msg] TypedContent))
+                                                    -- ^ function to handler success form result
+                     -> HandlerOf site TypedContent
 runFormPostHandlerJH form_func show_page h_ok = do
-    runFormPostHandler form_func $
-        jsonOrHtmlOutputFormHandleResult show_page h_ok
+    runFormPostHandler form_func $ jsonOrHtmlOutputFormHandleResult show_page h_ok
 
 
-jsonOrHtmlOutputFormX :: (Yesod site, MonadIO m, MonadThrow m, MonadBaseControl IO m) =>
-    ([Text] -> FormHandlerT site m Html)
-    -> [Text]
-    -> FormHandlerT site m TypedContent
+jsonOrHtmlOutputFormX :: (Yesod site)
+                      => ([Text] -> FormHandlerOf site Html)
+                      -> [Text]
+                      -> FormHandlerOf site TypedContent
 jsonOrHtmlOutputFormX show_form errs = do
     (formWidget, formEnctype) <- R.ask
     let show_form' = R.runReaderT (show_form errs) (formWidget, formEnctype)
@@ -373,11 +363,11 @@ jsonOrHtmlOutputFormX show_form errs = do
 --               }
 --           }
 -- }
-jsonOrHtmlOutputFormEX :: (Yesod site, MonadIO m, MonadThrow m, MonadBaseControl IO m)
+jsonOrHtmlOutputFormEX :: (Yesod site)
                         => [Pair]
-                        -> EFormHandlerT site m Html
+                        -> EFormHandlerOf site Html
                             -- ^ provide HTML content
-                        -> EFormHandlerT site m TypedContent
+                        -> EFormHandlerOf site TypedContent
 jsonOrHtmlOutputFormEX extra_js_fields show_form = do
     r@((formWidget, _formEnctype), field_errs) <- R.ask
     lift $ do
@@ -388,14 +378,12 @@ jsonOrHtmlOutputFormEX extra_js_fields show_form = do
                 form_body <- widgetToBodyHtml formWidget
                 return $ jsendFormData render_msg (Just form_body) field_errs extra_js_fields
 
-jsonOrHtmlOutputFormHandleResult ::
-    (Yesod site, RenderMessage site msg
-    , MonadIO m, MonadThrow m, MonadBaseControl IO m
-    ) =>
-    ([Text] -> FormHandlerT site m Html)
-    -> (r -> HandlerT site m (Either [msg] TypedContent))
-    -> FormResult r
-    -> FormHandlerT site m TypedContent
+
+jsonOrHtmlOutputFormHandleResult :: (Yesod site, RenderMessage site msg)
+                                 => ([Text] -> FormHandlerOf site Html)
+                                 -> (r -> HandlerOf site (Either [msg] TypedContent))
+                                  -> FormResult r
+                                  -> FormHandlerOf site TypedContent
 jsonOrHtmlOutputFormHandleResult show_page f result = do
     let showf errs = jsonOrHtmlOutputFormX show_page errs
         showf' msgs = lift getMessageRender >>= showf . flip map msgs
@@ -404,12 +392,13 @@ jsonOrHtmlOutputFormHandleResult show_page f result = do
         FormFailure errs    -> showf errs
         FormSuccess x       -> (lift $ f x) >>= either showf' return
 
+
 -- | 如果是普通页面输出，则，调用 setMessageI 并重定向至指定的 route
 -- 如果是 JSON 输出，则按操作成功的方式输出文字信息
-jsonOrRedirect ::
-    forall site message url.
-    (RenderMessage site message, RedirectUrl site url) =>
-    message -> url -> HandlerT site IO TypedContent
+jsonOrRedirect :: forall site message url.  (RenderMessage site message, RedirectUrl site url)
+               => message
+               -> url
+               -> HandlerOf site TypedContent
 jsonOrRedirect msg route = do
     selectRep $ do
         provideRepJsendAndJsonp $ do
@@ -420,10 +409,11 @@ jsonOrRedirect msg route = do
             return $ JSendSuccess dat
         provideRep $ html
         where
-            html :: HandlerT site IO Html
+            html :: HandlerOf site Html
             html = do
                 setMessageI $ msg
                 redirect route
+
 
 matchMimeType :: ContentType -> ContentType -> Bool
 matchMimeType expected actual =
@@ -450,7 +440,7 @@ lookupReqAccept lst = do
 -- Use this function to workaround this.
 -- XXX: getHelper auto add _hasdata to the form.
 -- It'd better to add to params by yourself if submit by AJAX.
-withHasDataGetParam :: HandlerT site m a -> HandlerT site m a
+withHasDataGetParam :: HandlerOf site a -> HandlerOf site a
 withHasDataGetParam f = localYesodRequest add_has_data_req f
     where
         getKey = "_hasdata"     -- 这个值 Yesod 没有 export 出来
@@ -462,24 +452,21 @@ withHasDataGetParam f = localYesodRequest add_has_data_req f
                                 lookup getKey ps
 
 
--- | modify YesodRequest before executing inner Handler code
-{-# DEPRECATED withAlteredYesodRequest "use localYesodRequest instead" #-}
-withAlteredYesodRequest :: (YesodRequest -> YesodRequest)
-                        -> HandlerT site m a
-                        -> HandlerT site m a
-withAlteredYesodRequest = localYesodRequest
-
-
 localYesodRequest :: (YesodRequest -> YesodRequest)
-                  -> HandlerT site m a
-                  -> HandlerT site m a
-localYesodRequest change f = HandlerT $ unHandlerT f . modify_hd
+                  -> HandlerOf site a
+                  -> HandlerOf site a
+localYesodRequest change f =
+#if MIN_VERSION_yesod_core(1, 6, 0)
+  HandlerFor $ unHandlerFor f . modify_hd
+#else
+  HandlerT $ unHandlerT f . modify_hd
+#endif
   where modify_hd hd = hd { handlerRequest = change $ handlerRequest hd }
 
 
 localVault :: (V.Vault -> V.Vault)
-           -> HandlerT site m a
-           -> HandlerT site m a
+           -> HandlerOf site a
+           -> HandlerOf site a
 localVault update_v = localYesodRequest f
   where f yr = yr { reqWaiRequest = g (reqWaiRequest yr) }
         g wai_req = wai_req { vault = update_v (vault wai_req) }
@@ -589,7 +576,7 @@ redirectToReturnUrl = do
   where
       lk x = lookupPostParam x >>= maybe (lookupGetParam x) (return . Just)
 
-withReturnUrl :: Route site -> WidgetT site IO ()
+withReturnUrl :: Route site -> WidgetOf site
 withReturnUrl r = do
   ret <- getCurrentUrl
   [whamlet|@?{(r, [(returnUrlParamName, ret)])}|]
@@ -625,12 +612,11 @@ getUrlRenderIO foundation = do
         >>= either (error "getUrlRender shoud never fail") return
 
 
-widgetToBodyHtml :: (Yesod site, MonadIO m, MonadThrow m, MonadBaseControl IO m)
-                => WidgetT site IO ()
-                -> HandlerT site m Html
-widgetToBodyHtml widget = liftHandlerT $ do
-    widgetToPageContent widget
-        >>= withUrlRenderer . pageBody
+widgetToBodyHtml :: (Yesod site, MonadHandler m, HandlerSite m ~ site)
+                 => WidgetOf site
+                 -> m Html
+widgetToBodyHtml widget = liftMonadHandler $ do
+  widgetToPageContent widget >>= withUrlRenderer . pageBody
 
 
 -- | 目前来说，大多数时候情况都不需要 i18n

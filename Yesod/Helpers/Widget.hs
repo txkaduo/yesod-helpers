@@ -10,6 +10,8 @@ import Yesod.Helpers.Form2
 import Yesod.Helpers.Handler
 import Yesod.Helpers.Utils
 import Yesod.Helpers.FuzzyDay
+
+import Yesod.Compat
 -- }}}1
 
 
@@ -28,10 +30,10 @@ mergePageTitles parts = do
 -- }}}1
 
 
-formOverallErrorMessageWidget :: (RenderMessage site a, MonadIO m, MonadThrow m, MonadBaseControl IO m)
+formOverallErrorMessageWidget :: (RenderMessage site a)
                               => Maybe a  -- ^ overall message
                               -> FieldErrors site
-                              -> WidgetT site m ()
+                              -> WidgetOf site
 formOverallErrorMessageWidget = formOverallErrorMessageWidget' . fmap w_msg
   where w_msg t = [whamlet|
                     <div .form-group>
@@ -39,10 +41,10 @@ formOverallErrorMessageWidget = formOverallErrorMessageWidget' . fmap w_msg
                   |]
 
 
-formOverallErrorMessageWidget' :: (ToWidget site a, MonadIO m, MonadThrow m, MonadBaseControl IO m)
+formOverallErrorMessageWidget' :: (ToWidget site a)
                                => Maybe a -- ^ overall message
                                -> FieldErrors site
-                               -> WidgetT site m ()
+                               -> WidgetOf site
 -- {{{1
 formOverallErrorMessageWidget' m_err_msg form_errs =
   [whamlet|
@@ -64,12 +66,12 @@ formOverallErrorMessageWidget' m_err_msg form_errs =
 -- }}}1
 
 
-simpleShowFormWidget :: (MonadIO m, MonadThrow m, MonadBaseControl IO m, RenderMessage master msg)
+simpleShowFormWidget :: (RenderMessage master msg)
                      => ByteString
                      -> Either (Route master) Text
                      -> GenFormData master
                      -> msg
-                     -> WidgetT master m ()
+                     -> WidgetOf master
 -- {{{1
 simpleShowFormWidget method action' (formWidget, formEnctype) submit_msg = do
   action <- case action' of
@@ -88,23 +90,19 @@ simpleShowFormWidget method action' (formWidget, formEnctype) submit_msg = do
 
 
 -- | A simple widget to show a html POST form
-simpleFormPageWidgetEither :: ( MonadIO m, MonadThrow m
-                              , MonadBaseControl IO m
-                              , RenderMessage master a
+simpleFormPageWidgetEither :: ( RenderMessage master a
                               , RenderMessage master YHCommonMessage
                               )
                            => GenFormData master
                            -> Either (Route master) Text  -- ^ action url
                            -> Maybe a       -- ^ any global error message
                            -> FieldErrors master  -- ^ error messages for form fields
-                           -> WidgetT master m ()
+                           -> WidgetOf master
 simpleFormPageWidgetEither = simpleFormPageWidgetEither' "POST"
 
 
 -- | A simple widget to show a html form
-simpleFormPageWidgetEither' :: ( MonadIO m, MonadThrow m
-                              , MonadBaseControl IO m
-                              , RenderMessage master a
+simpleFormPageWidgetEither' :: ( RenderMessage master a
                               , RenderMessage master YHCommonMessage
                               )
                             => ByteString   -- ^ method
@@ -112,7 +110,7 @@ simpleFormPageWidgetEither' :: ( MonadIO m, MonadThrow m
                             -> Either (Route master) Text  -- ^ action url
                             -> Maybe a       -- ^ any global error message
                             -> FieldErrors master  -- ^ error messages for form fields
-                            -> WidgetT master m ()
+                            -> WidgetOf master
 -- {{{1
 simpleFormPageWidgetEither' method (formWidget, formEnctype) action' m_err_msg form_errs = do
   [whamlet|
@@ -122,16 +120,14 @@ simpleFormPageWidgetEither' method (formWidget, formEnctype) action' m_err_msg f
 -- }}}1
 
 
-simpleFormPageWidget :: (MonadIO m, MonadThrow m
-                        , MonadBaseControl IO m
-                        , RenderMessage master a
+simpleFormPageWidget :: ( RenderMessage master a
                         , RenderMessage master YHCommonMessage
                         )
                      => GenFormData master
                      -> Route master  -- ^ action url
                      -> Maybe a       -- ^ any global error message
                      -> FieldErrors master  -- ^ error messages for form fields
-                     -> WidgetT master m ()
+                     -> WidgetOf master
 simpleFormPageWidget (formWidget, formEnctype) action m_err_msg form_errs =
   simpleFormPageWidgetEither (formWidget, formEnctype) (Left action) m_err_msg form_errs
 
@@ -153,12 +149,11 @@ jsSetSubmitButtonText selector txt =
 -- }}}1
 
 
-zhCnFormatUtcWidget :: (MonadIO m, MonadBaseControl IO m, MonadThrow m)
-                    => String
+zhCnFormatUtcWidget :: String
                     -> UTCTime
-                    -> WidgetT site m ()
+                    -> WidgetOf site
 zhCnFormatUtcWidget fmt time = do
-  localTime <- liftBase $ utcToLocalZonedTime time
+  localTime <- liftIO $ utcToLocalZonedTime time
   [whamlet|
     <time datetime=#{formatTime defaultTimeLocale iso8601 time}>
       #{formatTime zhCnTimeLocale fmt localTime}
@@ -166,20 +161,18 @@ zhCnFormatUtcWidget fmt time = do
   where iso8601 = "%Y-%m-%dT%H:%M:%SZ"
 
 
-zhCnFormatUtcWidgetDefault :: (MonadIO m, MonadBaseControl IO m, MonadThrow m)
-                           => UTCTime
-                           -> WidgetT site m ()
+zhCnFormatUtcWidgetDefault :: UTCTime
+                           -> WidgetOf site
 zhCnFormatUtcWidgetDefault = zhCnFormatUtcWidget "%Y-%m-%d %H:%M:%S"
 
 
-fuzzyDayWidget :: (MonadIO m, MonadBaseControl IO m, MonadThrow m) => FuzzyDay -> WidgetT site m ()
+fuzzyDayWidget :: FuzzyDay -> WidgetOf site
 fuzzyDayWidget fd = [whamlet|<time datetime=#{toPathPiece fd}>#{toPathPiece fd}|]
 
 
-dayWidget :: (MonadIO m, MonadBaseControl IO m, MonadThrow m)
-          => (Day -> String)  -- ^ how to shou day
+dayWidget :: (Day -> String)  -- ^ how to shou day
           -> Day
-          -> WidgetT site m ()
+          -> WidgetOf site
 dayWidget show_day d = [whamlet|<time datetime=#{show d}>#{show_day d}|]
 
 
@@ -187,9 +180,9 @@ wshow :: (ToMarkup a, MonadWidget m) => a -> m ()
 wshow = toWidget . toHtml
 
 
-wMessage :: (RenderMessage site a, MonadIO m, MonadThrow m, MonadBaseControl IO m)
+wMessage :: (RenderMessage site a)
          => a
-         -> WidgetT site m ()
+         -> WidgetOf site
 wMessage x = [whamlet|_{x}|]
 
 

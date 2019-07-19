@@ -96,9 +96,12 @@ getCopySimpleEncoded = contain getCopySimpleEncodedInside
 putCopyAnyEntity :: (SafeCopy (Key val), SafeCopy val) => Entity val -> Contained Put
 putCopyAnyEntity x = contain $ safePut (entityKey x, entityVal x)
 
-getCopyAnyEntity ::
-    (PersistEntity val, SafeCopy (Key val), SafeCopy val) =>
-    Contained (Get (Entity val))
+getCopyAnyEntity :: (SafeCopy (Key val), SafeCopy val
+#if !MIN_VERSION_persistent(2, 9, 0)
+                    , PersistEntity val
+#endif
+                    )
+                 => Contained (Get (Entity val))
 getCopyAnyEntity = contain $ fmap (uncurry Entity) safeGet
 
 

@@ -1,10 +1,8 @@
 module Yesod.Helpers.Upload where
 
-import Prelude
-import Yesod
+import ClassyPrelude.Yesod
 
 import Yesod.Core.Types                     (fileSourceRaw)
-import Data.Conduit                         (($=), ($$))
 import qualified Data.Conduit.Binary        as CB
 import qualified Data.ByteString.Lazy       as LB
 
@@ -13,8 +11,7 @@ import qualified Data.ByteString.Lazy       as LB
 -- to restrict maximum bytes that are allowed to read from.
 fiRestrictSourceSize :: Int -> FileInfo -> FileInfo
 fiRestrictSourceSize max_size fi = fi { fileSourceRaw = new_source }
-    where
-        new_source = fileSourceRaw fi $= CB.isolate max_size
+    where new_source = fileSourceRaw fi .| CB.isolate max_size
 
 
 -- | read all content from source in FileInfo,
@@ -32,7 +29,7 @@ fiReadLimited max_size fi = do
         else return $ Just lbs
 
 
-fiReadUnlimited :: (MonadResource m) =>
-    FileInfo -> m LB.ByteString
-fiReadUnlimited fi = fileSource fi $$ CB.sinkLbs
+fiReadUnlimited :: (MonadResource m)
+                => FileInfo -> m LB.ByteString
+fiReadUnlimited fi = runConduit $ fileSource fi .| CB.sinkLbs
 

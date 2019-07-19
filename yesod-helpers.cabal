@@ -148,6 +148,7 @@ library
                      , mime-types
                      , vault
                      , parsec-tx-utils         >= 0.3.1
+                     , yesod-compat
 
   if flag(acid-state)
       build-depends:   acid-state
@@ -177,7 +178,7 @@ library
   -- hs-source-dirs:      
   default-language:    Haskell2010
 
-  ghc-options: -Wall -fwarn-tabs -fno-warn-partial-type-signatures
+  ghc-options: -Wall -fwarn-tabs -fwarn-redundant-constraints -fno-warn-partial-type-signatures
 
   if flag(dev)
       cpp-options:   -DDEVELOPMENT

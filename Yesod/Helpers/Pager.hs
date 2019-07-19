@@ -5,6 +5,8 @@ import ClassyPrelude.Yesod
 
 import qualified Data.Conduit.Combinators as CC
 import qualified Data.Conduit.List        as CL
+
+import Yesod.Compat
 -- }}}1
 
 
@@ -50,8 +52,8 @@ pagerGetOffset (PagerSettings { pagerNumPerPage = npp } ) pn = (pn -1) * npp
 pagerSelectOpts :: PagerSettings -> Int -> [SelectOpt a]
 pagerSelectOpts ps pn = [ OffsetBy (pagerGetOffset ps pn), LimitTo (pagerNumPerPage ps) ]
 
-pagerWidget :: (MonadIO m, MonadThrow m, MonadBaseControl IO m)
-            => PagedResult -> Int -> WidgetT site m ()
+
+pagerWidget :: PagedResult -> Int -> WidgetOf site
 pagerWidget paged total_num = [whamlet|$newline never
   <div>
     #{tshow $ pagedCurrentPageNum paged}/#{tshow $ pagedLastPageNum paged}页, 共#{tshow total_num}条记录
@@ -68,6 +70,7 @@ pagerWidget paged total_num = [whamlet|$newline never
       <li>
         <a href="#{pagedLastPageUrl paged}">末页
           |]
+
 
 runPager :: (MonadHandler m)
          => PagerSettings
@@ -120,7 +123,11 @@ runPager (PagerSettings npp pn_param) pn total_num = do
 sinkPagedListCount :: Monad m
                    => Int
                    -> Int
+#if MIN_VERSION_conduit(1, 3, 0)
+                   -> SinkC a m ([a], Int)
+#else
                    -> Sink a m ([a], Int)
+#endif
 -- {{{1
 sinkPagedListCount npp0 pn0 =
   getZipSink $ (,) <$> ZipSink (CL.drop ((pn -1) * npp) >> CL.take npp)

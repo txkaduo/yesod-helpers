@@ -48,13 +48,13 @@ amendSessionCookie settings = add_domain . add_name . add_path . add_max_age
 
 -- | like defaultClientSessionBackend, but add extra param to specify session cookie name
 defaultClientSessionBackendCkName :: Int -- ^ minutes
-                                    -> FilePath -- ^ key file
-                                    -> ByteString
-                                    -> IO SessionBackend
+                                  -> FilePath -- ^ key file
+                                  -> ByteString
+                                  -> IO SessionBackend
 defaultClientSessionBackendCkName minutes fp ck_name = do
   key <- CS.getKey fp
-  let timeout = fromIntegral (minutes * 60)
-  (getCachedDate, _closeDateCacher) <- clientSessionDateCacher timeout
+  let timeout_sec = fromIntegral (minutes * 60)
+  (getCachedDate, _closeDateCacher) <- clientSessionDateCacher timeout_sec
   return $
     SessionBackend {
       sbLoadSession = loadClientSession key getCachedDate ck_name
@@ -70,7 +70,11 @@ setSessionCereal n x = setSessionBS n (SL.runPut $ SL.put x)
 
 
 -- | lookup session data with Data.Serialize interface
-lookupSessionCereal :: (MonadHandler m, MonadLogger m, SL.Serialize a)
+lookupSessionCereal :: (MonadHandler m, SL.Serialize a
+#if !MIN_VERSION_yesod_core(1, 6, 0)
+                       , MonadLogger m
+#endif
+                       )
                     => Text
                     -> m (Maybe a)
 lookupSessionCereal n = do
@@ -95,7 +99,11 @@ setSessionBinary n x = setSessionBS n (toStrict $ Bin.runPut $ Bin.put x)
 
 
 -- | lookup session data with Data.Binary interface
-lookupSessionBinary :: (MonadHandler m, MonadLogger m, Bin.Binary a)
+lookupSessionBinary :: (MonadHandler m, Bin.Binary a
+#if !MIN_VERSION_yesod_core(1, 6, 0)
+                       , MonadLogger m
+#endif
+                       )
                     => Text
                     -> m (Maybe a)
 lookupSessionBinary n = do

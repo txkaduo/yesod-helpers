@@ -11,7 +11,13 @@ import Control.Concurrent.Async             (Async, pollSTM)
 import Control.Monad.Logger
 import Control.Monad.Writer.Class           (MonadWriter(..))
 import Data.List.NonEmpty                   (NonEmpty(..), nonEmpty)
+
+#if MIN_VERSION_classy_prelude(1, 4, 0)
+import System.IO.Error                      (catchIOError)
+#else
 import System.Timeout                       (timeout)
+#endif
+
 -- }}}1
 
 
@@ -115,9 +121,9 @@ tryPortToRunAndCheck run_logging make_sure_alive_seconds ports svc_name f = do
 
   let go (port :| other_ports) = do
         ex_mvar <- newEmptyMVar
-        void $ fork $ report_port ex_mvar port
+        void $ async $ report_port ex_mvar port
         f port `catchIOError`
-          \ex -> do
+          \ ex -> do
               putMVar ex_mvar ex
               case nonEmpty other_ports of
                 Nothing -> do

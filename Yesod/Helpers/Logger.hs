@@ -1,26 +1,33 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Yesod.Helpers.Logger  where
 
-import ClassyPrelude
+import ClassyPrelude.Yesod hiding (fileSize)
+import Yesod.Core.Types
 
 import Data.Default                         (Default(..))
 import qualified Data.Text                  as T
 import Control.DeepSeq                      (force)
 
 import Network.Wai.Logger                   (DateCacheGetter)
-import Yesod.Core.Types
 import System.FilePath                      (splitFileName, takeFileName)
 import System.Directory                     (renameFile)
 import qualified Text.Parsec.Number         as PN
 import Text.Parsec                          (parse, eof)
 import qualified Text.Parsec
-import Data.Conduit
+
+#if MIN_VERSION_classy_prelude_yesod(1, 5, 0)
 import Data.Conduit.Combinators             (sourceDirectory)
+#endif
+
 import System.Posix.Files                   (getFileStatus, fileSize)
 import System.Posix.Types                   (COff(..))
 import Control.Monad.Trans.Resource         (runResourceT)
 import Control.Monad.Logger
 import System.Log.FastLogger
+
+#if MIN_VERSION_classy_prelude(1, 5, 0)
+import System.IO.Error
+#endif
 
 import Data.Aeson
 import qualified Data.Aeson.Types           as AT
@@ -29,6 +36,8 @@ import Yesod.Helpers.Aeson                  ( parseTextByRead, nullValueToNothin
                                             , parseTextByParsec
                                             )
 import Yesod.Helpers.Parsec                 ( parseByteSizeWithUnit )
+
+import Yesod.Compat
 
 
 type LoggingFunc = Loc -> LogSource -> LogLevel -> LogStr -> IO ()
@@ -266,9 +275,7 @@ newLogHandlerV getdate (LoggerConfig v m_def) = do
 
 
 -- | use this with runLoggingT
-logFuncByHandlerV ::
-    LogHandlerV
-    -> LoggingFunc
+logFuncByHandlerV :: LogHandlerV -> LoggingFunc
 logFuncByHandlerV (LogHandlerV getdate v m_def) loc src level msg = do
     log_str_ioref <- newIORef Nothing
 
@@ -340,43 +347,75 @@ instance LoggingTRunner LogHandlerV where
 
 
 -- | Used to implement instance of MonadLogger for (HandlerT site m)
-monadLoggerLogHandlerV :: (MonadIO m, ToLogStr msg)
+monadLoggerLogHandlerV :: (ToLogStr msg)
                        => (site -> LogHandlerV)
-                       -> Loc -> LogSource -> LogLevel -> msg -> HandlerT site m ()
-monadLoggerLogHandlerV get_logger_v loc src level msg = HandlerT $ \ hd ->
-  liftIO $ logFuncByHandlerV (get_logger_v $ rheSite $ handlerEnv hd) loc src level (toLogStr msg)
+                       -> Loc -> LogSource -> LogLevel -> msg -> HandlerOf site ()
+monadLoggerLogHandlerV get_logger_v loc src level msg =
+#if MIN_VERSION_yesod_core(1, 6, 0)
+  HandlerFor $ \ hd ->
+#else
+  HandlerT $ \ hd ->
+#endif
+    liftIO $ logFuncByHandlerV (get_logger_v $ rheSite $ handlerEnv hd) loc src level (toLogStr msg)
 
 
 -- | Used to implement instance of MonadLoggerIO for (HandlerT site m)
-askLoggerIoHandlerV :: (MonadIO m) => (site -> LogHandlerV) -> HandlerT site m LoggingFunc
-askLoggerIoHandlerV get_logger_v = HandlerT $ \ hd ->
+askLoggerIoHandlerV :: (site -> LogHandlerV)
+                    -> HandlerOf site LoggingFunc
+askLoggerIoHandlerV get_logger_v =
+#if MIN_VERSION_yesod_core(1, 6, 0)
+  HandlerFor $ \ hd ->
+#else
+  HandlerT $ \ hd ->
+#endif
     return $ logFuncByHandlerV (get_logger_v (rheSite $ handlerEnv hd))
 
 
-withLogFuncInHandlerT ::
-    LoggingFunc
-    -> HandlerT site m a
-    -> HandlerT site m a
-withLogFuncInHandlerT log_func (HandlerT f) = HandlerT $ \hd -> do
-    let rhe  = handlerEnv hd
-    let rhe' = rhe { rheLog = log_func }
+localHandlerDataFunc :: LoggingFunc
+                     -> (HandlerData a b -> r)
+                     -> (HandlerData a b -> r)
+localHandlerDataFunc log_func f hd = f hd'
+  where rhe  = handlerEnv hd
+        rhe' = rhe { rheLog = log_func }
         hd'  = hd { handlerEnv = rhe' }
-    f hd'
+
+
+withLogFuncInHandler :: LoggingFunc
+                     -> HandlerOf site a
+                     -> HandlerOf site a
+#if MIN_VERSION_yesod_core(1, 6, 0)
+withLogFuncInHandler log_func (HandlerFor f) = HandlerFor $ 
+#else
+withLogFuncInHandler log_func (HandlerT f) = HandlerT $
+#endif
+  localHandlerDataFunc log_func f
+
+
+withLogFuncInSubHandler :: LoggingFunc
+                        -> SubHandlerOf site master a
+                        -> SubHandlerOf site master a
+#if MIN_VERSION_yesod_core(1, 6, 0)
+withLogFuncInSubHandler log_func (SubHandlerFor f) = SubHandlerFor $
+#else
+withLogFuncInSubHandler log_func (HandlerT f) = HandlerT $
+#endif
+  localHandlerDataFunc log_func f
+
 
 -- | usually, in 'HandlerT site m', log will go to the logger returned by
 -- 'makeLogger'. With this function, log will be handled by runLoggingTWith
-withSiteLogFuncInHandlerT :: (LoggingTRunner site, Monad m) =>
-    HandlerT site m a
-    -> HandlerT site m a
-withSiteLogFuncInHandlerT h = do
-    foundation <- ask
+withSiteLogFuncInHandler :: (LoggingTRunner site)
+                         => HandlerOf site a
+                         -> HandlerOf site a
+withSiteLogFuncInHandler h = do
+    foundation <- getYesod
     runLoggingTWith foundation $ LoggingT $ \log_func ->
-        withLogFuncInHandlerT log_func h
+        withLogFuncInHandler log_func h
 
 
 cutLogFileThenArchive :: FilePath -> IO ()
 cutLogFileThenArchive log_path = do
-    suf_n <- runResourceT $ sourceDirectory dir_name $$ find_next_n (0 :: Int)
+    suf_n <- runResourceT $ runConduit $ sourceDirectory dir_name .| find_next_n (0 :: Int)
     let suf = '.' : show (suf_n + 1 :: Int)
     renameFile log_path (log_path ++ suf)
     where
@@ -409,6 +448,7 @@ annotateRethrowIOError :: String
 annotateRethrowIOError loc m_handle m_fp ex =
   throwIO $ annotateIOError ex loc m_handle m_fp
 
+#if !MIN_VERSION_yesod_core(1, 4, 0)
 -- | XXX: copied from source of yesod-core
 formatLogMessage :: DateCacheGetter
                  -> Loc
@@ -433,7 +473,6 @@ formatLogMessage getdate loc src level msg = do
         toLogStr (fileLocationToString loc) `mappend`
         ")\n"
 
-
 -- taken from file-location package
 -- turn the TH Loc loaction information into a human readable string
 -- leaving out the loc_end parameter
@@ -443,3 +482,4 @@ fileLocationToString loc = (loc_package loc) ++ ':' : (loc_module loc) ++
   where
     line = show . fst . loc_start
     char = show . snd . loc_start
+#endif

@@ -1,49 +1,70 @@
 module Yesod.Helpers.Auth where
 
-import Prelude
-import Yesod
+#if !MIN_VERSION_yesod(1, 6, 0)
+import Control.Monad.Trans.Control
+import Control.Monad.Catch
+#endif
+
+import ClassyPrelude.Yesod
 import Yesod.Auth
-import Control.Monad.Catch                  (MonadThrow)
-import Control.Monad
 
-import qualified Data.Text                  as T
+import Yesod.Compat
 
 
-yesodAuthIdDo :: (YesodAuth master, MonadIO m, MonadThrow m, MonadBaseControl IO m) =>
-                (AuthId master -> HandlerT master m a)
-                -> HandlerT master m a
+yesodAuthIdDo :: (YesodAuth master, MonadHandler m, master ~ HandlerSite m)
+              => (AuthId master -> m a)
+              -> m a
 yesodAuthIdDo f = do
-    liftHandlerT maybeAuthId
-        >>= maybe (permissionDeniedI $ (T.pack "Login Required")) return
-        >>= f
+#if MIN_VERSION_yesod(1, 6, 0)
+  liftHandler maybeAuthId
+#else
+  liftHandlerT maybeAuthId
+#endif
+      >>= maybe (permissionDeniedI $ asText "Login Required") return
+      >>= f
 
 
-yesodAuthIdDoSub :: (YesodAuth master, MonadIO m, MonadThrow m, MonadBaseControl IO m) =>
-                    (AuthId master -> HandlerT site (HandlerT master m) a)
-                    -> HandlerT site (HandlerT master m) a
+#if !MIN_VERSION_yesod(1, 6, 0)
+yesodAuthIdDoSub :: ( YesodAuth master, MonadHandler m, master ~ HandlerSite m, MonadBaseControl IO m
+                    , h ~ HandlerT site m
+                    )
+                 => (AuthId master -> h a)
+                 -> h a
 yesodAuthIdDoSub f = do
-    (lift $ liftHandlerT maybeAuthId)
-        >>= maybe (permissionDeniedI $ (T.pack "Login Required")) return
+    lift (liftHandlerT maybeAuthId)
+        >>= maybe (permissionDeniedI $ asText "Login Required") return
         >>= f
+#endif
 
 
-yesodAuthEntityDo :: (YesodAuthPersist master, MonadIO m, MonadThrow m, MonadBaseControl IO m) =>
-                    ((AuthId master, AuthEntity master) -> HandlerT master m a)
-                    -> HandlerT master m a
+yesodAuthEntityDo :: (YesodAuthPersist master, MonadHandler m, master ~ HandlerSite m)
+                  => ((AuthId master, AuthEntity master) -> m a)
+                  -> m a
 yesodAuthEntityDo f = do
-    user_id <- liftHandlerT maybeAuthId
-                >>= maybe (permissionDeniedI $ (T.pack "Login Required")) return
+    user_id <-
+#if MIN_VERSION_yesod(1, 6, 0)
+      liftHandler maybeAuthId
+#else
+      liftHandlerT maybeAuthId
+#endif
+                >>= maybe (permissionDeniedI $ asText "Login Required") return
     let get_user =
 #if MIN_VERSION_yesod_core(1, 4, 0)
                 getAuthEntity
 #else
                 runDB . get
 #endif
-    user <- liftHandlerT (get_user user_id)
-                >>= maybe (permissionDeniedI $ (T.pack "AuthEntity not found")) return
+    user <-
+#if MIN_VERSION_yesod(1, 6, 0)
+      liftHandler (get_user user_id)
+#else
+      liftHandlerT (get_user user_id)
+#endif
+                >>= maybe (permissionDeniedI $ asText "AuthEntity not found") return
     f (user_id, user)
 
 
+#if !MIN_VERSION_yesod(1, 6, 0)
 yesodAuthEntityDoSub :: (YesodAuthPersist master, MonadIO m, MonadThrow m, MonadBaseControl IO m) =>
                     ((AuthId master, AuthEntity master) -> HandlerT site (HandlerT master m) a)
                     -> HandlerT site (HandlerT master m) a
@@ -55,14 +76,15 @@ yesodAuthEntityDoSub f = do
                 runDB . get
 #endif
     user_id <- lift (liftHandlerT maybeAuthId)
-                >>= maybe (permissionDeniedI $ (T.pack "Login Required")) return
+                >>= maybe (permissionDeniedI $ asText "Login Required") return
     user <- lift (liftHandlerT $ get_user user_id)
-                >>= maybe (permissionDeniedI $ (T.pack "AuthEntity not found")) return
+                >>= maybe (permissionDeniedI $ asText "AuthEntity not found") return
     f (user_id, user)
+#endif
 
 
 -- | 用于实现一种简单的身份认证手段：使用 google email 作为用户标识
-newtype GoogleEmail = GoogleEmail { unGoogleEmail :: T.Text }
+newtype GoogleEmail = GoogleEmail { unGoogleEmail :: Text }
                     deriving (Show, Eq, PathPiece)
 
 -- | used to implement 'authenticate' method of 'YesodAuth' class
@@ -81,10 +103,10 @@ maybeAuthIdGeImpl = do
     liftM (fmap GoogleEmail) $ lookupSession "authed_gmail"
 
 
-eitherGetLoggedInUserId :: YesodAuth master
-                        => HandlerT master IO (Either AuthResult (AuthId master))
+eitherGetLoggedInUserId :: (YesodAuth master, MonadHandler m, HandlerSite m ~ master)
+                        => m (Either AuthResult (AuthId master))
 eitherGetLoggedInUserId = do
-    m_uid <- maybeAuthId
+    m_uid <- liftMonadHandler maybeAuthId
     case m_uid of
         Nothing -> return $ Left AuthenticationRequired
         Just uid -> return $ Right uid

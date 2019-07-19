@@ -9,12 +9,13 @@ import qualified Network.HTTP.Types         as H
 import Data.Proxy
 import Data.Typeable                        (Typeable)
 import Data.Time                            (TimeZone)
-import Control.Monad.Catch                  (MonadThrow)
 
 import Yesod.Helpers.Json                   (jsonDecodeKey, jsonEncodeKey)
 import Yesod.Helpers.Form                   (nameToFs)
 import Yesod.Helpers.Handler                (lookupReqAccept, matchMimeType, retainHttpParams)
 import Yesod.Helpers.ParamNames
+
+import Yesod.Compat
 
 -- | Any logged-in user on Web
 -- 本意是要打算支持多种类型用户互相独立地登录
@@ -47,7 +48,7 @@ class
 
 
 
-getLoggedInUser :: forall u site.
+getLoggedInUser :: forall u site m.
     ( LoginUser site u
 #if MIN_VERSION_persistent(2, 0, 0)
 
@@ -63,14 +64,15 @@ getLoggedInUser :: forall u site.
     , PersistStore (YesodDB site)
 #endif
     , YesodPersist site
-    ) =>
-    HandlerT site IO (Maybe (Entity u))
+    , MonadHandler m, HandlerSite m ~ site
+    )
+    => m (Maybe (Entity u))
 getLoggedInUser = do
     let mu = Proxy :: Proxy u
     maybe_key <- getLoggedInId mu
     case maybe_key of
         Nothing -> return Nothing
-        Just k -> runDB $ liftM (fmap $ Entity k) $ get k
+        Just k -> liftMonadHandler $ runDB $ liftM (fmap $ Entity k) $ get k
 
 getLoggedInIdent :: (LoginUser site u, MonadHandler m, HandlerSite m ~ site)
                  => Proxy u
@@ -90,27 +92,31 @@ getLoggedInId mu = do
 
 
 -- | 在 session 中标记某个用户为登录状态
-markLoggedIn :: forall u site . (LoginUser site u)
-             => Key u -> HandlerT site IO ()
+markLoggedIn :: forall u site m.
+                (LoginUser site u, MonadHandler m, HandlerSite m ~ site)
+             => Key u
+             -> m ()
 markLoggedIn uid = do
     foundation <- getYesod
     let sk = loginIdentSK foundation (Proxy :: Proxy u)
     setSession sk $ jsonEncodeKey uid
 
 
-markLoggedOut :: (LoginUser site u) => Proxy u -> HandlerT site IO ()
+markLoggedOut :: (LoginUser site u, MonadHandler m, HandlerSite m ~ site)
+              => Proxy u
+              -> m ()
 markLoggedOut mu = do
     foundation <- getYesod
     let sk = loginIdentSK foundation mu
     deleteSession sk
 
 
-data LoggedInHandler u site m a =
+data LoggedInHandler u site a =
             LoggedInHandler
-                (forall msg. RenderMessage site msg => msg -> HandlerT site m a)
+                (forall msg. RenderMessage site msg => msg -> HandlerOf site a)
                     -- a function to do "redirect"
                     -- when login is required
-                (Entity u -> HandlerT site m a)
+                (Entity u -> HandlerOf site a)
                     -- the real handler function
 
 runLoggedInHandler ::
@@ -130,8 +136,10 @@ runLoggedInHandler ::
     , PersistStore (YesodDB site)
 #endif
     , YesodPersist site
-    ) =>
-    message -> LoggedInHandler u site IO a -> HandlerT site IO a
+    )
+    => message
+    -> LoggedInHandler u site a
+    -> HandlerOf site a
 runLoggedInHandler msg (LoggedInHandler rdr h) = do
     mu <- getLoggedInUser
     case mu of
@@ -162,42 +170,36 @@ runLoggedInHandler msg (LoggedInHandler rdr h) = do
 --
 -- 没有使用 setMessage setUltDest 是为了减少使用 session
 -- Yesod 的 session 内容不宜太多，因全部 session 都直接加密保存于 client
-redirectToLoginRoute ::
-    ( RenderMessage site message
-    , MonadIO m
-    , MonadThrow m
-    , MonadBaseControl IO m
-    ) =>
-    Route site -> message -> HandlerT site m a
+redirectToLoginRoute :: ( RenderMessage site message, MonadHandler m, HandlerSite m ~ site)
+                     => Route site
+                     -> message
+                     -> m a
 redirectToLoginRoute login_route msg = do
     url_render_p <- getUrlRenderParams
     m_current_r <- getCurrentRoute
     mr <- getMessageRender
     req <- getRequest
     redirect $ url_render_p login_route $
-        (loginMsgParamName, mr msg) : case m_current_r of
-                                    Nothing -> []
-                                    Just r -> [ (returnUrlParamName, url_render_p r (reqGetParams req)) ]
+        (loginMsgParamName, mr msg) :
+          case m_current_r of
+            Nothing -> []
+            Just r -> [ (returnUrlParamName, url_render_p r (reqGetParams req)) ]
 
 data LoginParams = LoginParams {
                     loginParamFromUrl   :: Maybe Text
                     , loginParamMessage :: Maybe Text
                     }
 
-getLoginParam :: (MonadIO m, MonadThrow m, MonadBaseControl IO m) =>
-    HandlerT site m LoginParams
+getLoginParam :: (MonadHandler m) => m LoginParams
 getLoginParam = do
     u <- lk returnUrlParamName
     msg <- lk loginMsgParamName
     return $ LoginParams u msg
-    where
-        lk x = lookupPostParam x >>= maybe (lookupGetParam x) (return . Just)
+    where lk x = lookupPostParam x >>= maybe (lookupGetParam x) (return . Just)
 
-loginParamHiddenFormParts ::
-    -- (Monad m, PathPiece p, RenderMessage (HandlerSite m) FormMessage) =>
-    (MonadIO m, MonadBaseControl IO m, MonadThrow m
-    , RenderMessage site FormMessage) =>
-    MForm (HandlerT site m) [(FormResult (Maybe Text), FieldView site)]
+
+loginParamHiddenFormParts :: (RenderMessage site FormMessage, MonadHandler m, HandlerSite m ~ site)
+                          => MForm m [(FormResult (Maybe Text), FieldView site)]
 loginParamHiddenFormParts = do
     lp <- lift getLoginParam
     sequence

@@ -6,6 +6,7 @@ module Yesod.Helpers.Form where
 
 -- {{{1 imports
 import ClassyPrelude.Yesod hiding (catch)
+import Control.Arrow (left)
 
 #if MIN_VERSION_yesod_form(1, 3, 8)
 import Yesod.Form.Bootstrap3                ( renderBootstrap3
@@ -33,24 +34,28 @@ import qualified Data.Attoparsec.ByteString as Atto
 
 import Control.Monad.RWS.Lazy               (RWST)
 import Text.Blaze                           (Markup)
-import Control.Monad.Trans.Resource         (transResourceT)
 import Control.Monad.Trans.Maybe            (runMaybeT)
 import Control.Arrow                        (right)
 import Data.Conduit.Binary                  (sourceLbs, sinkLbs)
 
-import Data.List                            (nub)
 import Text.Blaze.Renderer.Utf8             (renderMarkup)
-import Control.Monad.Catch                  (catch)
 import Text.Parsec                          (parse, space, eof, Parsec)
-import Control.Monad.Except                 (runExceptT, throwError, ExceptT(..), withExceptT)
+import Control.Monad.Except                 (runExceptT, throwError, ExceptT(..), withExceptT, mapExceptT)
 import Data.Aeson.Types                     (parseEither)
-import Data.Yaml                            (decodeEither)
+import Data.Yaml                            (decodeEither')
 
 import qualified Codec.Archive.Smooth.All as AS
+
+#if MIN_VERSION_classy_prelude(1, 4, 0)
+import Control.Monad.Trans.Control
+import Control.Monad.Catch                  (throwM)
+#endif
 
 import Yesod.Helpers.Message
 import Yesod.Helpers.Parsec
 import Yesod.Helpers.Utils                  (normalizeChineseMobileNum)
+
+import Yesod.Compat as YC
 -- }}}1
 
 
@@ -158,7 +163,7 @@ fsAddCssClass :: Text -> FieldSettings site -> FieldSettings site
 fsAddCssClass css_cls fs = fs { fsAttrs = new_attrs' }
     where
         classes = fromMaybe "" $ lookup "class" $ fsAttrs fs
-        new_classes = T.unwords (nub $ css_cls : T.words classes)
+        new_classes = T.unwords (ordNub $ css_cls : T.words classes)
         new_attrs = flip map (fsAttrs fs) $ \(n, v) ->
                         let new_v = if n == "class"
                                        then new_classes
@@ -171,11 +176,12 @@ fsAddCssClass css_cls fs = fs { fsAttrs = new_attrs' }
 -- }}}1
 
 
-minimialLayoutBody :: (Yesod site, MonadIO m, MonadThrow m, MonadBaseControl IO m) =>
-                    WidgetT site IO () -> HandlerT site m Html
+minimialLayoutBody :: (Yesod site)
+                   => WidgetOf site
+                   -> HandlerOf site Html
 -- {{{1
 minimialLayoutBody widget = do
-    pc <- liftHandlerT $ widgetToPageContent widget
+    pc <- liftMonadHandler $ widgetToPageContent widget
 #if MIN_VERSION_yesod_core(1, 2, 20)
     withUrlRenderer
 #else
@@ -186,17 +192,17 @@ minimialLayoutBody widget = do
 
 
 -- | 把 form 的 html 代码用 json 打包返回
-jsonOutputForm :: (Yesod site, MonadIO m, MonadThrow m, MonadBaseControl IO m) =>
-    WidgetT site IO () -> HandlerT site m Value
+jsonOutputForm :: (Yesod site)
+               => WidgetOf site
+               -> HandlerOf site Value
 jsonOutputForm = jsonOutputFormMsg (Nothing :: Maybe Text)
 
+
 -- | 同上，只是增加了 message 字段
-jsonOutputFormMsg :: (Yesod site, RenderMessage site message
-                    , MonadIO m, MonadThrow m, MonadBaseControl IO m
-                    ) =>
-                    Maybe message
-                    -> WidgetT site IO ()
-                    -> HandlerT site m Value
+jsonOutputFormMsg :: (Yesod site, RenderMessage site message)
+                  => Maybe message
+                  -> WidgetOf site
+                  -> HandlerOf site Value
 -- {{{1
 jsonOutputFormMsg m_msg formWidget = do
     body <- liftM (TE.decodeUtf8 . LB.toStrict . renderMarkup)
@@ -209,22 +215,23 @@ jsonOutputFormMsg m_msg formWidget = do
 -- }}}1
 
 
-type ShowFormPage site m = WidgetT site IO () -> Enctype -> HandlerT site m Html
+type ShowFormPage site = WidgetOf site -> Enctype -> HandlerOf site Html
 
-jsonOrHtmlOutputForm :: (Yesod site, MonadIO m, MonadThrow m, MonadBaseControl IO m) =>
-    ShowFormPage site m
-    -> WidgetT site IO ()
-    -> Enctype
-    -> [A.Pair]
-    -> HandlerT site m TypedContent
+jsonOrHtmlOutputForm :: (Yesod site)
+                     => ShowFormPage site
+                     -> WidgetOf site
+                     -> Enctype
+                     -> [A.Pair]
+                     -> HandlerOf site TypedContent
 jsonOrHtmlOutputForm show_form formWidget formEnctype other_data = do
     jsonOrHtmlOutputForm' (show_form formWidget formEnctype) formWidget other_data
 
-jsonOrHtmlOutputForm' :: (Yesod site, MonadIO m, MonadThrow m, MonadBaseControl IO m) =>
-    HandlerT site m Html
-    -> WidgetT site IO ()
-    -> [A.Pair]
-    -> HandlerT site m TypedContent
+
+jsonOrHtmlOutputForm' :: (Yesod site)
+                      => HandlerOf site Html
+                      -> WidgetOf site
+                      -> [A.Pair]
+                      -> HandlerOf site TypedContent
 -- {{{1
 jsonOrHtmlOutputForm' show_form formWidget other_data = do
     selectRep $ do
@@ -331,7 +338,7 @@ entityField ::
     ) =>
     msg
     -> msg
-    -> Field (HandlerT site IO) (Entity val)
+    -> Field (HandlerOf site) (Entity val)
 entityField invalid_msg not_found_msg =
     checkMMap f (toPathPiece . entityKey) strippedTextField
     where
@@ -352,7 +359,7 @@ entityFieldDefault ::
 #endif
     , YesodPersist site
     , PathPiece (Key val)
-    ) => Field (HandlerT site IO) (Entity val)
+    ) => Field (HandlerOf site) (Entity val)
 entityFieldDefault = entityField MsgInvalidDbObjectId MsgObjectNotFoundById
 
 
@@ -371,7 +378,7 @@ entityKeyField ::
     ) =>
     msg
     -> msg
-    -> Field (HandlerT site IO) (Key val)
+    -> Field (HandlerOf site) (Key val)
 entityKeyField = (convertToEntityKeyField .) . entityField
 
 
@@ -387,11 +394,18 @@ entityKeyFieldDefault ::
 #endif
     , YesodPersist site
     , PathPiece (Key val)
-    ) => Field (HandlerT site IO) (Key val)
+    ) => Field (HandlerOf site) (Key val)
 entityKeyFieldDefault = entityKeyField MsgInvalidDbObjectId MsgObjectNotFoundById
 
 
-convertToEntityKeyField :: (PersistEntity a, Functor m) => Field m (Entity a) -> Field m (Key a)
+convertToEntityKeyField :: (Functor m
+#if MIN_VERSION_persistent(2, 9, 0)
+#else
+                          , PersistEntity a
+#endif
+                           )
+                        => Field m (Entity a)
+                        -> Field m (Key a)
 convertToEntityKeyField = convertField entityKey $ flip Entity (error "fake entity value")
 
 
@@ -410,7 +424,7 @@ entityKeyHiddenField ::
     ) =>
     msg
     -> msg
-    -> Field (HandlerT site IO) (Key val)
+    -> Field (HandlerOf site) (Key val)
 entityKeyHiddenField invalid_msg not_found_msg =
     checkMMap f toPathPiece hiddenField
     where
@@ -431,7 +445,7 @@ entityKeyHiddenFieldDefault ::
 #endif
     , YesodPersist site
     , PathPiece (Key val)
-    ) => Field (HandlerT site IO) (Key val)
+    ) => Field (HandlerOf site) (Key val)
 entityKeyHiddenFieldDefault = entityKeyHiddenField MsgInvalidDbObjectId MsgObjectNotFoundById
 
 
@@ -450,7 +464,7 @@ entityUniqueKeyField ::
     ) =>
     (Text -> msg)
     -> (Text -> Unique val)
-    -> Field (HandlerT site IO) (Entity val)
+    -> Field (HandlerOf site) (Entity val)
 -- {{{1
 entityUniqueKeyField not_found_msg mk_unique =
     checkMMap f (toPathPiece . entityKey) strippedTextField
@@ -637,8 +651,8 @@ checkFieldDBUniqueId ::
     -> msg
     -> Maybe (Key val)
         -- ^ Old value. Don't check DB if result is the same as this.
-    -> Field (HandlerT site IO) a
-    -> Field (HandlerT site IO) a
+    -> Field (HandlerOf site) a
+    -> Field (HandlerOf site) a
 checkFieldDBUniqueId mk_unique msg m_old_id = checkM (runDB . dbCheckFieldDBUniqueId mk_unique msg m_old_id)
 
 
@@ -699,8 +713,8 @@ checkFieldDBUnique2 ::
     -> msg
     -> Maybe a
         -- ^ Old value. Don't check DB if result is the same as this.
-    -> Field (HandlerT site IO) a
-    -> Field (HandlerT site IO) a
+    -> Field (HandlerOf site) a
+    -> Field (HandlerOf site) a
 -- {{{1
 checkFieldDBUnique2 mk_unique msg m_old_val = checkMMap chk id
     where
@@ -728,8 +742,8 @@ checkFieldDBUnique ::
     ) =>
     (a -> Unique val)
     -> msg
-    -> Field (HandlerT site IO) a
-    -> Field (HandlerT site IO) a
+    -> Field (HandlerOf site) a
+    -> Field (HandlerOf site) a
 checkFieldDBUnique mk_unique msg = checkFieldDBUnique2 mk_unique msg Nothing
 
 
@@ -783,9 +797,9 @@ data BytestringTooLarge = BytestringTooLarge
 
 instance Exception BytestringTooLarge
 
-limitedSizeConduitBs ::
-    (MonadThrow m) =>
-    Int -> Conduit B.ByteString m B.ByteString
+limitedSizeConduitBs :: (MonadThrow m)
+                     => Int
+                     -> ConduitC B.ByteString m B.ByteString
 -- {{{1
 limitedSizeConduitBs max_size = go 0
     where
@@ -806,7 +820,7 @@ limitedSizeConduitBs max_size = go 0
 fieldExceptionToMessage :: forall m e msg a.
     ( RenderMessage (HandlerSite m) msg
     , Exception e
-    , MonadCatch m
+    , MonadHandlerCatch m
     ) =>
     (e -> msg)           -- ^ make a message when file size exceeds limit
     -> Field m a
@@ -814,13 +828,13 @@ fieldExceptionToMessage :: forall m e msg a.
 fieldExceptionToMessage mk_msg f = f { fieldParse  = p }
     where
         p txts fis = fieldParse f txts fis
-                        `catch` (\err -> return $ Left $ SomeMessage $ mk_msg err)
+                        `YC.catch` (\err -> return $ Left $ SomeMessage $ mk_msg err)
 
 
 -- | modify fileField to a size-limited one.
 limitFileSize :: ( MonadResource m
                  , RenderMessage (HandlerSite m) msg
-                 , MonadCatch m
+                 , MonadHandlerCatch m
                  , Integral i
                  )
               => msg         -- ^ make a message when file size exceeds limit
@@ -831,7 +845,7 @@ limitFileSize err_msg max_size field =
     let h (_ :: BytestringTooLarge) = err_msg
         c       = limitedSizeConduitBs (fromIntegral max_size)
         f fi    = return
-                    (Right $ fi { fileSourceRaw = fileSourceRaw fi $= c }
+                    (Right $ fi { fileSourceRaw = fileSourceRaw fi .| c }
                         :: Either Text FileInfo
                     )
     in fieldExceptionToMessage h $ checkM f field
@@ -880,8 +894,10 @@ smopt field settings initv = do
     return res
 
 
-renderBootstrapS :: Monad m =>
-    Markup -> FormResult a -> SMForm m (FormResult a, WidgetT (HandlerSite m) IO ())
+renderBootstrapS :: Monad m
+                 => Markup
+                 -> FormResult a
+                 -> SMForm m (FormResult a, WidgetOf (HandlerSite m))
 renderBootstrapS extra result = do
     views <- liftM reverse $ SS.get
     let aform = formToAForm $ return (result, views)
@@ -902,7 +918,7 @@ renderBootstrap3S :: Monad m
                   => BootstrapFormLayout
                   -> Markup
                   -> FormResult a
-                  -> SMForm m (FormResult a, WidgetT (HandlerSite m) IO ())
+                  -> SMForm m (FormResult a, WidgetOf (HandlerSite m))
 renderBootstrap3S layout extra result = do
     views <- liftM reverse $ SS.get
     let aform = formToAForm $ return (result, views)
@@ -914,7 +930,7 @@ renderBootstrap3S layout extra result = do
 renderBootstrapS' :: Monad m =>
     Markup
     -> SMForm m (FormResult a)
-    -> MForm m (FormResult a, WidgetT (HandlerSite m) IO ())
+    -> MForm m (FormResult a, WidgetOf (HandlerSite m))
 renderBootstrapS' extra result = do
     smToForm $ result >>= renderBootstrapS extra
 
@@ -924,7 +940,7 @@ renderBootstrap3S' :: Monad m
                    => BootstrapFormLayout
                    -> Markup
                    -> SMForm m (FormResult a)
-                   -> MForm m (FormResult a, WidgetT (HandlerSite m) IO ())
+                   -> MForm m (FormResult a, WidgetOf (HandlerSite m))
 renderBootstrap3S' layout extra result = do
   smToForm $ result >>= renderBootstrap3S layout extra
 #endif
@@ -985,7 +1001,7 @@ yamlTextareaField yaml_err p =
     where
         parse_input t = runExceptT $ do
             either (throwError . yaml_err) (return . (,t)) $ do
-                (decodeEither $ TE.encodeUtf8 $ unTextarea t)
+                (left show $ decodeEither' $ TE.encodeUtf8 $ unTextarea t)
                     >>= parseEither p
 -- }}}1
 
@@ -1008,9 +1024,9 @@ yamlFileField yaml_err p file_field = do
     where
         parse_sunk fi = runExceptT $ do
             let file_name = T.unpack $ fileName fi
-            bs <- liftIO $ runResourceT $ fileSourceRaw fi $$ sinkLbs
+            bs <- liftIO $ runResourceT $ runConduit $ fileSourceRaw fi .| sinkLbs
             either (throwError . yaml_err file_name) (return . (fi,)) $
-                (decodeEither $ LB.toStrict bs)
+                (left show $ decodeEither' $ LB.toStrict bs)
                     >>= parseEither (p file_name)
 -- }}}1
 
@@ -1022,7 +1038,11 @@ yamlFileField yaml_err p file_field = do
 -- Supported Archive file formats and compression format depend on simple-archive-conduit
 archivedYamlFilesField :: ( RenderMessage (HandlerSite m) msg
                           , FromJSON a, MonadResource m
+#if MIN_VERSION_yesod(1, 6, 0)
                           , MonadBaseControl IO m
+                          , MonadThrow m
+                          , PrimMonad m
+#endif
                           )
                        => (String -> msg)
                        -> (String -> String -> msg)
@@ -1038,10 +1058,10 @@ archivedYamlFilesField archive_err yaml_err p file_field =
     checkMMap parse_sunk fst file_field
     where
         parse_sunk fi = runExceptT $ do
-            fe_list <- runResourceT $ do
-                    (rsrc1, m_arc) <- (transPipe (transResourceT liftIO) $ fileSourceRaw fi)
-                                        $= AS.autoDecompressByCompressors AS.allKnownDetectiveCompressors
-                                        $$+ AS.autoDetectArchive AS.allKnownDetectiveArchives
+            fe_list <- do
+                    (rsrc1, m_arc) <- transPipe (liftIO . runResourceT) (fileSourceRaw fi)
+                                          .| AS.autoDecompressByCompressors AS.allKnownDetectiveCompressors
+                                          $$+ AS.autoDetectArchive AS.allKnownDetectiveArchives
                     case m_arc of
                         Nothing -> do
                             -- not an archive, treat it as a single file
@@ -1052,16 +1072,17 @@ archivedYamlFilesField archive_err yaml_err p file_field =
                         Just ax -> do
                             rsrc1
                                 $$+- (transPipe
-                                        (transResourceT $ withExceptT archive_err)
+                                        (withExceptT archive_err)
                                         $ AS.extractFilesByDetectiveArchive ax)
-                                =$ CL.consume
+                                .| CL.consume
+
             fmap (fi,) $ liftM catMaybes $ forM fe_list $
                 \(AS.FileEntry file_name file_bs) -> runMaybeT $ do
                     when (LB.length file_bs <= 0) $ mzero
                     when (not $ ".yml" `isSuffixOf` file_name || ".yaml" `isSuffixOf` file_name)
                         mzero
                     lift $ either (throwError . yaml_err file_name) return $
-                            decodeEither (LB.toStrict file_bs) >>= parseEither (p file_name)
+                            left show (decodeEither' (LB.toStrict file_bs)) >>= parseEither (p file_name)
 -- }}}1
 
 
@@ -1086,7 +1107,7 @@ zippedYamlFilesField unzip_err yaml_err p file_field =
     checkMMap parse_sunk fst file_field
     where
         parse_sunk fi = runExceptT $ do
-            bs <- liftIO $ runResourceT $ fileSourceRaw fi $$ sinkLbs
+            bs <- liftIO $ runResourceT $ runConduit $ fileSourceRaw fi .| sinkLbs
             let magic_bytes = LB.take 4 bs
             let is_zip = ct == "application/zip" ||
                             ct == "application/x-zip-compressed" ||
@@ -1105,7 +1126,7 @@ zippedYamlFilesField unzip_err yaml_err p file_field =
         parse_fi_one fi bs = do
             let file_name = T.unpack $ fileName fi
             either (throwError . yaml_err file_name) (return . (fi,) . (:[])) $
-                (decodeEither $ LB.toStrict bs)
+                left show (decodeEither' $ LB.toStrict bs)
                     >>= parseEither (p file_name)
 
         parse_fi_zip fi bs = do
@@ -1117,13 +1138,13 @@ zippedYamlFilesField unzip_err yaml_err p file_field =
                         file_name   = Zip.eRelativePath entry
                     when (B.length file_bs <= 0) $ mzero
                     lift $ either (throwError . yaml_err file_name) return $
-                            decodeEither file_bs >>= parseEither (p file_name)
+                            left show (decodeEither' file_bs) >>= parseEither (p file_name)
 -- }}}1
 
 
 -- | accept an uploaded file and parse it with an Attoparsec Parser
 attoparsecFileField :: ( RenderMessage (HandlerSite m) msg
-                       , MonadResource m, MonadCatch m
+                       , MonadResource m, MonadHandlerCatch m
                        )
                     => (String -> String -> msg)
                             -- ^ error message when fail to parse Yaml file
@@ -1141,54 +1162,52 @@ attoparsecFileField parse_err p file_field = do
                         let file_name = T.unpack $ fileName fi
                         (runExceptT $ do
                             liftM (fi,) $
-                                liftIO $ runResourceT $
-                                    fileSourceRaw fi $$ CA.sinkParser (p file_name)
-                            ) `catch` (\(e :: CA.ParseError) ->
+                                liftIO $ runResourceT $ runConduit $
+                                    fileSourceRaw fi .| CA.sinkParser (p file_name)
+                            ) `YC.catch` (\(e :: CA.ParseError) ->
                                             return $ Left $ parse_err file_name $ show e
                                         )
 -- }}}1
 
 
 -- | used in archivedFilesField
-parseFileInfoAsArchive :: forall e (m :: * -> *).
-                          (MonadBase IO m, MonadThrow m, MonadIO m) =>
-                          ([Char] -> e)
-                          -> FileInfo
-                          -> ResourceT (ExceptT e m) [AS.FileEntry]
+parseFileInfoAsArchive :: forall e m.  ( MonadIO m )
+                        => ([Char] -> e)
+                        -> FileInfo
+                        -> ExceptT e m [AS.FileEntry]
 -- {{{1
 parseFileInfoAsArchive archive_err fi = do
-    (rsrc1, m_arc) <- (transPipe (transResourceT liftIO) $ fileSourceRaw fi)
-                        $= AS.autoDecompressByCompressors AS.allKnownDetectiveCompressors
-                        $$+ AS.autoDetectArchive AS.allKnownDetectiveArchives
+    (rsrc1, m_arc) <- mapExceptT (liftIO . runResourceT) $
+      (transPipe lift (fileSourceRaw fi) {- :: Source (ExceptT e (ResourceT IO))  -})
+          .| AS.autoDecompressByCompressors AS.allKnownDetectiveCompressors
+          $$+ AS.autoDetectArchive AS.allKnownDetectiveArchives
     case m_arc of
         Nothing -> do
             -- not an archive, treat it as a single file
-            bs <- rsrc1 $$+- sinkLbs
+            bs <- mapExceptT (liftIO . runResourceT) $ rsrc1 $$+- sinkLbs
             let file_name = T.unpack $ fileName fi
             return $ return $ AS.FileEntry file_name bs
 
         Just ax -> do
-            rsrc1
+            mapExceptT (liftIO . runResourceT) $
+                rsrc1
                 $$+- (transPipe
-                        (transResourceT $ withExceptT archive_err)
+                        (withExceptT archive_err)
                         $ AS.extractFilesByDetectiveArchive ax)
-                =$ CL.consume
+                .| CL.consume
 -- }}}1
 
 
 fileInfoToFileEntry :: MonadIO m => FileInfo -> m AS.FileEntry
 -- {{{1
 fileInfoToFileEntry fi = do
-    content <- liftIO $ runResourceT $
-                    fileSourceRaw fi $$ sinkLbs
+    content <- liftIO $ runResourceT $ runConduit $
+                    fileSourceRaw fi .| sinkLbs
     return $ AS.FileEntry (T.unpack $ fileName fi) content
 -- }}}1
 
 
-archivedFilesField :: ( RenderMessage (HandlerSite m) msg
-                      , MonadResource m
-                      , MonadBaseControl IO m
-                      )
+archivedFilesField :: ( RenderMessage (HandlerSite m) msg, MonadIO m)
                    => (String -> msg)
                    -> Field m FileInfo
                    -> Field m (FileInfo, [AS.FileEntry])
@@ -1197,7 +1216,7 @@ archivedFilesField archive_err file_field = do
     checkMMap parse_sunk fst file_field
     where
         parse_sunk fi = runExceptT $ do
-            fe_list <- runResourceT $ parseFileInfoAsArchive archive_err fi
+            fe_list <- parseFileInfoAsArchive archive_err fi
             return (fi, fe_list)
 -- }}}1
 
@@ -1205,8 +1224,8 @@ archivedFilesField archive_err file_field = do
 -- | accept an uploaded file and parse it with an Attoparsec Parser
 -- If uploaded file is a zip file, parse files in it one by one.
 archivedAttoparsecFilesField :: ( RenderMessage (HandlerSite m) msg
-                                , MonadResource m, MonadCatch m
-                                , MonadBaseControl IO m
+                                , MonadIO m
+                                , MonadHandlerCatch m
                                 )
                              => (String -> msg)
                              -> (String -> String -> msg)
@@ -1222,14 +1241,14 @@ archivedAttoparsecFilesField archive_err parse_err p file_field = do
     checkMMap parse_sunk fst file_field
     where
         parse_sunk fi = runExceptT $ do
-            fe_list <- runResourceT $ parseFileInfoAsArchive archive_err fi
+            fe_list <- parseFileInfoAsArchive archive_err fi
             fmap (fi,) $ liftM catMaybes $ forM fe_list $
                 \(AS.FileEntry file_name file_bs) -> runMaybeT $ do
                     when (LB.length file_bs <= 0) $ mzero
                     lift $ ExceptT $
-                        (liftM Right $ liftIO $ runResourceT $
-                            sourceLbs file_bs $$ CA.sinkParser (p file_name)
-                        ) `catch` (\(e :: CA.ParseError) ->
+                        (liftM Right $ liftIO $ runResourceT $ runConduit $
+                            sourceLbs file_bs .| CA.sinkParser (p file_name)
+                        ) `YC.catch` (\(e :: CA.ParseError) ->
                                         return $ Left $ parse_err file_name $ show e
                                     )
 -- }}}1
@@ -1238,7 +1257,7 @@ archivedAttoparsecFilesField archive_err parse_err p file_field = do
 -- | accept an uploaded file and parse it with an Attoparsec Parser
 -- If uploaded file is a zip file, parse files in it one by one.
 zippedAttoparsecFilesField :: ( RenderMessage (HandlerSite m) msg
-                              , MonadResource m, MonadCatch m
+                              , MonadResource m, MonadHandlerCatch m
                               )
                            => (String -> msg)
                            -> (String -> String -> msg)
@@ -1254,7 +1273,7 @@ zippedAttoparsecFilesField unzip_err parse_err p file_field = do
     checkMMap parse_sunk fst file_field
     where
         parse_sunk fi = runExceptT $ do
-            bs <- liftIO $ runResourceT $ fileSourceRaw fi $$ sinkLbs
+            bs <- liftIO $ runResourceT $ runConduit $ fileSourceRaw fi .| sinkLbs
             let magic_bytes = LB.take 4 bs
             let is_zip = ct == "application/zip" ||
                             ct == "application/x-zip-compressed" ||
@@ -1274,14 +1293,14 @@ zippedAttoparsecFilesField unzip_err parse_err p file_field = do
             let file_name = T.unpack $ fileName fi
             ExceptT $
                 (liftM Right $ liftM ((fi,) . (:[])) $
-                    liftIO $ runResourceT $
-                        fileSourceRaw fi $$ CA.sinkParser (p file_name)
-                ) `catch` (\(e :: CA.ParseError) ->
+                    liftIO $ runResourceT $ runConduit $
+                        fileSourceRaw fi .| CA.sinkParser (p file_name)
+                ) `YC.catch` (\(e :: CA.ParseError) ->
                                 return $ Left $ parse_err file_name $ show e
                             )
 
         parse_fi_zip fi = do
-            bs <- liftIO $ runResourceT $ fileSourceRaw fi $$ sinkLbs
+            bs <- liftIO $ runResourceT $ runConduit $ fileSourceRaw fi .| sinkLbs
             arc <- either (throwError . unzip_err) return $
                             Zip.toArchiveOrFail bs
             fmap (fi,) $ liftM catMaybes $ forM (Zip.zEntries arc) $ \entry -> runMaybeT $ do
@@ -1289,9 +1308,9 @@ zippedAttoparsecFilesField unzip_err parse_err p file_field = do
                     file_name   = Zip.eRelativePath entry
                 when (B.length file_bs <= 0) $ mzero
                 lift $ ExceptT $
-                    (liftM Right $ liftIO $ runResourceT $
-                        sourceLbs (LB.fromStrict file_bs) $$ CA.sinkParser (p file_name)
-                    ) `catch` (\(e :: CA.ParseError) ->
+                    (liftM Right $ liftIO $ runResourceT $ runConduit $
+                        sourceLbs (LB.fromStrict file_bs) .| CA.sinkParser (p file_name)
+                    ) `YC.catch` (\(e :: CA.ParseError) ->
                                     return $ Left $ parse_err file_name $ show e
                                 )
 -- }}}1
@@ -1342,12 +1361,12 @@ weekDateMsgList =
 
 
 weekDateSelectField :: (RenderMessage site FormMessage, RenderMessage site YHCommonMessage)
-                    => Field (HandlerT site IO) Int
+                    => Field (HandlerOf site) Int
 weekDateSelectField = selectFieldList weekDateMsgList
 
 
-weekDateMultiSelectField :: (RenderMessage site FormMessage, RenderMessage site YHCommonMessage)
-                         => Field (HandlerT site IO) [Int]
+weekDateMultiSelectField :: (RenderMessage site YHCommonMessage)
+                         => Field (HandlerOf site) [Int]
 weekDateMultiSelectField = multiSelectFieldList weekDateMsgList
 
 

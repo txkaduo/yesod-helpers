@@ -23,10 +23,11 @@ import Data.Time                            (parseTime)
 import Control.Monad.Logger
 import qualified Control.Monad.Logger.CallStack as LCS
 import System.Random                        (randomIO)
-#if !MIN_VERSION_classy_prelude(1, 0, 0)
-import Control.Monad.Trans.Control          (MonadBaseControl)
-#endif
+
+#if !MIN_VERSION_classy_prelude(1, 4, 0)
 import System.Timeout                       (timeout)
+#endif
+
 import Network.HTTP.Types                   (parseQueryText, renderQueryText, QueryText, urlEncode)
 import qualified Network.Mime               as MM
 import Network.URI                          (parseURIReference, uriQuery, uriToString
@@ -40,6 +41,8 @@ import qualified Data.ByteString.Lazy       as LB
 import qualified Data.ByteString.Base64.Lazy as LB64
 
 import GHC.Stack
+
+import Yesod.Compat as YC
 -- }}}1
 
 
@@ -241,8 +244,11 @@ foreverUntilFalse f = loop
 -- 结束循环的条件是以下任意一种情况成立
 -- * 工作函数返回 False
 -- * 检查退出函数返回 True
-foreverWithExitCheck :: (MonadIO m, MonadLogger m
-#if MIN_VERSION_classy_prelude(1, 0, 0)
+foreverWithExitCheck :: (MonadIO m
+
+#if MIN_VERSION_classy_prelude(1, 4, 0)
+                          , MonadUnliftIO m
+#elif MIN_VERSION_classy_prelude(1, 0, 0)
                           , MonadCatch m
 #else
                           , MonadBaseControl IO m
@@ -378,7 +384,10 @@ intersperseDelayStmQueue get_key delay_ms old_chan = do
 
 
 -- | 辅助读 intersperseDelayStmQueue 中的信息并处理的函数
-handleReadDelayedStmQueue :: (MonadIO m, MonadLogger m, MonadBaseControl IO m, MonadMask m, Ord b, StmQueue t)
+handleReadDelayedStmQueue :: ( MonadIO m
+                             , YC.MonadHandlerMask m
+                             , Ord b, StmQueue t
+                             )
                           => TVar Bool
                           -- ^ 全局结束标志
                           -> (Maybe SomeException -> m Bool)
@@ -394,7 +403,7 @@ handleReadDelayedStmQueue :: (MonadIO m, MonadLogger m, MonadBaseControl IO m, M
                           -> m ()
 -- {{{1
 handleReadDelayedStmQueue app_exit_var check_exit_between get_key delay_ms in_chan real_work = do
-  bracket
+  YC.bracket
     (liftIO $ intersperseDelayStmQueue get_key delay_ms in_chan)
     cleanup
     (foreverWithExitCheck check_exit_between . loop)
@@ -452,9 +461,13 @@ extractHostFromAbsUrl uri = do
 -- | Prepend a dot on a domain unless it already begins with a dot.
 domainPrependDot :: ( IsString s
 #if MIN_VERSION_mono_traversable(1, 0, 0)
-                    , Eq (Element s), IsSequence s, Semigroup s
+                    , Eq (Element s), IsSequence s
 #else
                     , EqSequence s
+#endif
+
+#if !MIN_VERSION_base(4, 11, 0)
+                    , Semigroup s
 #endif
                     )
                  => s -> s

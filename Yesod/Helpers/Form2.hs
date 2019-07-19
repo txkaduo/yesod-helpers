@@ -49,6 +49,8 @@ import Yesod.Form.Bootstrap3                ( renderBootstrap3
                                             , BootstrapFormLayout(BootstrapBasicForm)
                                             )
 #endif
+
+import Yesod.Compat
 -- }}}1
 
 
@@ -430,7 +432,7 @@ semreqOpt field settings initv = do
 renderBootstrapES :: Monad m =>
                     Markup
                     -> FormResult a
-                    -> SEMForm m (FormResult a, WidgetT (HandlerSite m) IO ())
+                    -> SEMForm m (FormResult a, WidgetOf (HandlerSite m))
 -- {{{1
 renderBootstrapES extra result = do
     views <- liftM reverse $ SS.get
@@ -453,7 +455,7 @@ renderBootstrap3ES :: Monad m
                    => BootstrapFormLayout
                    -> Markup
                    -> FormResult a
-                   -> SEMForm m (FormResult a, WidgetT (HandlerSite m) IO ())
+                   -> SEMForm m (FormResult a, WidgetOf (HandlerSite m))
 renderBootstrap3ES layout extra result = do
     views <- liftM reverse $ SS.get
     let aform = formToAForm $ return (result, views)
@@ -465,7 +467,7 @@ renderBootstrap3ES layout extra result = do
 renderBootstrapES' :: Monad m =>
     Markup
     -> SEMForm m (FormResult a)
-    -> EMForm m (FormResult a, WidgetT (HandlerSite m) IO ())
+    -> EMForm m (FormResult a, WidgetOf (HandlerSite m))
 renderBootstrapES' extra result = do
     runSEMForm $ result >>= renderBootstrapES extra
 
@@ -475,7 +477,7 @@ renderBootstrap3ES' :: Monad m
                     => BootstrapFormLayout
                     -> Markup
                     -> SEMForm m (FormResult a)
-                    -> EMForm m (FormResult a, WidgetT (HandlerSite m) IO ())
+                    -> EMForm m (FormResult a, WidgetOf (HandlerSite m))
 renderBootstrap3ES' layout extra result = do
   runSEMForm $ result >>= renderBootstrap3ES layout extra
 #endif
@@ -582,7 +584,7 @@ optTimeRangeEndpointField :: (RenderMessage site FormMessage, YesodJquery site)
                           -> FieldSettings site
                           -> FieldSettings site
                           -> Maybe UTCTime
-                          -> SEMForm (HandlerT site IO) (FormResult (Maybe UTCTime))
+                          -> SEMForm (HandlerOf site) (FormResult (Maybe UTCTime))
 -- {{{1
 optTimeRangeEndpointField tz is_start day_fs tod_fs old = do
   day <- semopt (jqueryDayField def) day_fs
@@ -623,7 +625,7 @@ reqTimeRangeEndpointField :: (RenderMessage site FormMessage, YesodJquery site)
                           -> FieldSettings site
                           -> FieldSettings site
                           -> Maybe UTCTime
-                          -> SEMForm (HandlerT site IO) (FormResult UTCTime)
+                          -> SEMForm (HandlerOf site) (FormResult UTCTime)
 -- {{{1
 reqTimeRangeEndpointField tz is_start day_fs tod_fs old_time = do
   day <- semreq (jqueryDayField def) day_fs

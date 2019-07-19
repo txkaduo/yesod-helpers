@@ -16,6 +16,7 @@ import Text.Julius (Javascript)
 import Yesod.Helpers.Handler                (lookupReqAccept, matchMimeType)
 import Yesod.Helpers.JSend
 
+import Yesod.Compat
 
 jsonErrorOutput' :: (ToJSON a) => a -> [ (Text, Value) ]
 jsonErrorOutput' msg = [ "message" .= msg, "result" .= ("fail" :: Text) ]
@@ -39,16 +40,18 @@ jsonOkOutputData msg jv = object $ ("data" .= jv) : obj0
 
 -- | 如果是普通页面输出，则，调用 setMessageI 并重定向至指定的 route
 -- 如果是 JSON 输出，则按操作成功的方式输出文字信息
-succeedOutputJsonOrRedirect ::
-    (RenderMessage site message, RedirectUrl site url) =>
-    message -> url -> HandlerT site IO TypedContent
-succeedOutputJsonOrRedirect msg route = do
-    succeedOutputJsonDataOrRedirect msg route []
+succeedOutputJsonOrRedirect :: (RenderMessage site message, RedirectUrl site url, MonadHandler m, HandlerSite m ~ site)
+                            => message
+                            -> url
+                            -> m TypedContent
+succeedOutputJsonOrRedirect msg route = succeedOutputJsonDataOrRedirect msg route []
 
-succeedOutputJsonDataOrRedirect ::
-    forall site message url.
-    (RenderMessage site message, RedirectUrl site url) =>
-    message -> url -> [Pair] -> HandlerT site IO TypedContent
+succeedOutputJsonDataOrRedirect :: forall site message url m.
+                                  (RenderMessage site message, RedirectUrl site url, MonadHandler m, HandlerSite m ~ site)
+                                => message
+                                -> url
+                                -> [Pair]
+                                -> m TypedContent
 succeedOutputJsonDataOrRedirect msg route other_data = do
     selectRep $ do
         provideRep $ do
@@ -59,15 +62,14 @@ succeedOutputJsonDataOrRedirect msg route other_data = do
             return $ jsonOkOutputData tmsg dat
         provideRep $ html 
         where
-            html :: HandlerT site IO Html
-            html = do
-                setMessageI $ msg
-                redirect route
+            html :: m Html
+            html = setMessageI msg >> redirect route
 
-errorOutputJsonOrHtml ::
-    (MonadHandler m, HasContentType a,
-     RenderMessage (HandlerSite m) message) =>
-    message -> m a -> m TypedContent
+
+errorOutputJsonOrHtml :: (MonadHandler m, HasContentType a, RenderMessage (HandlerSite m) message)
+                      => message
+                      -> m a
+                      -> m TypedContent
 errorOutputJsonOrHtml msg showf = do
     msgRender <- getMessageRender
     let tmsg = msgRender msg
@@ -79,11 +81,10 @@ errorOutputJsonOrHtml msg showf = do
             return $ jsonErrorOutput tmsg
 
 
-redirectOrJson ::
-     (RenderMessage (HandlerSite m) message, MonadHandler m
-     , RedirectUrl (HandlerSite m) url
-     ) =>
-    message -> url -> m a
+redirectOrJson :: (RenderMessage (HandlerSite m) message, MonadHandler m, RedirectUrl (HandlerSite m) url)
+               => message
+               -> url
+               -> m a
 redirectOrJson msg route = do
     msgRender <- getMessageRender
     let tmsg = msgRender msg
@@ -96,9 +97,9 @@ redirectOrJson msg route = do
 
 -- | if client accept json (ajax call), give a http 401 status code, and a Location header
 -- otherwise, just a normal http redirect 301
-redirectOrJson401 ::
-     (MonadHandler m, RedirectUrl (HandlerSite m) url) =>
-    url -> m a
+redirectOrJson401 :: (MonadHandler m, RedirectUrl (HandlerSite m) url)
+                  => url
+                  -> m a
 redirectOrJson401 route = do
     is_ajax <- acceptsJson
     if is_ajax
@@ -176,7 +177,7 @@ getOrRedirectJH ::
     , RenderMessage site message
     , RedirectUrl site url
     ) =>
-    message -> url -> Key val -> HandlerT site IO val
+    message -> url -> Key val -> HandlerOf site val
 getOrRedirectJH msg route key = do
     (runDB $ get key) >>= maybe (redirectOrJson msg route) return
 
@@ -199,6 +200,6 @@ getByOrRedirectJH ::
     , RenderMessage site message
     , RedirectUrl site url
     ) =>
-    message -> url -> Unique val -> HandlerT site IO (Entity val)
+    message -> url -> Unique val -> HandlerOf site (Entity val)
 getByOrRedirectJH msg route u_key = do
     (runDB $ getBy u_key) >>= maybe (redirectOrJson msg route) return
