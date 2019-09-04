@@ -13,13 +13,16 @@ import qualified Data.Serialize             as SL
 import qualified Data.Text                  as T
 
 import Language.Haskell.TH.Lift             (deriveLift)
-import Data.Time                            (TimeZone, timeZoneOffsetString)
+import Data.Time                            (TimeZone, timeZoneOffsetString, getCurrentTimeZone, localDay, utcToLocalTime)
 #if MIN_VERSION_time(1,5,0)
 import Data.Time                            (parseTimeM)
 #else
 import System.Locale                        (defaultTimeLocale)
 import Data.Time                            (parseTime)
 #endif
+
+import Data.Time.Calendar
+import Web.PathPieces (showToPathPiece, readFromPathPiece)
 
 import Data.SafeCopy
 import Data.Binary                          (Binary)
@@ -389,4 +392,64 @@ newtype CommaSepPathPieces a = CommaSepPathPieces { unCommaSepPathPieces :: [ a 
 instance PathPiece a => PathPiece (CommaSepPathPieces a) where
   toPathPiece = intercalate "," . map toPathPiece . unCommaSepPathPieces
   fromPathPiece = fmap CommaSepPathPieces . sequence . map fromPathPiece . T.splitOn ","
+
+
+type PathPieceDayRange = PathPieceTuple Day Day
+
+
+data YearMonth = YearMonth Integer Int
+  deriving (Eq, Ord)
+
+-- {{{1 instances
+instance Show YearMonth where
+  show (YearMonth y m) = show y <> "-" <> show m
+
+instance Read YearMonth where
+  readsPrec p s = do
+    (y, s1) <- readsPrec p s
+    case s1 of
+      ('-' : s2) -> do
+        (m, s3) <- readsPrec p s2
+        pure (YearMonth y m, s3)
+
+      _ -> mzero
+
+instance PathPiece YearMonth where
+  toPathPiece = showToPathPiece
+  fromPathPiece = readFromPathPiece
+
+instance ToJSON YearMonth where toJSON = toJSON . toPathPiece
+
+instance FromJSON YearMonth where
+  parseJSON = A.withText "YearMonth" $ maybe mzero return . fromPathPiece
+-- }}}1
+
+type YearMonthList = CommaSepPathPieces YearMonth
+
+yearMonthSucc :: YearMonth -> YearMonth
+yearMonthSucc (YearMonth y 12) = YearMonth (y + 1) 1
+yearMonthSucc (YearMonth y m) = YearMonth y (m + 1)
+
+
+yearMonthPred :: YearMonth -> YearMonth
+yearMonthPred (YearMonth y 1) = YearMonth (y - 1) 12
+yearMonthPred (YearMonth y m) = YearMonth y (m - 1)
+
+
+yearMonthToDayRange :: YearMonth -> (Day, Day)
+yearMonthToDayRange (YearMonth year month) = (day1, day2)
+  where l = gregorianMonthLength year month
+        day1 = fromGregorian year month 1
+        day2 = fromGregorian year month l
+
+
+getCurrentYearMonth :: MonadIO m => m YearMonth
+getCurrentYearMonth = liftIO $ do
+  tz <- getCurrentTimeZone
+  now <- getCurrentTime
+  let today = localDay $ utcToLocalTime tz now
+      (year, month, _) = toGregorian today
+
+  return (YearMonth year month)
+
 
