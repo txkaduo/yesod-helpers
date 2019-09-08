@@ -26,6 +26,9 @@ import Web.PathPieces (showToPathPiece, readFromPathPiece)
 
 import Data.SafeCopy
 import Data.Binary                          (Binary)
+#if MIN_VERSION_binary_orphans(1, 0, 0)
+import Data.Binary.Instances                ()
+#endif
 import Data.Binary.Orphans                  ()
 import Database.Persist.Sql                 (PersistFieldSql(..))
 import Control.DeepSeq                      (NFData(..))
