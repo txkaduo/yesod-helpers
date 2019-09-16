@@ -12,6 +12,7 @@ import qualified Data.Sequence              as Sq
 import Data.Time                            ( localTimeToUTC, zonedTimeToUTC, TimeZone, ParseTime
                                             , LocalTime(..), midnight, TimeOfDay, addDays
                                             , NominalDiffTime, TimeLocale(..), TimeZone(..)
+                                            , getZonedTime, zonedTimeToLocalTime
                                             )
 import Data.Time.Clock.POSIX                ( posixSecondsToUTCTime
                                             , utcTimeToPOSIXSeconds)
@@ -544,5 +545,8 @@ encodeUtf8Rfc5987 t = "UTF-8''" <> urlEncode False (encodeUtf8 t)
 defaultExtensionOfMime :: MM.MimeType -> Maybe MM.Extension
 defaultExtensionOfMime mt = fmap fst $ find ((== mt) . snd) (mapToList MM.defaultMimeMap)
 
+
+getTodayLocal :: MonadIO m => m Day
+getTodayLocal = liftIO $ localDay . zonedTimeToLocalTime <$> getZonedTime
 
 -- vim: set foldmethod=marker:
