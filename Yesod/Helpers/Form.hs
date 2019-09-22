@@ -1,6 +1,7 @@
 -- {{{1 language options
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 -- }}}1
 module Yesod.Helpers.Form where
 
@@ -43,6 +44,7 @@ import Text.Parsec                          (parse, space, eof, Parsec)
 import Control.Monad.Except                 (runExceptT, throwError, ExceptT(..), withExceptT, mapExceptT)
 import Data.Aeson.Types                     (parseEither)
 import Data.Yaml                            (decodeEither')
+import Data.List.NonEmpty                   (NonEmpty, nonEmpty)
 
 import qualified Codec.Archive.Smooth.All as AS
 
@@ -78,6 +80,25 @@ data SingleFormInputReqOpt :: FormInputReqOpt -> * where
   SingleFormInputReq :: SingleFormInputReqOpt 'FormInputReq
   SingleFormInputOpt :: SingleFormInputReqOpt 'FormInputOpt
 
+
+fromSingleFormInputReqOpt :: SingleFormInputReqOpt ro -> FormInputReqOpt
+fromSingleFormInputReqOpt SingleFormInputReq = FormInputReq
+fromSingleFormInputReqOpt SingleFormInputOpt = FormInputOpt
+
+
+formResultMultiToNonEmpty :: (RenderMessage (HandlerSite m) FormMessage, MonadHandler m)
+                          => SingleFormInputReqOpt ro
+                          -> FormResult (FormResultTypeReqOpt ro [a])
+                          -> m (FormResult (FormResultTypeReqOpt ro (NonEmpty a)))
+formResultMultiToNonEmpty opt_or_req old_res = do
+  case opt_or_req of
+    SingleFormInputOpt -> return $ fmap (join . fmap nonEmpty) old_res
+    SingleFormInputReq -> case fmap nonEmpty old_res of
+                            FormSuccess Nothing -> do render_msg <- getMessageRender
+                                                      return $ FormFailure [ render_msg MsgValueRequired ]
+                            FormSuccess (Just x) -> return $ FormSuccess x
+                            FormFailure x        -> return $ FormFailure x
+                            FormMissing          -> return FormMissing
 
 
 data FormOption = FormOption
