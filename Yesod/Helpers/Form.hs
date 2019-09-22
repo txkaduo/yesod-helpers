@@ -1,6 +1,6 @@
 -- {{{1 language options
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
 -- }}}1
 module Yesod.Helpers.Form where
 
@@ -65,6 +65,19 @@ import Yesod.Compat as YC
 type PersistRecordBackend record backend = (PersistEntity record, PersistEntityBackend record ~ BaseBackend backend)
 #endif
 #endif
+
+
+-- | For sharing code between 'XXreq' and 'XXopt'
+data FormInputReqOpt = FormInputReq | FormInputOpt
+
+type family FormResultTypeReqOpt (ro :: FormInputReqOpt) a where
+  FormResultTypeReqOpt 'FormInputReq a = a
+  FormResultTypeReqOpt 'FormInputOpt a = Maybe a
+
+data SingleFormInputReqOpt :: FormInputReqOpt -> * where
+  SingleFormInputReq :: SingleFormInputReqOpt 'FormInputReq
+  SingleFormInputOpt :: SingleFormInputReqOpt 'FormInputOpt
+
 
 
 data FormOption = FormOption
