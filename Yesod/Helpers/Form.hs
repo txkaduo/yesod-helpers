@@ -130,8 +130,24 @@ fsSetAttr attr_name attr_val (fs@FieldSettings{ fsAttrs = attrs }) =
   fs { fsAttrs = insertMap attr_name attr_val attrs }
 
 
+fsSetAttrWith :: Text
+              -> (Maybe Text -> Text)
+              -> FieldSettings site -> FieldSettings site
+fsSetAttrWith attr_name new_from_old (fs@FieldSettings{ fsAttrs = attrs }) =
+  fs { fsAttrs = insertMap attr_name (new_from_old $ lookup attr_name attrs) attrs }
+
+
 fsSetPlaceholder :: Text -> FieldSettings site -> FieldSettings site
 fsSetPlaceholder = fsSetAttr "placeholder"
+
+
+fsSetPlaceholderDefault :: Text -> FieldSettings site -> FieldSettings site
+fsSetPlaceholderDefault s =
+  fsSetAttrWith "placeholder" $
+    \ mt ->
+      case fromMaybe "" mt of
+        t | null t -> s
+          | otherwise -> t
 
 
 fsSetReadOnly :: FieldSettings site -> FieldSettings site
