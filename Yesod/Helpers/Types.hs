@@ -451,8 +451,10 @@ getCurrentYearMonth = liftIO $ do
   tz <- getCurrentTimeZone
   now <- getCurrentTime
   let today = localDay $ utcToLocalTime tz now
-      (year, month, _) = toGregorian today
+  return (yearMonthFromDay today)
 
-  return (YearMonth year month)
 
+yearMonthFromDay :: Day -> YearMonth
+yearMonthFromDay d = YearMonth year month
+  where (year, month, _) = toGregorian d
 
