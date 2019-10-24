@@ -160,7 +160,7 @@ fromFuzzyDay :: FuzzyDay -> Day
 fromFuzzyDay fd = fromGregorian (fromIntegral y) m d
     where
         (y, m, d) = case fd of
-                        FuzzyDayY a -> (a, 6, 31)
+                        FuzzyDayY a -> (a, 7, 1)
                         FuzzyDayYM a b -> (a, b, 15)
                         FuzzyDayYMD a b c -> (a, b, c)
 -- }}}1
