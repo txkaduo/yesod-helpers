@@ -55,6 +55,9 @@ partlyUpsert :: ( MonadIO m
 #endif
                 , PartlyUpdatablePersistEntity record
                 , PersistUnique backend
+#if MIN_VERSION_persistent(2, 10, 0)
+                , AtLeastOneUniqueKey record
+#endif
                  )
              => record
              -> ReaderT backend m
