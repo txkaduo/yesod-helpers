@@ -815,12 +815,16 @@ isEmptyFieldView fv = fvId fv == ""
 fvClearErrors :: FieldView site -> FieldView site
 fvClearErrors fv = fv { fvErrors = Nothing }
 
+
+extractFormResult :: Alternative m => FormResult a -> m a
+extractFormResult (FormSuccess x) = pure x
+extractFormResult _               = empty
+
+
 -- | call a function when FormResult is success,
 -- otherwise use the default value
 caseFormResult :: b -> (a -> b) -> FormResult a -> b
-caseFormResult x _ FormMissing      = x
-caseFormResult x _ (FormFailure _)  = x
-caseFormResult _ f (FormSuccess r)  = f r
+caseFormResult x f = maybe x f . extractFormResult
 
 
 -- | 'join' for FormResult.
@@ -839,7 +843,7 @@ ifFormResult ::
     (a -> Bool)      -- ^ check value is expected
     -> FormResult a
     -> Bool             -- ^ if result is expected
-ifFormResult = caseFormResult False
+ifFormResult f = maybe False f . extractFormResult
 
 
 data BytestringTooLarge = BytestringTooLarge
