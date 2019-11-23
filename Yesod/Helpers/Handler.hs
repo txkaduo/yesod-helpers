@@ -219,16 +219,16 @@ handleGetPostEMFormNoToken form show_form handle_form_data = do
 
 -- | Handler a GET form
 -- If form failed/missing, abort processing and output empty widget (except the form widget)
-handleGetEMForm :: (ToTypedContent b, MonadHandler m, w ~ WidgetOf site)
+handleGetEMForm :: (ToTypedContent b, MonadHandler m)
                 => (Html -> EMForm m (FormResult a, w))
                 -- ^ 'MkEMForm a', the form function
-                -> ((w, Enctype) -> FieldErrors (HandlerSite m) -> Maybe Text -> Maybe w -> m b)
+                -> ((w, Enctype) -> FieldErrors (HandlerSite m) -> Maybe Text -> Maybe r -> m b)
                 -- ^ a function to make some output.
                 -- Maybe Text param: an error message
                 -- first 'w': form widget
-                -- second 'w': extra content. If form failed/missing, this is mempty, otherwise, it is the output of function in next param.
-                -> (a -> m w)
-                -- ^ use the form result
+                -- 'r': extra content. If form failed/missing, this will be mempty, otherwise, it will be the output of function in next param.
+                -> (a -> m r)
+                -- ^ use the form result, to generate result data
                 -> m b
 -- {{{1
 handleGetEMForm form show_widget f = do
@@ -246,15 +246,16 @@ handleGetEMForm form show_widget f = do
 
 -- | Handler a GET form
 -- Form result can be 'missing'
-handleGetEMFormMaybe :: (ToTypedContent b, MonadHandler m, w ~ WidgetOf site)
+handleGetEMFormMaybe :: (ToTypedContent b, MonadHandler m)
                      => (Html -> EMForm m (FormResult a, w))
                      -- ^ 'MkEMForm a', the form function
-                     -> ((w, Enctype) -> FieldErrors (HandlerSite m) -> Maybe Text -> Maybe w -> m b)
+                     -> ((w, Enctype) -> FieldErrors (HandlerSite m) -> Maybe Text -> Maybe r -> m b)
                      -- ^ a function to make some output.
                      -- Maybe Text param: an error message
                      -- first 'w': form widget
-                     -- second 'w': extra content. If form failed/missing, this is mempty, otherwise, it is the output of function in next param.
-                     -> (Maybe a -> m w)
+                     -- 'r': extra content. If form failed/missing, this will be mempty, otherwise, it will be the output of function in next param.
+                     -- second 'w': extra content. If form failed/missing, this will be mempty, otherwise, it will be the output of function in next param.
+                     -> (Maybe a -> m r)
                      -- ^ use the form result
                      -> m b
 -- {{{1
