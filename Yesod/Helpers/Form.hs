@@ -631,6 +631,27 @@ strippedTextareaField :: forall m. (Monad m
     Field m Textarea
 strippedTextareaField = stripUpFront textareaField
 
+
+-- | Field that converts text input to Bool. Text input format is compatible with checkBoxField
+-- true/yes/1 converts to True
+-- false/no/0 converts to False
+boolTextField :: forall m. (Monad m
+                           , RenderMessage (HandlerSite m) FormMessage
+                 )
+              => Field m Bool
+boolTextField = checkMMap (pure . to_bool . toLower) from_bool strippedTextField
+  where to_bool "true"  = pure True
+        to_bool "yes"   = pure True
+        to_bool "1"     = pure True
+        to_bool "false" = pure False
+        to_bool "no"    = pure False
+        to_bool "0"     = pure False
+        to_bool x       = Left $ MsgInvalidBool x
+
+        from_bool True = "yes"
+        from_bool False = "no"
+
+
 -- | input for bytestring, accept base16-encode string
 base16Field ::
     ( Monad m, RenderMessage (HandlerSite m) FormMessage
