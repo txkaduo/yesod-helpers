@@ -458,3 +458,12 @@ yearMonthFromDay :: Day -> YearMonth
 yearMonthFromDay d = YearMonth year month
   where (year, month, _) = toGregorian d
 
+
+class HasDayRange a where
+  getDayRange :: a -> (Day, Day)
+
+instance HasDayRange (Day, Day) where
+  getDayRange = id
+
+instance HasDayRange YearMonth where
+  getDayRange = yearMonthToDayRange
