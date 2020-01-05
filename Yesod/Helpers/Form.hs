@@ -1418,7 +1418,7 @@ mustBePositive = checkBool (> 0) MsgFormMsgMustBePositive
 mustNotBeNegative :: (Num a, Ord a, RenderMessage (HandlerSite m) YHCommonMessage, Monad m)
                   => Field m a
                   -> Field m a
-mustNotBeNegative = checkBool (>= 0) MsgFormMsgMustBePositive
+mustNotBeNegative = checkBool (>= 0) MsgFormMsgMustNotBeNegative
 
 
 weekDateMsgList :: [(YHCommonMessage, Int)]
