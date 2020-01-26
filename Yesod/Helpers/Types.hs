@@ -36,6 +36,8 @@ import Control.DeepSeq.Generics             (genericRnf)
 import qualified System.FilePath.Glob       as G
 import qualified Data.Binary                as Binary
 import Text.Parsec
+import Text.Blaze (preEscapedText)
+import Text.Blaze.Renderer.Text (renderMarkup)
 import Yesod.Helpers.Parsec
 import Yesod.Helpers.SafeCopy
 
@@ -467,3 +469,14 @@ instance HasDayRange (Day, Day) where
 
 instance HasDayRange YearMonth where
   getDayRange = yearMonthToDayRange
+
+
+-- | 主要是为了 ToJSON/FromJSON
+newtype HtmlCode = HtmlCode { unHtmlCode :: Text }
+  deriving (Show, Eq, Ord, PersistFieldSql, PersistField, ToJSON, FromJSON)
+
+toHtmlCode :: Html -> HtmlCode
+toHtmlCode = HtmlCode . toStrict . renderMarkup
+
+fromHtmlCode :: HtmlCode -> Html
+fromHtmlCode = preEscapedText . unHtmlCode
