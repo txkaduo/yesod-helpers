@@ -1080,6 +1080,15 @@ yamlTextareaField yaml_err p =
                     >>= parseEither p
 -- }}}1
 
+-- | Creates an input with @type="file"@.
+multiFileField :: Monad m => Field m (NonEmpty FileInfo)
+multiFileField = Field
+    { fieldParse = \_ files -> return $ Right $ nonEmpty files
+    , fieldView = \id' name attrs _ isReq -> toWidget [hamlet|
+            <input id=#{id'} name=#{name} *{attrs} type=file :isReq:required multiple>
+        |]
+    , fieldEnctype = Multipart
+    }
 
 -- | a form input field that accept an uploaded YAML file and parse it
 yamlFileField :: ( RenderMessage (HandlerSite m) msg
