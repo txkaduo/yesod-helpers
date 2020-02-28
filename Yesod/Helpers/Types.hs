@@ -38,8 +38,11 @@ import qualified Data.Binary                as Binary
 import Text.Parsec
 import Text.Blaze (preEscapedText)
 import Text.Blaze.Renderer.Text (renderMarkup)
+
 import Yesod.Helpers.Parsec
 import Yesod.Helpers.SafeCopy
+import Yesod.Helpers.Message
+
 
 -- 用 SafeCopy 提供的实现应该使用空间上更优，但迁移时不知道会不会很麻烦
 -- 用 deriveSafeCopySimpleEncoded 因为使用的是字串表达，迁移时比较容易做兼容
@@ -428,6 +431,20 @@ instance ToJSON YearMonth where toJSON = toJSON . toPathPiece
 instance FromJSON YearMonth where
   parseJSON = A.withText "YearMonth" $ maybe mzero return . fromPathPiece
 -- }}}1
+
+
+yearMonthField :: Monad m => RenderMessage (HandlerSite m) YHCommonMessage => Field m YearMonth
+yearMonthField = Field
+    { fieldParse = parseHelperGen $ parseYearMonth
+    , fieldView = \theId name attrs val isReq -> toWidget [hamlet|
+$newline never
+<input id="#{theId}" name="#{name}" *{attrs} type="month" :isReq:required="" value="#{showVal val}">
+|]
+    , fieldEnctype = UrlEncoded
+    }
+  where showVal = either id (pack . show)
+        parseYearMonth = maybe (Left MsgInvalidYearMonth) Right . readMay
+
 
 type YearMonthList = CommaSepPathPieces YearMonth
 

@@ -30,3 +30,4 @@ Thursday: 周四
 Friday: 周五
 Saturday: 周六
 Sunday: 周日
+InvalidYearMonth: 无效的年月
