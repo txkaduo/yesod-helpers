@@ -138,6 +138,7 @@ library
                      , stm
                      , async
                      , random
+                     , cryptohash
                      , th-lift
                      , simple-archive-conduit
                      , byteable
