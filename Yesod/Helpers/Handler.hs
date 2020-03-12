@@ -453,6 +453,12 @@ withHasDataGetParam f = localYesodRequest add_has_data_req f
                                 lookup getKey ps
 
 
+-- | Run handler with 'get params' overridden
+withGetParams :: [(Text, Text)] -> HandlerOf site a -> HandlerOf site a
+withGetParams params f = localYesodRequest set_get_params f
+  where set_get_params req = req { reqGetParams = params }
+
+
 localYesodRequest :: (YesodRequest -> YesodRequest)
                   -> HandlerOf site a
                   -> HandlerOf site a
