@@ -117,3 +117,11 @@ lookupSessionBinary n = do
                                return Nothing
 
         Right (_, _, x)  -> return x
+
+
+lookupSessionPathPiece :: (MonadHandler m, PathPiece a) => Text -> m (Maybe a)
+lookupSessionPathPiece = fmap (join . fmap fromPathPiece) . lookupSession
+
+
+setSessionPathPiece :: (MonadHandler m, PathPiece a) => Text -> a -> m ()
+setSessionPathPiece t = setSession t . toPathPiece
