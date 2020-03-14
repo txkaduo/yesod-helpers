@@ -410,7 +410,7 @@ data YearMonth = YearMonth Integer Int
 
 -- {{{1 instances
 instance Show YearMonth where
-  show (YearMonth y m) = show y <> "-" <> show m
+  show (YearMonth y m) = show y <> "-" <> (bool "" "0" (m < 10) <>) (show m)
 
 instance Read YearMonth where
   readsPrec p s = do
