@@ -21,6 +21,8 @@ module Yesod.Helpers.Form2
     , renderBootstrapES'
     , renderBootstrap3ES
     , renderBootstrap3ES'
+    , renderBootstrap4ES
+    , renderBootstrap4ES'
     , jsendFormData
     , optTimeRangeEndpointField
     , reqTimeRangeEndpointField
@@ -40,6 +42,7 @@ import Network.Wai                          (requestMethod)
 import Text.Blaze                           (Markup)
 import Text.Blaze.Html.Renderer.Text        (renderHtml)
 import Data.Aeson.Types                     (Pair)
+import qualified Yesod.Form.Bootstrap4      as FB4
 
 import Yesod.Helpers.JSend
 
@@ -462,6 +465,16 @@ renderBootstrap3ES layout extra result = do
     lift $ lift $ renderBootstrap3 layout aform extra
 #endif
 
+renderBootstrap4ES :: Monad m
+                   => FB4.BootstrapFormLayout
+                   -> Markup
+                   -> FormResult a
+                   -> SEMForm m (FormResult a, WidgetOf (HandlerSite m))
+renderBootstrap4ES layout extra result = do
+    views <- liftM reverse $ SS.get
+    let aform = formToAForm $ return (result, views)
+    lift $ lift $ FB4.renderBootstrap4 layout aform extra
+
 
 -- | combines renderBootstrapS and runSEMForm, smToForm
 renderBootstrapES' :: Monad m =>
@@ -481,6 +494,15 @@ renderBootstrap3ES' :: Monad m
 renderBootstrap3ES' layout extra result = do
   runSEMForm $ result >>= renderBootstrap3ES layout extra
 #endif
+
+
+renderBootstrap4ES' :: Monad m
+                    => FB4.BootstrapFormLayout
+                    -> Markup
+                    -> SEMForm m (FormResult a)
+                    -> EMForm m (FormResult a, WidgetOf (HandlerSite m))
+renderBootstrap4ES' layout extra result = do
+  runSEMForm $ result >>= renderBootstrap4ES layout extra
 
 
 runSEMForm :: Monad m => SEMForm m a -> EMForm m a

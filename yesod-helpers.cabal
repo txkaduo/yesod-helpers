@@ -91,6 +91,7 @@ library
                      , wai-logger
                      , yesod
                      , yesod-form
+                     , yesod-form-bootstrap4
                      , yesod-static
                      , persistent
                      , text
