@@ -53,8 +53,8 @@ pagerSelectOpts :: PagerSettings -> Int -> [SelectOpt a]
 pagerSelectOpts ps pn = [ OffsetBy (pagerGetOffset ps pn), LimitTo (pagerNumPerPage ps) ]
 
 
-pagerWidget :: PagedResult -> Int -> WidgetOf site
-pagerWidget paged total_num = [whamlet|$newline never
+pagerWidgetBs3 :: PagedResult -> Int -> WidgetOf site
+pagerWidgetBs3 paged total_num = [whamlet|$newline never
   <div>
     #{tshow $ pagedCurrentPageNum paged}/#{tshow $ pagedLastPageNum paged}页, 共#{tshow total_num}条记录
   $if pagedLastPageNum paged > 1
@@ -70,6 +70,34 @@ pagerWidget paged total_num = [whamlet|$newline never
       <li>
         <a href="#{pagedLastPageUrl paged}">末页
           |]
+
+
+pagerWidgetBs4 :: PagedResult -> Int -> WidgetOf site
+pagerWidgetBs4 paged total_num = [whamlet|$newline never
+  <div>
+    #{tshow $ pagedCurrentPageNum paged}/#{tshow $ pagedLastPageNum paged}页, 共#{tshow total_num}条记录
+  $if pagedLastPageNum paged > 1
+    <nav>
+      <ul .pagination>
+        <li .page-item>
+          <a .page-link href="#{pagedFirstPageUrl paged}">首页
+
+        $maybe url <- pagedPrevPageUrl paged
+          <li .page-item>
+            <a .page-link href="#{url}">前一页
+        $nothing
+          <li .page-item .disabled>
+            <a .page-link tabindex="-1" aria-disabled=true href="#">前一页
+
+        $maybe url <- pagedNextPageUrl paged
+          <li .page-item>
+            <a .page-link href="#{url}">后一页
+        $nothing
+          <li .page-item .disabled>
+            <a .page-link tabindex="-1" aria-disabled=true hhref="#">后一页
+        <li .page-item>
+          <a .page-link href="#{pagedLastPageUrl paged}">末页
+            |]
 
 
 runPager :: (MonadHandler m)
