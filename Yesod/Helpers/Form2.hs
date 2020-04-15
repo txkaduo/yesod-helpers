@@ -42,7 +42,7 @@ import Network.Wai                          (requestMethod)
 import Text.Blaze                           (Markup)
 import Text.Blaze.Html.Renderer.Text        (renderHtml)
 import Data.Aeson.Types                     (Pair)
-import qualified Yesod.Form.Bootstrap4      as FB4
+import qualified Yesod.Helpers.Bootstrap4   as BS4
 
 import Yesod.Helpers.JSend
 
@@ -466,14 +466,14 @@ renderBootstrap3ES layout extra result = do
 #endif
 
 renderBootstrap4ES :: Monad m
-                   => FB4.BootstrapFormLayout
+                   => BS4.BootstrapFormLayout
                    -> Markup
                    -> FormResult a
                    -> SEMForm m (FormResult a, WidgetOf (HandlerSite m))
 renderBootstrap4ES layout extra result = do
     views <- liftM reverse $ SS.get
     let aform = formToAForm $ return (result, views)
-    lift $ lift $ FB4.renderBootstrap4 layout aform extra
+    lift $ lift $ BS4.renderBootstrap4 layout aform extra
 
 
 -- | combines renderBootstrapS and runSEMForm, smToForm
@@ -497,7 +497,7 @@ renderBootstrap3ES' layout extra result = do
 
 
 renderBootstrap4ES' :: Monad m
-                    => FB4.BootstrapFormLayout
+                    => BS4.BootstrapFormLayout
                     -> Markup
                     -> SEMForm m (FormResult a)
                     -> EMForm m (FormResult a, WidgetOf (HandlerSite m))
