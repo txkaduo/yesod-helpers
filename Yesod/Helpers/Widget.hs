@@ -196,7 +196,7 @@ simpleShowFormWidget method action' (formWidget, formEnctype) submit_msg = do
     <form method=#{decodeUtf8 method} action="#{action}" enctype=#{formEnctype} .form-horizontal>
       ^{formWidget}
       <div .form-group>
-        <div .submit-btn-container .col-xs-offset-3 .col-xs-9>
+        <div .submit-btn-container .col-xs-offset-3 .col-xs-9 .offset-sm-3 .col-sm-9 >
           <input .btn .btn-primary type=submit value=_{submit_msg}>
   |]
 -- }}}1
