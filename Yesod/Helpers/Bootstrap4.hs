@@ -70,11 +70,11 @@ toColumn (ColLg columns) = "col-lg-" ++ show columns
 toColumn (ColXl columns) = "col-xl-" ++ show columns
 
 toOffset :: BootstrapGridOptions -> String
-toOffset (ColXs columns) = "col-xs-offset-" ++ show columns
-toOffset (ColSm columns) = "col-sm-offset-" ++ show columns
-toOffset (ColMd columns) = "col-md-offset-" ++ show columns
-toOffset (ColLg columns) = "col-lg-offset-" ++ show columns
-toOffset (ColXl columns) = "col-Xl-offset-" ++ show columns
+toOffset (ColXs columns) = "offset-xs-" ++ show columns
+toOffset (ColSm columns) = "offset-sm-" ++ show columns
+toOffset (ColMd columns) = "offset-md-" ++ show columns
+toOffset (ColLg columns) = "offset-lg-" ++ show columns
+toOffset (ColXl columns) = "offset-xl-" ++ show columns
 
 addGO :: BootstrapGridOptions -> BootstrapGridOptions -> BootstrapGridOptions
 addGO (ColXs a) (ColXs b) = ColXs (a+b)
