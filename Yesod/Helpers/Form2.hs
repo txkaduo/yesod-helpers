@@ -299,7 +299,7 @@ emstatic (FieldSettings {..}) v text = do
         , fvTooltip = fmap toHtml $ fmap mr2 fsTooltip
         , fvId = theId
         , fvInput = toWidget
-            [shamlet|<p id="#{theId}" *{fsAttrs} .form-control-static>#{text}|]
+            [shamlet|<p id="#{theId}" *{fsAttrs} .form-control-static .form-control-plaintext>#{text}|]
         , fvErrors = Nothing
         , fvRequired = False
         })
