@@ -12,7 +12,7 @@ module Yesod.Helpers.Form2
     , generateEMFormGet'
     , generateEMFormGet
     , emreq, emopt, emstatic, emstaticW
-    , semreq, semopt, semreqOpt, semstatic, semstatic', semstaticW
+    , semreq, semreq2, semopt, semopt2, semreqOpt, semstatic, semstatic', semstaticW
     , semview, semviewW
     , addEMFieldError
     , overallFieldName
@@ -360,26 +360,40 @@ addEMOverallErrorOfResult field_result =
     _                -> return ()
 
 
-semreq ::
-    (RenderMessage site FormMessage, HandlerSite m ~ site, MonadHandler m) =>
-    Field m a
-    -> FieldSettings site
-    -> Maybe a
-    -> SEMForm m (FormResult a)
-semreq field settings initv = do
+semreq :: (RenderMessage site FormMessage, HandlerSite m ~ site, MonadHandler m)
+       => Field m a
+       -> FieldSettings site
+       -> Maybe a
+       -> SEMForm m (FormResult a)
+semreq field settings initv = fmap fst $ semreq2 field settings initv
+
+semreq2 :: (RenderMessage site FormMessage, HandlerSite m ~ site, MonadHandler m)
+        => Field m a
+        -> FieldSettings site
+        -> Maybe a
+        -> SEMForm m (FormResult a, FieldView site)
+semreq2 field settings initv = do
     (res, view) <- lift $ emreq field settings initv
     SS.modify ( view : )
-    return res
+    return (res, view)
+
 
 semopt :: (HandlerSite m ~ site, MonadHandler m)
        => Field m a
        -> FieldSettings site
        -> Maybe (Maybe a)
        -> SEMForm m (FormResult (Maybe a))
-semopt field settings initv = do
+semopt field settings initv = fmap fst $ semopt2 field settings initv
+
+semopt2 :: (HandlerSite m ~ site, MonadHandler m)
+        => Field m a
+        -> FieldSettings site
+        -> Maybe (Maybe a)
+        -> SEMForm m (FormResult (Maybe a), FieldView site)
+semopt2 field settings initv = do
     (res, view) <- lift $ emopt field settings initv
     SS.modify ( view : )
-    return res
+    return (res, view)
 
 semstatic :: (HandlerSite m ~ site, MonadHandler m)
     => FieldSettings site
