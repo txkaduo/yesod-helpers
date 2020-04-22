@@ -21,7 +21,7 @@ module Yesod.Helpers.Bootstrap4
   , bootstrapSubmit
   , mbootstrapSubmit
   , BootstrapSubmit(..)
-  , radioFieldBs4, radioFieldListBs4
+  , radioFieldBs4, radioFieldListBs4, boolFieldBs4
   ) where
 
 import           ClassyPrelude
@@ -273,14 +273,14 @@ $newline never
 |])
     (\theId name isSel -> [whamlet|
 $newline never
-<div ##{theId} .form-check :is_inline:.form-check-inline>
+<div .form-check :is_inline:.form-check-inline>
   <input id=#{theId}-none type=radio name=#{name} value=none :isSel:checked .form-check-input>
   <label .radio for=#{theId}-none .form-check-label>
     _{MsgSelectNone}
 |])
     (\theId name attrs value isSel text -> [whamlet|
 $newline never
-<div ##{theId} .form-check :is_inline:.form-check-inline>
+<div .form-check :is_inline:.form-check-inline>
   <input id=#{theId}-#{value} type=radio name=#{name} value=#{value} :isSel:checked *{attrs} .form-check-input>
   <label .radio for=#{theId}-#{value} .form-check-label>
     #{text}
@@ -293,6 +293,50 @@ radioFieldListBs4 :: (Eq a, RenderMessage site FormMessage, RenderMessage site m
                   -> [(msg, a)]
                   -> Field (HandlerOf site) a
 radioFieldListBs4 inline = radioFieldBs4 inline . optionsPairs
+
+
+-- | Creates a group of radio buttons to answer the question given in the message. Radio buttons are used to allow differentiating between an empty response (@Nothing@) and a no response (@Just False@). Consider using the simpler 'checkBoxField' if you don't need to make this distinction.
+--
+-- If this field is optional, the first radio button is labeled "\<None>", the second \"Yes" and the third \"No".
+--
+-- If this field is required, the first radio button is labeled \"Yes" and the second \"No".
+--
+-- (Exact label titles will depend on localization).
+boolFieldBs4 :: Monad m => RenderMessage (HandlerSite m) FormMessage => Choice "inline" -> Field m Bool
+boolFieldBs4 inline = Field
+      { fieldParse = \e _ -> return $ boolParser e
+      , fieldView = \theId name attrs val isReq -> [whamlet|
+$newline never
+  $if not isReq
+    <div .form-check :is_inline:.form-check-inline>
+      <input id=#{theId}-none *{attrs} type=radio name=#{name} value=none checked>
+      <label for=#{theId}-none>_{MsgSelectNone}
+
+
+<div .form-check :is_inline:.form-check-inline>
+  <input id=#{theId}-yes *{attrs} type=radio name=#{name} value=yes :showVal id val:checked .form-check-input>
+  <label for=#{theId}-yes .form-check-label>_{MsgBoolYes}
+
+<div .form-check :is_inline:.form-check-inline>
+  <input id=#{theId}-no *{attrs} type=radio name=#{name} value=no :showVal not val:checked .form-check-input>
+  <label for=#{theId}-no .form-check-label>_{MsgBoolNo}
+|]
+    , fieldEnctype = UrlEncoded
+    }
+  where
+    boolParser [] = Right Nothing
+    boolParser (x:_) = case x of
+      "" -> Right Nothing
+      "none" -> Right Nothing
+      "yes" -> Right $ Just True
+      "on" -> Right $ Just True
+      "no" -> Right $ Just False
+      "true" -> Right $ Just True
+      "false" -> Right $ Just False
+      t -> Left $ SomeMessage $ MsgInvalidBool t
+    showVal = either (\_ -> False)
+    is_inline = toBool inline
+
 
 #if !MIN_VERSION_yesod_form(1, 6, 0)
 -- | Copied from source of Yesod.Form.Types.
