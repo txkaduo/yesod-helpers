@@ -207,6 +207,9 @@ labelNameToFs label name = FieldSettings
 fsAddFormControlClass :: FieldSettings site -> FieldSettings site
 fsAddFormControlClass = fsAddCssClass "form-control"
 
+fsAddFormControlFileClass :: FieldSettings site -> FieldSettings site
+fsAddFormControlFileClass = fsAddCssClass "form-control-file"
+
 -- | add a CSS class to form input field, remove duplicates
 fsAddCssClass :: Text -> FieldSettings site -> FieldSettings site
 -- {{{1
