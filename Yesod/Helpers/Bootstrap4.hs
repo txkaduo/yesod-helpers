@@ -21,11 +21,11 @@ module Yesod.Helpers.Bootstrap4
   , bootstrapSubmit
   , mbootstrapSubmit
   , BootstrapSubmit(..)
-  , radioFieldBs4, radioFieldListBs4, boolFieldBs4
+  , radioFieldBs4, radioFieldListBs4
+  , boolFieldBs4, checkBoxFieldBs4
   ) where
 
 import           ClassyPrelude
-import           Data.Choice
 import qualified Data.Text.Lazy                as TL
 import           Text.Blaze.Html.Renderer.Text
 import           Yesod.Core
@@ -99,11 +99,20 @@ data BootstrapFormLayout = BootstrapBasicForm | BootstrapInlineForm |
   deriving (Eq, Ord, Show, Read)
 
 
-inputTypeRadioOrCheckbox :: Yesod site => FieldView site -> HandlerOf site Bool
-inputTypeRadioOrCheckbox view = do
+data FormInputType = FormInputRadio
+                   | FormInputCheckbox
+                   | FormInputOther
+                   deriving (Eq, Ord, Enum, Bounded, Show)
+
+inputType :: Yesod site => FieldView site -> HandlerOf site FormInputType
+inputType view = do
   html <- to_body_html (fvInput view)
   let textLabel = renderHtml html
-  pure $ "\"radio\"" `TL.isInfixOf` textLabel || "\"checkbox\"" `TL.isInfixOf` textLabel
+  pure $
+    case () of
+      () | "\"radio\"" `TL.isInfixOf` textLabel -> FormInputRadio
+         | "\"checkbox\"" `TL.isInfixOf` textLabel -> FormInputCheckbox
+         | otherwise -> FormInputOther
   where to_body_html widget = widgetToPageContent widget >>= withUrlRenderer . pageBody
 
 
@@ -113,48 +122,74 @@ renderBootstrap4 formLayout aform fragment = do
   (res, views') <- aFormToForm aform
   let views = views' []
 
-  views_is_check <-
+  views_and_type <-
     liftMonadHandler $ do
       forM views $ \ view -> do
-        b <- inputTypeRadioOrCheckbox view
-        pure (view, b)
+        it <- inputType view
+        pure (view, it)
 
   let widget = [whamlet|
 #{fragment}
-$forall (view, is_check_input) <- views_is_check
-  $if is_check_input
-    ^{renderCheckInput view formLayout}
-  $else
-    ^{renderGroupInput view formLayout}
+$forall (view, it) <- views_and_type
+  $case it
+    $of FormInputRadio
+      ^{renderInputRadio view formLayout}
+    $of FormInputCheckbox
+      ^{renderInputCheckbox view formLayout}
+    $of FormInputOther
+      ^{renderInputOther view formLayout}
 |]
   return (res, widget)
 
 
--- FIXME: `.form-check-input`を`input`につける方法がわからない
-renderCheckInput :: FieldView site -> BootstrapFormLayout -> WidgetFor site ()
-renderCheckInput view formLayout = [whamlet|
+renderInputRadio :: FieldView site -> BootstrapFormLayout -> WidgetFor site ()
+renderInputRadio view formLayout = [whamlet|
 $case formLayout
   $of BootstrapHorizontalForm labelOffset labelSize inputOffset inputSize
     <div .form-group>
       <div .row>
-        <legend
-          .col-form-label
-          .#{toOffset labelOffset}
-          .#{toColumn labelSize}
-          for=#{fvId view}>#{fvLabel view}
-        <div .#{toOffset inputOffset} .#{toColumn inputSize}>
+        <legend .col-form-label .#{toOffset labelOffset} .#{toColumn labelSize} :is_invalid:.is-invalid>
+          #{fvLabel view}
+        <fieldset .#{toOffset inputOffset} .#{toColumn inputSize}>
           ^{fvInput view}
           ^{helpWidget view}
 
   $of _
-    <div .form-check :is_invalid:.is-invalid>
+    <fieldset :is_invalid:.is-invalid>
       ^{fvInput view}
       ^{helpWidget view}
 |]
   where is_invalid = isJust $ fvErrors view
 
-renderGroupInput :: FieldView site -> BootstrapFormLayout -> WidgetFor site ()
-renderGroupInput view formLayout = [whamlet|
+
+renderInputCheckbox :: FieldView site -> BootstrapFormLayout -> WidgetFor site ()
+renderInputCheckbox view formLayout = [whamlet|
+$case formLayout
+  $of BootstrapHorizontalForm labelOffset labelSize inputOffset inputSize
+    <div .form-group>
+      <div .row>
+        <div
+          .col-form-label
+          .#{toOffset labelOffset}
+          .#{toColumn labelSize}
+          >
+        <div .#{toOffset inputOffset} .#{toColumn inputSize}>
+          <div .form-check :is_invalid:.is-invalid>
+            ^{fvInput view}
+            <label for=#{fvId view} .form-check-label>#{fvLabel view}
+            ^{helpWidget view}
+
+  $of _
+    <div .form-check :is_invalid:.is-invalid>
+      ^{fvInput view}
+      <label for=#{fvId view} .form-check-label>#{fvLabel view}
+      ^{helpWidget view}
+|]
+  where is_invalid = isJust $ fvErrors view
+
+
+renderInputOther :: FieldView site -> BootstrapFormLayout -> WidgetFor site ()
+renderInputOther view formLayout = [whamlet|
 $case formLayout
   $of BootstrapBasicForm
     $if fvId view /= bootstrapSubmitId
@@ -263,36 +298,33 @@ bootstrapSubmitId = "b:ootstrap___unique__:::::::::::::::::submit-id"
 -- | Creates an input with @type="radio"@ for selecting one option.
 -- base on source code of radioField from Yesod.Form
 radioFieldBs4 :: (Eq a, RenderMessage site FormMessage)
-              => Choice "inline"
-              -> HandlerOf site (OptionList a)
+              => HandlerOf site (OptionList a)
               -> Field (HandlerOf site) a
-radioFieldBs4 inline = selectFieldHelper
+radioFieldBs4 = selectFieldHelper
     (\ _theId _name _attrs inside -> [whamlet|
 $newline never
 ^{inside}
 |])
     (\theId name isSel -> [whamlet|
 $newline never
-<div .form-check :is_inline:.form-check-inline>
+<div .form-check>
   <input id=#{theId}-none type=radio name=#{name} value=none :isSel:checked .form-check-input>
   <label .radio for=#{theId}-none .form-check-label>
     _{MsgSelectNone}
 |])
     (\theId name attrs value isSel text -> [whamlet|
 $newline never
-<div .form-check :is_inline:.form-check-inline>
+<div .form-check>
   <input id=#{theId}-#{value} type=radio name=#{name} value=#{value} :isSel:checked *{attrs} .form-check-input>
   <label .radio for=#{theId}-#{value} .form-check-label>
     #{text}
 |])
-  where is_inline = toBool inline
 
 -- | Creates an input with @type="radio"@ for selecting one option.
 radioFieldListBs4 :: (Eq a, RenderMessage site FormMessage, RenderMessage site msg)
-                  => Choice "inline"
-                  -> [(msg, a)]
+                  => [(msg, a)]
                   -> Field (HandlerOf site) a
-radioFieldListBs4 inline = radioFieldBs4 inline . optionsPairs
+radioFieldListBs4 = radioFieldBs4 . optionsPairs
 
 
 -- | Creates a group of radio buttons to answer the question given in the message. Radio buttons are used to allow differentiating between an empty response (@Nothing@) and a no response (@Just False@). Consider using the simpler 'checkBoxField' if you don't need to make this distinction.
@@ -302,22 +334,23 @@ radioFieldListBs4 inline = radioFieldBs4 inline . optionsPairs
 -- If this field is required, the first radio button is labeled \"Yes" and the second \"No".
 --
 -- (Exact label titles will depend on localization).
-boolFieldBs4 :: Monad m => RenderMessage (HandlerSite m) FormMessage => Choice "inline" -> Field m Bool
-boolFieldBs4 inline = Field
+boolFieldBs4 :: Monad m => RenderMessage (HandlerSite m) FormMessage => Field m Bool
+boolFieldBs4 = Field
       { fieldParse = \e _ -> return $ boolParser e
-      , fieldView = \theId name attrs val isReq -> [whamlet|
+      , fieldView = \theId name attrs val isReq -> do
+        [whamlet|
 $newline never
   $if not isReq
-    <div .form-check :is_inline:.form-check-inline>
-      <input id=#{theId}-none *{attrs} type=radio name=#{name} value=none checked>
+    <div .form-check>
+      <input id=#{theId}-none *{attrs} type=radio name=#{name} value=none checked .form-check-input>
       <label for=#{theId}-none>_{MsgSelectNone}
 
 
-<div .form-check :is_inline:.form-check-inline>
+<div .form-check>
   <input id=#{theId}-yes *{attrs} type=radio name=#{name} value=yes :showVal id val:checked .form-check-input>
   <label for=#{theId}-yes .form-check-label>_{MsgBoolYes}
 
-<div .form-check :is_inline:.form-check-inline>
+<div .form-check>
   <input id=#{theId}-no *{attrs} type=radio name=#{name} value=no :showVal not val:checked .form-check-input>
   <label for=#{theId}-no .form-check-label>_{MsgBoolNo}
 |]
@@ -335,7 +368,34 @@ $newline never
       "false" -> Right $ Just False
       t -> Left $ SomeMessage $ MsgInvalidBool t
     showVal = either (\_ -> False)
-    is_inline = toBool inline
+
+
+-- | Creates an input with @type="checkbox"@.
+--   While the default @'boolField'@ implements a radio button so you
+--   can differentiate between an empty response (@Nothing@) and a no
+--   response (@Just False@), this simpler checkbox field returns an empty
+--   response as @Just False@.
+--
+--   Note that this makes the field always optional.
+--
+checkBoxFieldBs4 :: Monad m => Field m Bool
+checkBoxFieldBs4 = Field
+    { fieldParse = \e _ -> return $ checkBoxParser e
+    , fieldView  = \theId name attrs val _ -> [whamlet|
+$newline never
+<input id=#{theId} *{attrs} type=checkbox name=#{name} value=yes :showVal id val:checked .form-check-input>
+|]
+    , fieldEnctype = UrlEncoded
+    }
+
+    where
+        checkBoxParser [] = Right $ Just False
+        checkBoxParser (x:_) = case x of
+            "yes" -> Right $ Just True
+            "on" -> Right $ Just True
+            _     -> Right $ Just False
+
+        showVal = either (\_ -> False)
 
 
 #if !MIN_VERSION_yesod_form(1, 6, 0)
