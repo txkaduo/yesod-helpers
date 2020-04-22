@@ -395,6 +395,26 @@ toEntityField not_found_msg field =
                   lift (runDB $ getEntity k) >>= maybe (throwError not_found_msg) return
 
 
+toEntitiesField ::
+    ( RenderMessage site msg
+#if MIN_VERSION_persistent(2, 0, 0)
+    , PersistRecordBackend val (YesodPersistBackend site)
+    , PersistStore (YesodPersistBackend site)
+#else
+    , PersistMonadBackend (YesodDB site) ~ PersistEntityBackend val
+    , PersistStore (YesodDB site)
+#endif
+    , YesodPersist site
+    ) => msg
+    -> Field (HandlerOf site) [Key val]
+    -> Field (HandlerOf site) [Entity val]
+toEntitiesField not_found_msg field =
+    checkMMap f (map entityKey) field
+    where f ks = runExceptT $ do
+                  forM ks $ \ k ->
+                    lift (runDB $ getEntity k) >>= maybe (throwError not_found_msg) return
+
+
 entityField ::
     ( RenderMessage site msg
     , RenderMessage site FormMessage
