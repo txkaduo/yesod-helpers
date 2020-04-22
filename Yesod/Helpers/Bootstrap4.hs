@@ -21,16 +21,17 @@ module Yesod.Helpers.Bootstrap4
   , bootstrapSubmit
   , mbootstrapSubmit
   , BootstrapSubmit(..)
+  , radioFieldBs4, radioFieldListBs4
   ) where
 
-import           Prelude
-import           Control.Arrow                 (second)
-import           Data.String                   (IsString (..))
-import           Data.Text                     (Text)
+import           ClassyPrelude
+import           Data.Choice
 import qualified Data.Text.Lazy                as TL
 import           Text.Blaze.Html.Renderer.Text
 import           Yesod.Core
 import           Yesod.Form
+
+import           Yesod.Compat
 
 bfs :: RenderMessage site msg => msg -> FieldSettings site
 bfs msg
@@ -97,29 +98,60 @@ data BootstrapFormLayout = BootstrapBasicForm | BootstrapInlineForm |
   }
   deriving (Eq, Ord, Show, Read)
 
+
+inputTypeRadioOrCheckbox :: Yesod site => FieldView site -> HandlerOf site Bool
+inputTypeRadioOrCheckbox view = do
+  html <- to_body_html (fvInput view)
+  let textLabel = renderHtml html
+  pure $ "\"radio\"" `TL.isInfixOf` textLabel || "\"checkbox\"" `TL.isInfixOf` textLabel
+  where to_body_html widget = widgetToPageContent widget >>= withUrlRenderer . pageBody
+
+
 -- | Render the given form using Bootstrap v4 conventions.
-renderBootstrap4 :: Monad m => BootstrapFormLayout -> FormRender m a
+renderBootstrap4 :: (MonadHandler m, Yesod (HandlerSite m)) => BootstrapFormLayout -> FormRender m a
 renderBootstrap4 formLayout aform fragment = do
   (res, views') <- aFormToForm aform
   let views = views' []
-      widget = [whamlet|
+
+  views_is_check <-
+    liftMonadHandler $ do
+      forM views $ \ view -> do
+        b <- inputTypeRadioOrCheckbox view
+        pure (view, b)
+
+  let widget = [whamlet|
 #{fragment}
-$forall view <- views
-  $if inputTypeBoolOrCheckBox view
-    ^{renderCheckInput view}
+$forall (view, is_check_input) <- views_is_check
+  $if is_check_input
+    ^{renderCheckInput view formLayout}
   $else
     ^{renderGroupInput view formLayout}
 |]
   return (res, widget)
 
+
 -- FIXME: `.form-check-input`を`input`につける方法がわからない
-renderCheckInput :: FieldView site -> WidgetFor site ()
-renderCheckInput view = [whamlet|
-<div .form-check (fvErrors view):.is-invalid>
-  ^{fvInput view}
-  <label .form-check-label for=#{fvId view}>
-  ^{helpWidget view}
+renderCheckInput :: FieldView site -> BootstrapFormLayout -> WidgetFor site ()
+renderCheckInput view formLayout = [whamlet|
+$case formLayout
+  $of BootstrapHorizontalForm labelOffset labelSize inputOffset inputSize
+    <div .form-group>
+      <div .row>
+        <legend
+          .col-form-label
+          .#{toOffset labelOffset}
+          .#{toColumn labelSize}
+          for=#{fvId view}>#{fvLabel view}
+        <div .#{toOffset inputOffset} .#{toColumn inputSize}>
+          ^{fvInput view}
+          ^{helpWidget view}
+
+  $of _
+    <div .form-check :is_invalid:.is-invalid>
+      ^{fvInput view}
+      ^{helpWidget view}
 |]
+  where is_invalid = isJust $ fvErrors view
 
 renderGroupInput :: FieldView site -> BootstrapFormLayout -> WidgetFor site ()
 renderGroupInput view formLayout = [whamlet|
@@ -153,12 +185,6 @@ $case formLayout
         ^{helpWidget view}
 |]
 
--- | 入力されたフィールドがcheck形式である必要があるか判定する
--- HTMLの内容を`Monad`の範囲で見る方法が分からなかったため,ワークアラウンドとしてlabelの内容を見て判断します
-inputTypeBoolOrCheckBox :: FieldView site -> Bool
-inputTypeBoolOrCheckBox FieldView{fvLabel}
-  = let textLabel = renderHtml fvLabel
-    in "radio" `TL.isInfixOf` textLabel || "checkbox" `TL.isInfixOf` textLabel
 
 -- | (Internal) Render a help widget for tooltips and errors.
 -- .invalid-feedbackを必ず表示する
@@ -232,3 +258,77 @@ mbootstrapSubmit (BootstrapSubmit msg classes attrs) =
 -- 'bootstrapSubmit' outside 'renderBootstrap4'.
 bootstrapSubmitId :: Text
 bootstrapSubmitId = "b:ootstrap___unique__:::::::::::::::::submit-id"
+
+
+-- | Creates an input with @type="radio"@ for selecting one option.
+-- base on source code of radioField from Yesod.Form
+radioFieldBs4 :: (Eq a, RenderMessage site FormMessage)
+              => Choice "inline"
+              -> HandlerOf site (OptionList a)
+              -> Field (HandlerOf site) a
+radioFieldBs4 inline = selectFieldHelper
+    (\ _theId _name _attrs inside -> [whamlet|
+$newline never
+^{inside}
+|])
+    (\theId name isSel -> [whamlet|
+$newline never
+<div ##{theId} .form-check :is_inline:.form-check-inline>
+  <input id=#{theId}-none type=radio name=#{name} value=none :isSel:checked .form-check-input>
+  <label .radio for=#{theId}-none .form-check-label>
+    _{MsgSelectNone}
+|])
+    (\theId name attrs value isSel text -> [whamlet|
+$newline never
+<div ##{theId} .form-check :is_inline:.form-check-inline>
+  <input id=#{theId}-#{value} type=radio name=#{name} value=#{value} :isSel:checked *{attrs} .form-check-input>
+  <label .radio for=#{theId}-#{value} .form-check-label>
+    #{text}
+|])
+  where is_inline = toBool inline
+
+-- | Creates an input with @type="radio"@ for selecting one option.
+radioFieldListBs4 :: (Eq a, RenderMessage site FormMessage, RenderMessage site msg)
+                  => Choice "inline"
+                  -> [(msg, a)]
+                  -> Field (HandlerOf site) a
+radioFieldListBs4 inline = radioFieldBs4 inline . optionsPairs
+
+#if !MIN_VERSION_yesod_form(1, 6, 0)
+-- | Copied from source of Yesod.Form.Types.
+-- change signatures a little to make it compatible
+selectFieldHelper
+        :: (Eq a, RenderMessage site FormMessage)
+        => (Text -> Text -> [(Text, Text)] -> WidgetOf site -> WidgetOf site)
+        -> (Text -> Text -> Bool -> WidgetOf site)
+        -> (Text -> Text -> [(Text, Text)] -> Text -> Bool -> Text -> WidgetOf site)
+        -> HandlerOf site (OptionList a)
+        -> Field (HandlerOf site) a
+selectFieldHelper outside onOpt inside opts' = Field
+    { fieldParse = \x _ -> do
+        opts <- opts'
+        return $ selectParser opts x
+    , fieldView = \theId name attrs val isReq -> do
+        opts <- fmap olOptions $ handlerToWidget opts'
+        outside theId name attrs $ do
+            unless isReq $ onOpt theId name $ not $ render opts val `elem` map optionExternalValue opts
+            flip mapM_ opts $ \opt -> inside
+                theId
+                name
+                ((if isReq then (("required", "required"):) else id) attrs)
+                (optionExternalValue opt)
+                ((render opts val) == optionExternalValue opt)
+                (optionDisplay opt)
+    , fieldEnctype = UrlEncoded
+    }
+  where
+    render _ (Left _) = ""
+    render opts (Right a) = maybe "" optionExternalValue $ listToMaybe $ filter ((== a) . optionInternalValue) opts
+    selectParser _ [] = Right Nothing
+    selectParser opts (s:_) = case s of
+            "" -> Right Nothing
+            "none" -> Right Nothing
+            x -> case olReadExternal opts x of
+                    Nothing -> Left $ SomeMessage $ MsgInvalidEntry x
+                    Just y -> Right $ Just y
+#endif

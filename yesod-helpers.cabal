@@ -154,6 +154,7 @@ library
                      , http-types
                      , mime-types
                      , vault
+                     , choice
                      , parsec-tx-utils         >= 0.3.1
                      , yesod-compat
 
@@ -223,6 +224,7 @@ library
               PartialTypeSignatures
               CPP
               ConstraintKinds
+              DataKinds
 
 test-suite test
     type:              exitcode-stdio-1.0

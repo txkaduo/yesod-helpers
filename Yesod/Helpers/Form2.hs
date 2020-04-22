@@ -479,7 +479,7 @@ renderBootstrap3ES layout extra result = do
     lift $ lift $ renderBootstrap3 layout aform extra
 #endif
 
-renderBootstrap4ES :: Monad m
+renderBootstrap4ES :: (MonadHandler m, Yesod (HandlerSite m))
                    => BS4.BootstrapFormLayout
                    -> Markup
                    -> FormResult a
@@ -510,7 +510,7 @@ renderBootstrap3ES' layout extra result = do
 #endif
 
 
-renderBootstrap4ES' :: Monad m
+renderBootstrap4ES' :: (MonadHandler m, Yesod (HandlerSite m))
                     => BS4.BootstrapFormLayout
                     -> Markup
                     -> SEMForm m (FormResult a)
