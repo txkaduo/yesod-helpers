@@ -146,6 +146,11 @@ addWidgetToField :: FieldViewFunc m a -> Field m a -> Field m a
 addWidgetToField f field = field { fieldView = fieldView field `appendWidgetFieldViewFunc` f }
 
 
+addWidgetByIdToField :: (Text -> WidgetOf (HandlerSite m)) -> Field m a -> Field m a
+addWidgetByIdToField f field = field { fieldView = fieldView field `appendWidgetFieldViewFunc` f' }
+  where f' theId _ _ _ _ = f theId
+
+
 nameIdToFs :: Text -> Text -> FieldSettings site
 nameIdToFs name idName = FieldSettings "" Nothing (Just idName) (Just name) []
 
