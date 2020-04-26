@@ -312,6 +312,17 @@ traverseFormResult _ FormMissing        = pure (FormMissing :: FormResult b)
 -- }}}1
 
 
+-- | Convert form result [] to NonEmpty
+toNonEmptyField :: (MonadHandler m, RenderMessage (HandlerSite m) FormMessage)
+                => Field m [a] -> Field m (NonEmpty a)
+toNonEmptyField = checkMMap to_non_empty toList
+  where
+    to_non_empty xs = do
+      case nonEmpty xs of
+        Nothing -> pure $ Left MsgValueRequired
+        Just xs' -> pure $ Right xs'
+
+
 -- | Construct a new field that will never fail because of missing value.
 -- Useful when user want to control more what should do on missing value.
 -- Like report missing value base on other conditions.
