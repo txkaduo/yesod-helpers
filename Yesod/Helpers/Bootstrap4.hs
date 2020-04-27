@@ -23,6 +23,7 @@ module Yesod.Helpers.Bootstrap4
   , BootstrapSubmit(..)
   , radioFieldBs4, radioFieldListBs4
   , boolFieldBs4, checkBoxFieldBs4
+  , checkboxesFieldBs4, checkboxesFieldListBs4
   ) where
 
 import           ClassyPrelude
@@ -106,13 +107,16 @@ data FormInputType = FormInputRadio
 
 inputType :: Yesod site => FieldView site -> HandlerOf site FormInputType
 inputType view = do
-  html <- to_body_html (fvInput view)
-  let textLabel = renderHtml html
+  textCode <- fiedViewHtmlCode view
   pure $
     case () of
-      () | "\"radio\"" `TL.isInfixOf` textLabel -> FormInputRadio
-         | "\"checkbox\"" `TL.isInfixOf` textLabel -> FormInputCheckbox
+      () | "\"radio\"" `TL.isInfixOf` textCode -> FormInputRadio
+         | "\"checkbox\"" `TL.isInfixOf` textCode -> FormInputCheckbox
          | otherwise -> FormInputOther
+
+
+fiedViewHtmlCode :: Yesod site => FieldView site -> HandlerOf site TL.Text
+fiedViewHtmlCode view = fmap renderHtml $ to_body_html (fvInput view)
   where to_body_html widget = widgetToPageContent widget >>= withUrlRenderer . pageBody
 
 
@@ -162,28 +166,49 @@ $case formLayout
   where is_invalid = isJust $ fvErrors view
 
 
-renderInputCheckbox :: FieldView site -> BootstrapFormLayout -> WidgetFor site ()
-renderInputCheckbox view formLayout = [whamlet|
+-- | Render checkBoxFieldBs4 and checkboxesFieldBs4 differently.
+-- checkBoxFieldBs4: view 只有 <input>，我们在后面直接把label加上去
+-- checkboxesFieldBs4: view 有很多个 <input><label>已包装在 <div.form-check> 里，这个field的label就要放在旁边
+renderInputCheckbox :: Yesod site => FieldView site -> BootstrapFormLayout -> WidgetFor site ()
+renderInputCheckbox view formLayout = do
+  textCode <- liftMonadHandler $ fiedViewHtmlCode view
+  [whamlet|
 $case formLayout
   $of BootstrapHorizontalForm labelOffset labelSize inputOffset inputSize
     <div .form-group>
       <div .row>
-        <div
-          .col-form-label
-          .#{toOffset labelOffset}
-          .#{toColumn labelSize}
-          >
-        <div .#{toOffset inputOffset} .#{toColumn inputSize}>
-          <div .form-check :is_invalid:.is-invalid>
+        $if TL.isInfixOf "form-check-label" textCode
+          <div
+            .col-form-label
+            .#{toOffset labelOffset}
+            .#{toColumn labelSize}
+            for=#{fvId view}
+            >#{fvLabel view}
+          <div .#{toOffset inputOffset} .#{toColumn inputSize} ##{fvId view}>
             ^{fvInput view}
-            <label for=#{fvId view} .form-check-label>#{fvLabel view}
             ^{helpWidget view}
+        $else
+          <div
+            .col-form-label
+            .#{toOffset labelOffset}
+            .#{toColumn labelSize}
+            >
+          <div .#{toOffset inputOffset} .#{toColumn inputSize}>
+            <div .form-check :is_invalid:.is-invalid>
+              ^{fvInput view}
+              <label for=#{fvId view} .form-check-label>#{fvLabel view}
+              ^{helpWidget view}
 
   $of _
-    <div .form-check :is_invalid:.is-invalid>
+    $if TL.isInfixOf "form-check-label" textCode
+      <label .sr-only for=#{fvId view}>#{fvLabel view}
       ^{fvInput view}
-      <label for=#{fvId view} .form-check-label>#{fvLabel view}
       ^{helpWidget view}
+    $else
+      <div .form-check :is_invalid:.is-invalid>
+        ^{fvInput view}
+        <label for=#{fvId view} .form-check-label>#{fvLabel view}
+        ^{helpWidget view}
 |]
   where is_invalid = isJust $ fvErrors view
 
@@ -397,6 +422,32 @@ $newline never
 
         showVal = either (\_ -> False)
 
+
+checkboxesFieldListBs4 :: (Eq a, RenderMessage site msg)
+                       => [(msg, a)]
+                       -> Field (HandlerOf site) [a]
+checkboxesFieldListBs4 = checkboxesFieldBs4 . optionsPairs
+
+-- | Creates an input with @type="checkbox"@ for selecting multiple options.
+checkboxesFieldBs4 :: Eq a
+                   => HandlerOf site (OptionList a)
+                   -> Field (HandlerOf site) [a]
+checkboxesFieldBs4 ioptlist = (multiSelectField ioptlist)
+    { fieldView =
+        \theId name attrs val _isReq -> do
+            opts <- fmap olOptions $ handlerToWidget ioptlist
+            let optselected (Left _) _ = False
+                optselected (Right vals) opt = (optionInternalValue opt) `elem` vals
+            [whamlet|
+                $forall (idx, opt) <- zip_index opts
+                  $with ident <- mk_opt_ident theId idx
+                    <div .form-check>
+                      <input .form-check-input type=checkbox name=#{name} value=#{optionExternalValue opt} ##{ident} *{attrs} :optselected val opt:checked>
+                      <label .form-check-label for=#{ident}>#{optionDisplay opt}
+                |]
+    }
+    where zip_index = zip ([1..] :: [Int])
+          mk_opt_ident theId idx = theId <> "-" <> tshow idx
 
 #if !MIN_VERSION_yesod_form(1, 6, 0)
 -- | Copied from source of Yesod.Form.Types.
