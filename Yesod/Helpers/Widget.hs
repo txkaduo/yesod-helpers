@@ -279,6 +279,11 @@ zhCnFormatUtcWidgetDefault :: UTCTime
 zhCnFormatUtcWidgetDefault = zhCnFormatUtcWidget "%Y-%m-%d %H:%M:%S"
 
 
+zhCnFormatUtcWidgetNoSec :: UTCTime
+                         -> WidgetOf site
+zhCnFormatUtcWidgetNoSec = zhCnFormatUtcWidget "%Y-%m-%d %H:%M"
+
+
 fuzzyDayWidget :: FuzzyDay -> WidgetOf site
 fuzzyDayWidget fd = [whamlet|<time datetime=#{toPathPiece fd}>#{toPathPiece fd}|]
 
