@@ -149,7 +149,7 @@ formOverallErrorMessageWidget :: (RenderMessage site a)
                               -> WidgetOf site
 formOverallErrorMessageWidget = formOverallErrorMessageWidget' . fmap w_msg
   where w_msg t = [whamlet|
-                    <div .form-group>
+                    <div .alert .alert-danger>
                       <span .err_msg>_{t}
                   |]
 
@@ -193,7 +193,7 @@ simpleShowFormWidget method action' (formWidget, formEnctype) submit_msg = do
                     url_render <- getUrlRender
                     return $ url_render r
   [whamlet|
-    <form method=#{decodeUtf8 method} action="#{action}" enctype=#{formEnctype} .form-horizontal>
+    <form method=#{decodeUtf8 method} action="#{action}" enctype=#{formEnctype} .form-horizontal .main-form>
       ^{formWidget}
       <div .form-group>
         <div .submit-btn-container .col-xs-offset-3 .col-xs-9 .offset-sm-3 .col-sm-9 >
