@@ -78,7 +78,7 @@ pagerWidgetBs4 paged total_num = [whamlet|$newline never
     #{tshow $ pagedCurrentPageNum paged}/#{tshow $ pagedLastPageNum paged}页, 共#{tshow total_num}条记录
   $if pagedLastPageNum paged > 1
     <nav>
-      <ul .pagination>
+      <ul .pagination .justify-content-center>
         <li .page-item>
           <a .page-link href="#{pagedFirstPageUrl paged}">首页
 
