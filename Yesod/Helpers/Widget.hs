@@ -24,6 +24,16 @@ import Yesod.Compat
 -- }}}1
 
 
+-- | Merge 'class' attribute
+mergeCssClassAttr :: Text -> Text -> Text
+mergeCssClassAttr new old = unwords $ ordNub $ new' <> old'
+  where new' = words new
+        old' = words old
+
+mergeCssClassInAttrs :: Text -> [(Text, Text)] -> [(Text, Text)]
+mergeCssClassInAttrs cls_spec = insertWith mergeCssClassAttr "class" cls_spec
+
+
 vaultKeyLoadedCss :: V.Key (IORef (Set ByteString))
 vaultKeyLoadedCss = unsafePerformIO V.newKey
 {-# NOINLINE vaultKeyLoadedCss #-}
