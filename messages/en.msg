@@ -1,4 +1,4 @@
-PageTitleSep: #{asText " | "}
+PageTitleSep: #{asText "|"}
 SubmitForm: Submit
 ObjectNotFoundById: Database record not found by the id
 InvalidDbObjectId: Invalid database record id

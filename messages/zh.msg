@@ -1,4 +1,4 @@
-PageTitleSep: #{asText " | "}
+PageTitleSep: #{asText " "}
 SubmitForm: 提交
 ObjectNotFoundById: 找不到对应此id的数据库记录
 InvalidDbObjectId: 无效的数据库记录id
