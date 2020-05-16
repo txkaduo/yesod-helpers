@@ -159,8 +159,7 @@ formOverallErrorMessageWidget :: (RenderMessage site a)
                               -> WidgetOf site
 formOverallErrorMessageWidget = formOverallErrorMessageWidget' . fmap w_msg
   where w_msg t = [whamlet|
-                    <div .alert .alert-danger>
-                      <span .err_msg>_{t}
+                    <span .err_msg>_{t}
                   |]
 
 
