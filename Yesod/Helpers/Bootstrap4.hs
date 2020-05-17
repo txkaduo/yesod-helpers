@@ -150,14 +150,19 @@ renderInputRadio :: FieldView site -> BootstrapFormLayout -> WidgetFor site ()
 renderInputRadio view formLayout = [whamlet|
 $case formLayout
   $of BootstrapHorizontalForm labelOffset labelSize inputOffset inputSize
-    <div .form-group>
-      <div .row>
-        <legend .col-form-label .#{toOffset labelOffset} .#{toColumn labelSize} :is_invalid:.is-invalid>
-          #{fvLabel view}
-        <fieldset .#{toOffset inputOffset} .#{toColumn inputSize}>
-          ^{fvInput view}
-          ^{helpWidget view}
+    <div .form-group .row>
+      <legend .col-form-label .#{toOffset labelOffset} .#{toColumn labelSize} :is_invalid:.is-invalid>
+        #{fvLabel view}
+      <fieldset .#{toOffset inputOffset} .#{toColumn inputSize}>
+        ^{fvInput view}
+        ^{helpWidget view}
 
+  $of BootstrapInlineForm
+    <legend .d-flex .w-auto>
+      #{fvLabel view}
+    <fieldset :is_invalid:.is-invalid>
+      ^{fvInput view}
+      ^{helpWidget view}
   $of _
     <fieldset :is_invalid:.is-invalid>
       ^{fvInput view}
@@ -175,29 +180,28 @@ renderInputCheckbox view formLayout = do
   [whamlet|
 $case formLayout
   $of BootstrapHorizontalForm labelOffset labelSize inputOffset inputSize
-    <div .form-group>
-      <div .row>
-        $if TL.isInfixOf "form-check-label" textCode
-          <div
-            .col-form-label
-            .#{toOffset labelOffset}
-            .#{toColumn labelSize}
-            for=#{fvId view}
-            >#{fvLabel view}
-          <div .#{toOffset inputOffset} .#{toColumn inputSize} ##{fvId view}>
+    <div .form-group .row>
+      $if TL.isInfixOf "form-check-label" textCode
+        <div
+          .col-form-label
+          .#{toOffset labelOffset}
+          .#{toColumn labelSize}
+          for=#{fvId view}
+          >#{fvLabel view}
+        <div .#{toOffset inputOffset} .#{toColumn inputSize} ##{fvId view}>
+          ^{fvInput view}
+          ^{helpWidget view}
+      $else
+        <div
+          .col-form-label
+          .#{toOffset labelOffset}
+          .#{toColumn labelSize}
+          >
+        <div .#{toOffset inputOffset} .#{toColumn inputSize}>
+          <div .form-check :is_invalid:.is-invalid>
             ^{fvInput view}
+            <label for=#{fvId view} .form-check-label>#{fvLabel view}
             ^{helpWidget view}
-        $else
-          <div
-            .col-form-label
-            .#{toOffset labelOffset}
-            .#{toColumn labelSize}
-            >
-          <div .#{toOffset inputOffset} .#{toColumn inputSize}>
-            <div .form-check :is_invalid:.is-invalid>
-              ^{fvInput view}
-              <label for=#{fvId view} .form-check-label>#{fvLabel view}
-              ^{helpWidget view}
 
   $of _
     $if TL.isInfixOf "form-check-label" textCode
