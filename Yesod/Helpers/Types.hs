@@ -63,6 +63,7 @@ instance NFData Gender where rnf = genericRnf
 
 $(derivePersistFieldS "Gender")
 $(deriveJsonS "Gender")
+$(derivePathPieceS "Gender")
 $(deriveSimpleStringRepEnumBounded "Gender")
 
 #ifdef USE_SIMPLE_ENCODED_SAFECOPY
