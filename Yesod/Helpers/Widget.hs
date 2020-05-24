@@ -271,6 +271,22 @@ jsSetSubmitButtonText selector txt =
 -- }}}1
 
 
+znCnFormatZonedTimeWidget :: String -> ZonedTime -> WidgetOf site
+znCnFormatZonedTimeWidget fmt zt = do
+  [whamlet|
+    <time datetime=#{formatTime defaultTimeLocale iso8601 zt}>
+      #{formatTime zhCnTimeLocale fmt zt}
+  |]
+  where iso8601 = "%Y-%m-%dT%H:%M:%SZ"
+
+
+znCnFormatZonedTimeWidgetDefault :: ZonedTime -> WidgetOf site
+znCnFormatZonedTimeWidgetDefault = znCnFormatZonedTimeWidget "%Y-%m-%d %H:%M:%S"
+
+znCnFormatZonedTimeWidgetNoSec :: ZonedTime -> WidgetOf site
+znCnFormatZonedTimeWidgetNoSec = znCnFormatZonedTimeWidget "%Y-%m-%d %H:%M"
+
+
 zhCnFormatUtcWidget :: String
                     -> UTCTime
                     -> WidgetOf site
@@ -297,7 +313,7 @@ fuzzyDayWidget :: FuzzyDay -> WidgetOf site
 fuzzyDayWidget fd = [whamlet|<time datetime=#{toPathPiece fd}>#{toPathPiece fd}|]
 
 
-dayWidget :: (Day -> String)  -- ^ how to shou day
+dayWidget :: (Day -> String)  -- ^ how to show day
           -> Day
           -> WidgetOf site
 dayWidget show_day d = [whamlet|<time datetime=#{show d}>#{show_day d}|]
