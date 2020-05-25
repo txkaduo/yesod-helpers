@@ -402,6 +402,8 @@ instance PathPiece a => PathPiece (CommaSepPathPieces a) where
   toPathPiece = intercalate "," . map toPathPiece . unCommaSepPathPieces
   fromPathPiece = fmap CommaSepPathPieces . sequence . map fromPathPiece . T.splitOn ","
 
+instance Default (CommaSepPathPieces a) where def = CommaSepPathPieces []
+
 
 type PathPieceDayRange = PathPieceTuple Day Day
 
