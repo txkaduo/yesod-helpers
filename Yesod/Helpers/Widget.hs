@@ -9,6 +9,7 @@ import System.IO.Unsafe (unsafePerformIO)
 import Text.Blaze.Renderer.Utf8             (renderMarkup)
 import Text.Cassius
 import Text.Julius (JavascriptUrl, Javascript, renderJavascript)
+import Text.Parsec.TX.Utils
 import Text.Hamlet
 
 import Yesod.Helpers.Message
@@ -317,6 +318,15 @@ dayWidget :: (Day -> String)  -- ^ how to show day
           -> Day
           -> WidgetOf site
 dayWidget show_day d = [whamlet|<time datetime=#{show d}>#{show_day d}|]
+
+
+zhCnFuzzyDayWidget :: FuzzyDay -> WidgetOf site
+zhCnFuzzyDayWidget fd =
+  [whamlet|<time datetime=#{simpleEncode fd}>#{show_fd}|]
+  where show_fd = case fd of
+                    FuzzyDayY y -> tshow y <> "年"
+                    FuzzyDayYM y m -> tshow y <> "年" <> tshow m <> "月"
+                    FuzzyDayYMD y m d -> tshow y <> "年" <> tshow m <> "月" <> tshow d <> "日"
 
 
 wshow :: (ToMarkup a, MonadWidget m) => a -> m ()
