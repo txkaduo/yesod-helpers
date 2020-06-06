@@ -577,7 +577,8 @@ semHiddenRetainParams names = do
     void $ semopt hiddenField (nameToFs n) (Just $ Just v)
 
 
-redirectToReturnUrl :: MonadHandler m => Route (HandlerSite m) -> m a
+redirectToReturnUrl :: (MonadHandler m, RedirectUrl (HandlerSite m) url)
+                    => url -> m a
 redirectToReturnUrl = do
   (lk returnUrlParamName >>=) . flip maybe redirect . redirect
   where
