@@ -158,18 +158,18 @@ formOverallErrorMessageWidget :: (RenderMessage site a)
                               => Maybe a  -- ^ overall message
                               -> FieldErrors site
                               -> WidgetOf site
-formOverallErrorMessageWidget = formOverallErrorMessageWidget' . fmap w_msg
+formOverallErrorMessageWidget = formAllErrorMessagesWidget . fmap w_msg
   where w_msg t = [whamlet|
                     <span .err_msg>_{t}
                   |]
 
 
-formOverallErrorMessageWidget' :: (ToWidget site a)
-                               => Maybe a -- ^ overall message
-                               -> FieldErrors site
-                               -> WidgetOf site
+formAllErrorMessagesWidget :: (ToWidget site a)
+                           => Maybe a -- ^ overall message
+                           -> FieldErrors site
+                           -> WidgetOf site
 -- {{{1
-formOverallErrorMessageWidget' m_err_msg form_errs =
+formAllErrorMessagesWidget m_err_msg form_errs =
   [whamlet|
     $if isJust m_err_msg || not (null overall_errors)
       <div .alert .alert-warning>
@@ -177,7 +177,7 @@ formOverallErrorMessageWidget' m_err_msg form_errs =
           ^{err_msg}
 
         $if not (null overall_errors)
-          <ul>输入数据错误
+          <ul>表单输入错误
             $forall (_, errs) <- overall_errors
               <li>#{intercalate ";" errs}
 
