@@ -154,28 +154,11 @@ mergePageTitles parts = do
 -- }}}1
 
 
-formOverallErrorMessageWidget :: (RenderMessage site a)
-                              => Maybe a  -- ^ overall message
-                              -> FieldErrors site
-                              -> WidgetOf site
-formOverallErrorMessageWidget = formAllErrorMessagesWidget . fmap w_msg
-  where w_msg t = [whamlet|
-                    <span .err_msg>_{t}
-                  |]
-
-
-formAllErrorMessagesWidget :: (ToWidget site a)
-                           => Maybe a -- ^ overall message
-                           -> FieldErrors site
-                           -> WidgetOf site
+formAllErrorMessagesWidget :: FieldErrors site -> WidgetOf site
 -- {{{1
-formAllErrorMessagesWidget m_err_msg form_errs =
+formAllErrorMessagesWidget form_errs =
   [whamlet|
-    $if isJust m_err_msg || not (null overall_errors)
-      <div .alert .alert-warning>
-        $maybe err_msg <- m_err_msg
-          ^{err_msg}
-
+    $if not (null overall_errors)
         $if not (null overall_errors)
           <ul>表单输入错误
             $forall (_, errs) <- overall_errors
@@ -213,46 +196,37 @@ simpleShowFormWidget method action' (formWidget, formEnctype) submit_msg = do
 
 
 -- | A simple widget to show a html POST form
-simpleFormPageWidgetEither :: ( RenderMessage master a
-                              , RenderMessage master YHCommonMessage
-                              )
+simpleFormPageWidgetEither :: (RenderMessage master YHCommonMessage)
                            => GenFormData master
                            -> Either (Route master) Text  -- ^ action url
-                           -> Maybe a       -- ^ any global error message
                            -> FieldErrors master  -- ^ error messages for form fields
                            -> WidgetOf master
 simpleFormPageWidgetEither = simpleFormPageWidgetEither' "POST"
 
 
 -- | A simple widget to show a html form
-simpleFormPageWidgetEither' :: ( RenderMessage master a
-                              , RenderMessage master YHCommonMessage
-                              )
+simpleFormPageWidgetEither' :: (RenderMessage master YHCommonMessage)
                             => ByteString   -- ^ method
                             -> GenFormData master
                             -> Either (Route master) Text  -- ^ action url
-                            -> Maybe a       -- ^ any global error message
                             -> FieldErrors master  -- ^ error messages for form fields
                             -> WidgetOf master
 -- {{{1
-simpleFormPageWidgetEither' method (formWidget, formEnctype) action' m_err_msg form_errs = do
+simpleFormPageWidgetEither' method (formWidget, formEnctype) action' form_errs = do
   [whamlet|
-    ^{formOverallErrorMessageWidget m_err_msg form_errs}
+    ^{formAllErrorMessagesWidget form_errs}
     ^{simpleShowFormWidget method action' (formWidget, formEnctype) MsgSubmitForm}
   |]
 -- }}}1
 
 
-simpleFormPageWidget :: ( RenderMessage master a
-                        , RenderMessage master YHCommonMessage
-                        )
+simpleFormPageWidget :: (RenderMessage master YHCommonMessage)
                      => GenFormData master
                      -> Route master  -- ^ action url
-                     -> Maybe a       -- ^ any global error message
                      -> FieldErrors master  -- ^ error messages for form fields
                      -> WidgetOf master
-simpleFormPageWidget (formWidget, formEnctype) action m_err_msg form_errs =
-  simpleFormPageWidgetEither (formWidget, formEnctype) (Left action) m_err_msg form_errs
+simpleFormPageWidget (formWidget, formEnctype) action form_errs =
+  simpleFormPageWidgetEither (formWidget, formEnctype) (Left action) form_errs
 
 
 -- | XXX: 因为现在的表单提交按键总是一句提交，又不能直接改
