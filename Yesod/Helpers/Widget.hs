@@ -160,12 +160,13 @@ formAllErrorMessagesWidget form_errs =
   [whamlet|
     $if not (null overall_errors)
         $if not (null overall_errors)
-          <ul>表单输入错误
-            $forall (_, errs) <- overall_errors
-              <li>#{intercalate ";" errs}
+          <div .alert .alert-warning>
+            <ul>表单输入错误
+              $forall (_, errs) <- overall_errors
+                <li>#{intercalate ";" errs}
 
-            $forall ((_name, fs), errs) <- other_errors
-              <li> _{fsLabel fs}: #{intercalate ";" errs}
+              $forall ((_name, fs), errs) <- other_errors
+                <li> _{fsLabel fs}: #{intercalate ";" errs}
   |]
   where error_list = fieldErrorsToList form_errs
         (overall_errors, other_errors) = partition ((== overallFieldName) . fst . fst) error_list
