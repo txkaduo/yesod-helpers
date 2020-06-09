@@ -128,13 +128,16 @@ type MkEMForm site a = Markup -> EMForm (HandlerOf site) (FormResult a, WidgetOf
 type FormHandlerOf site a = R.ReaderT (WidgetOf site, Enctype) (HandlerOf site) a
 
 type GenFormData site = (WidgetOf site, Enctype)
-type EFormHandlerOf site a = R.ReaderT (GenFormData site, FieldErrors site) (HandlerOf site) a
+
+type EFormHandlerT site m a = R.ReaderT (GenFormData site, FieldErrors site) m a
+type EFormHandlerOf site a = EFormHandlerT site (HandlerOf site) a
+
 
 
 handleGetPostEMFormTc :: (Yesod site, RenderMessage site FormMessage)
                       => MkEMForm site a
                       -> (EFormHandlerOf site Html)
-                      -> (a -> HandlerOf site TypedContent)
+                      -> (a -> EFormHandlerOf site TypedContent)
                       -> HandlerOf site TypedContent
 handleGetPostEMFormTc form show_form handle_form_data = do
   handleGetPostEMForm form show_form' handle_form_data
@@ -153,7 +156,7 @@ handleGetPost get_func post_func = do
 handleGetPostEMForm :: (RenderMessage site FormMessage)
                     => MkEMForm site a
                     -> EFormHandlerOf site c
-                    -> (a -> HandlerOf site c)
+                    -> (a -> EFormHandlerOf site c)
                     -> HandlerOf site c
 -- {{{1
 handleGetPostEMForm form show_form handle_form_data = do
@@ -163,17 +166,18 @@ handleGetPostEMForm form show_form handle_form_data = do
 
     on_post = do
       (((result, formWidget), formEnctype), form_errs) <- runEMFormPost form
-      case result of
-          FormMissing     -> flip runReaderT ((formWidget, formEnctype), form_errs) $ show_form
-          FormFailure _   -> flip runReaderT ((formWidget, formEnctype), form_errs) $ show_form
-          FormSuccess form_data -> handle_form_data form_data
+      flip runReaderT ((formWidget, formEnctype), form_errs) $ do
+        case result of
+            FormMissing     -> show_form
+            FormFailure _   -> show_form
+            FormSuccess form_data -> handle_form_data form_data
 -- }}}1
 
 
 handleGetPostEMFormNoTokenTc :: (Yesod site, RenderMessage site FormMessage)
                              => MkEMForm site a
                              -> EFormHandlerOf site Html
-                             -> (a -> HandlerOf site TypedContent)
+                             -> (a -> EFormHandlerOf site TypedContent)
                              -> HandlerOf site TypedContent
 handleGetPostEMFormNoTokenTc form show_form handle_form_data = do
   handleGetPostEMFormNoToken form show_form' handle_form_data
@@ -183,7 +187,7 @@ handleGetPostEMFormNoTokenTc form show_form handle_form_data = do
 handleGetPostEMFormNoToken :: (RenderMessage site FormMessage)
                            => MkEMForm site a
                            -> EFormHandlerOf site c
-                           -> (a -> HandlerOf site c)
+                           -> (a -> EFormHandlerOf site c)
                            -> HandlerOf site c
 -- {{{1
 handleGetPostEMFormNoToken form show_form handle_form_data = do
@@ -194,69 +198,67 @@ handleGetPostEMFormNoToken form show_form handle_form_data = do
 
     on_post = do
       (((result, formWidget), formEnctype), form_errs) <- runEMFormPostNoToken form
-      case result of
-          FormMissing     -> flip runReaderT ((formWidget, formEnctype), form_errs) $ show_form
-          FormFailure _   -> flip runReaderT ((formWidget, formEnctype), form_errs) $ show_form
-          FormSuccess form_data -> handle_form_data form_data
+      flip runReaderT ((formWidget, formEnctype), form_errs) $ do
+        case result of
+            FormMissing     -> show_form
+            FormFailure _   -> show_form
+            FormSuccess form_data -> handle_form_data form_data
 -- }}}1
 
 
 -- | Handler a GET form
 -- If form failed/missing, abort processing and output empty widget (except the form widget)
-handleGetEMForm :: (ToTypedContent b, MonadHandler m)
-                => (Html -> EMForm m (FormResult a, w))
-                -- ^ 'MkEMForm a', the form function
-                -> ((w, Enctype) -> FieldErrors (HandlerSite m) -> Maybe r -> m b)
+handleGetEMForm :: (ToTypedContent b, MonadHandler m, site ~ HandlerSite m)
+                => (Html -> EMForm m (FormResult a, WidgetOf site))
+                -> (Maybe r -> EFormHandlerT site m b)
                 -- ^ a function to make some output.
                 -- Maybe Text param: an error message
                 -- first 'w': form widget
                 -- 'r': extra content. If form failed/missing, this will be mempty, otherwise, it will be the output of function in next param.
-                -> (a -> m r)
+                -> (a -> EFormHandlerT site m r)
                 -- ^ use the form result, to generate result data
                 -> m b
 -- {{{1
 handleGetEMForm form show_widget f = do
   (((form_result, form_widget), form_enc), form_errs) <- runEMFormGet form
-  let show_empty_form_page = do
-        show_widget (form_widget, form_enc) form_errs Nothing
 
-  case form_result of
-    FormMissing -> show_empty_form_page >>= sendResponse
-    FormFailure _errs -> do
-      -- form errors already in 'form_errs'
-      show_empty_form_page >>= sendResponse
-    FormSuccess result -> do
-      f result >>= show_widget (form_widget, form_enc) mempty . Just
+  flip runReaderT ((form_widget, form_enc), form_errs) $ do
+    case form_result of
+      FormMissing -> show_widget Nothing >>= sendResponse
+      FormFailure _errs -> do
+        -- form errors already in 'form_errs'
+        show_widget Nothing >>= sendResponse
+      FormSuccess result -> do
+        f result >>= show_widget . Just
 -- }}}1
 
 
 -- | Handler a GET form
 -- Form result can be 'missing'
-handleGetEMFormMaybe :: (ToTypedContent b, MonadHandler m)
-                     => (Html -> EMForm m (FormResult a, w))
+handleGetEMFormMaybe :: (ToTypedContent b, MonadHandler m, site ~ HandlerSite m)
+                     => (Html -> EMForm m (FormResult a, WidgetOf site))
                      -- ^ 'MkEMForm a', the form function
-                     -> ((w, Enctype) -> FieldErrors (HandlerSite m) -> Maybe r -> m b)
+                     -> (Maybe r -> EFormHandlerT site m b)
                      -- ^ a function to make some output.
                      -- first 'w': form widget
                      -- 'r': extra content. If form failed/missing, this will be mempty, otherwise, it will be the output of function in next param.
                      -- second 'w': extra content. If form failed/missing, this will be mempty, otherwise, it will be the output of function in next param.
-                     -> (Maybe a -> m r)
+                     -> (Maybe a -> EFormHandlerT site m r)
                      -- ^ use the form result
                      -> m b
 -- {{{1
 handleGetEMFormMaybe form show_widget f = do
   (((form_result, form_widget), form_enc), form_errs) <- runEMFormGet form
-  let show_empty_form_page = do
-        show_widget (form_widget, form_enc) form_errs Nothing
 
-  m_res <- case form_result of
-    FormFailure _errs -> do
-      -- form errors already in 'form_errs'
-      show_empty_form_page >>= sendResponse
-    FormMissing -> return Nothing
-    FormSuccess result -> return $ Just result
+  flip runReaderT ((form_widget, form_enc), form_errs) $ do
+    m_res <- case form_result of
+      FormFailure _errs -> do
+        -- form errors already in 'form_errs'
+        show_widget Nothing >>= sendResponse
+      FormMissing -> return Nothing
+      FormSuccess result -> return $ Just result
 
-  f m_res >>= show_widget (form_widget, form_enc) mempty . Just
+    f m_res >>= show_widget . Just
 -- }}}1
 
 -- ^
