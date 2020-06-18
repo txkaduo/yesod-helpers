@@ -4,22 +4,13 @@ module Yesod.Helpers.Widget where
 import ClassyPrelude.Yesod
 import Text.Blaze (ToMarkup)
 import Data.Time
-import qualified Network.Wai as Wai
-import System.IO.Unsafe (unsafePerformIO)
-import Text.Blaze.Renderer.Utf8             (renderMarkup)
-import Text.Cassius
-import Text.Julius (JavascriptUrl, Javascript, renderJavascript)
 import Text.Parsec.TX.Utils
-import Text.Hamlet
 
 import Yesod.Helpers.Message
 import Yesod.Helpers.Form2
 import Yesod.Helpers.Handler
 import Yesod.Helpers.Utils
 import Yesod.Helpers.FuzzyDay
-
-import qualified Crypto.Hash.MD5 as MD5
-import qualified Data.Vault.Lazy as V
 
 import Yesod.Compat
 -- }}}1
@@ -33,111 +24,6 @@ mergeCssClassAttr new old = unwords $ ordNub $ new' <> old'
 
 mergeCssClassInAttrs :: Text -> [(Text, Text)] -> [(Text, Text)]
 mergeCssClassInAttrs cls_spec = insertWith mergeCssClassAttr "class" cls_spec
-
-
-vaultKeyLoadedCss :: V.Key (IORef (Set ByteString))
-vaultKeyLoadedCss = unsafePerformIO V.newKey
-{-# NOINLINE vaultKeyLoadedCss #-}
-
-
-vaultKeyLoadedJs :: V.Key (IORef (Set ByteString))
-vaultKeyLoadedJs = unsafePerformIO V.newKey
-{-# NOINLINE vaultKeyLoadedJs #-}
-
-
-vaultKeyLoadedHtml :: V.Key (IORef (Set ByteString))
-vaultKeyLoadedHtml = unsafePerformIO V.newKey
-{-# NOINLINE vaultKeyLoadedHtml #-}
-
-
--- | Must install this middleware, if use 'loadOnceCssUrl', 'loadOnceJsUrl', etc
--- Put it in 'yesodMiddleware' of the Yesod instance.
-yesodMiddlewareInsertVaultLoadedAsset :: HandlerOf site a -> HandlerOf site a
-yesodMiddlewareInsertVaultLoadedAsset h = do
-  loaded_css_set <- newIORef mempty
-  loaded_js_set <- newIORef mempty
-  loaded_html_set <- newIORef mempty
-  localVault (V.insert vaultKeyLoadedCss loaded_css_set) $
-    localVault (V.insert vaultKeyLoadedJs loaded_js_set) $
-      localVault (V.insert vaultKeyLoadedHtml loaded_html_set) $
-        h
-
-
--- | Load CSS content only once. 'yesodMiddlewareInsertVaultLoadedCssJs' must be installed.
--- Example:
---   loadOnceCssUrl $ $(luciusFie "xxx.lucius")
---   loadOnceCssUrl $ $(cassiusFie "xxx.lucius")
-loadOnceCssUrl :: MonadWidget m => CssUrl (Route (HandlerSite m)) -> m ()
-loadOnceCssUrl css_url = getUrlRenderParams >>= loadOnceCss . css_url
-
-
--- | Load CSS content only once. 'yesodMiddlewareInsertVaultLoadedCssJs' must be installed.
-loadOnceCss :: MonadWidget m => Css -> m ()
--- {{{1
-loadOnceCss css = do
-  m_set_ref <- V.lookup vaultKeyLoadedCss . Wai.vault <$> waiRequest
-  case m_set_ref of
-    Nothing -> fail "yesodMiddlewareInsertVaultLoadedAsset not installed"
-    Just s_ref -> do
-      let css_txt = renderCss css
-      let md5 = MD5.hashlazy $ encodeUtf8 css_txt
-      loaded <- member md5 <$> readIORef s_ref
-      unless loaded $ do
-        modifyIORef' s_ref (insertSet md5)
-        toWidget css
--- }}}1
-
-
--- | Load JS content only once. 'yesodMiddlewareInsertVaultLoadedCssJs' must be installed.
--- Example:
---   loadOnceJsUrl $ $(juliusFie "xxx.julius")
-loadOnceJsUrl :: (MonadWidget m, HandlerSite m ~ site) => JavascriptUrl (Route site) -> m ()
-loadOnceJsUrl js_url = getUrlRenderParams >>= loadOnceJs . js_url
-
-
--- | Load JS content only once. 'yesodMiddlewareInsertVaultLoadedCssJs' must be installed.
-loadOnceJs :: (MonadWidget m, HandlerSite m ~ site) => Javascript -> m ()
--- {{{1
-loadOnceJs js = do
-  m_set_ref <- V.lookup vaultKeyLoadedJs . Wai.vault <$> waiRequest
-  case m_set_ref of
-    Nothing -> fail "yesodMiddlewareInsertVaultLoadedAsset not installed"
-    Just s_ref -> do
-      let js_txt = renderJavascript js
-      let md5 = MD5.hashlazy $ encodeUtf8 js_txt
-      loaded <- member md5 <$> readIORef s_ref
-      unless loaded $ do
-        modifyIORef' s_ref (insertSet md5)
-        toWidget js
--- }}}1
-
-
-loadOnceHtmlUrl :: (MonadWidget m, HandlerSite m ~ site) => HtmlUrl (Route site) -> m ()
-loadOnceHtmlUrl html_url = getUrlRenderParams >>= loadOnceHtml . html_url
-
-
-loadOnceHtmlUrlI38n :: (MonadWidget m, HandlerSite m ~ site, RenderMessage site msg)
-                    => HtmlUrlI18n msg (Route site) -> m ()
-loadOnceHtmlUrlI38n html_url_i18n = do
-  render_url <- getUrlRenderParams
-  render_msg <- getMessageRender
-  loadOnceHtml $ html_url_i18n (toHtml . render_msg) render_url
-
-
-loadOnceHtml :: (MonadWidget m, HandlerSite m ~ site) => Html -> m ()
--- {{{1
-loadOnceHtml html = do
-  m_set_ref <- V.lookup vaultKeyLoadedHtml . Wai.vault <$> waiRequest
-  case m_set_ref of
-    Nothing -> fail "yesodMiddlewareInsertVaultLoadedAsset not installed"
-    Just s_ref -> do
-      let html_bs = renderMarkup html
-      let md5 = MD5.hashlazy html_bs
-      loaded <- member md5 <$> readIORef s_ref
-      unless loaded $ do
-        modifyIORef' s_ref (insertSet md5)
-        toWidget html
--- }}}1
 
 
 -- | construct page title by merging pieces of texts, separated by MsgPageTitleSep
