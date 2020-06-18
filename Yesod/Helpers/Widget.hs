@@ -56,9 +56,10 @@ yesodMiddlewareInsertVaultLoadedAsset :: HandlerOf site a -> HandlerOf site a
 yesodMiddlewareInsertVaultLoadedAsset h = do
   loaded_css_set <- newIORef mempty
   loaded_js_set <- newIORef mempty
+  loaded_html_set <- newIORef mempty
   localVault (V.insert vaultKeyLoadedCss loaded_css_set) $
     localVault (V.insert vaultKeyLoadedJs loaded_js_set) $
-      localVault (V.insert vaultKeyLoadedHtml loaded_js_set) $
+      localVault (V.insert vaultKeyLoadedHtml loaded_html_set) $
         h
 
 
