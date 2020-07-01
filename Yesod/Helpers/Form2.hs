@@ -11,8 +11,8 @@ module Yesod.Helpers.Form2
     , generateEMFormPost
     , generateEMFormGet'
     , generateEMFormGet
-    , emreq, emopt, emstatic, emstaticW
-    , semreq, semreq2, semopt, semopt2, semreqOpt, semstatic, semstatic', semstaticW
+    , emreq, emopt, emstatic, emstaticW, emstaticHiddenW
+    , semreq, semreq2, semopt, semopt2, semreqOpt, semstatic, semstatic', semstaticW, semstaticHiddenW
     , semview, semviewW
     , addEMFieldError
     , overallFieldName
@@ -319,7 +319,35 @@ emstaticW (FieldSettings {..}) v msg = do
         , fvTooltip = fmap toHtml $ fmap mr2 fsTooltip
         , fvId = theId
         , fvInput = toWidget
-            [whamlet|<p id="#{theId}" *{fsAttrs} .form-control-static>^{msg}|]
+            [whamlet|
+              <div id="#{theId}" *{fsAttrs} .form-control-static>^{msg}
+            |]
+        , fvErrors = Nothing
+        , fvRequired = False
+        })
+
+
+-- | 比 emstaticW 多个 hidden input
+emstaticHiddenW :: (site ~ HandlerSite m, MonadHandler m, ToWidget site w, PathPiece a)
+                => FieldSettings site
+                -> a
+                -> w
+                -> EMForm m (FormResult a, FieldView site)
+emstaticHiddenW (FieldSettings {..}) v msg = do
+    theId <- lift $ lift $ maybe newIdent return fsId
+    (_, site, langs) <- lift $ ask
+    let mr2 = renderMessage site langs
+    return (FormSuccess v, FieldView
+        { fvLabel = toHtml $ mr2 fsLabel
+        , fvTooltip = fmap toHtml $ fmap mr2 fsTooltip
+        , fvId = theId
+        , fvInput = toWidget
+            [whamlet|
+              <div id="#{theId}" *{fsAttrs} .form-control-static>
+                $maybe name <- fsName
+                  <input type=hidden name=#{name} value=#{toPathPiece v}>
+                ^{msg}
+            |]
         , fvErrors = Nothing
         , fvRequired = False
         })
@@ -420,6 +448,17 @@ semstaticW :: (site ~ HandlerSite m, MonadHandler m, ToWidget site w)
            -> SEMForm m (FormResult a)
 semstaticW fs v w = do
   (res, view) <- lift $ emstaticW fs v w
+  SS.modify ( view : )
+  return res
+
+
+semstaticHiddenW :: (site ~ HandlerSite m, MonadHandler m, ToWidget site w, PathPiece a)
+                 => FieldSettings site
+                 -> a
+                 -> w
+                 -> SEMForm m (FormResult a)
+semstaticHiddenW fs v w = do
+  (res, view) <- lift $ emstaticHiddenW fs v w
   SS.modify ( view : )
   return res
 
