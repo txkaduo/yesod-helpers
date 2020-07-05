@@ -3,6 +3,12 @@ module Yesod.Helpers.Aeson where
 
 -- {{{1
 import ClassyPrelude
+#if MIN_VERSION_base(4, 13, 0)
+import Control.Monad (MonadFail(..))
+#else
+import Data.Functor.Identity            (Identity)
+#endif
+
 import Prelude (ReadS, readsPrec)
 import Data.Aeson
 import qualified Data.Text              as T
@@ -19,7 +25,7 @@ import qualified Control.Monad.Trans.State as S
 import Text.Parsec.Text                 ()
 import Data.Aeson.Types                 (Parser, typeMismatch, modifyFailure)
 import Text.Parsec                      (ParsecT)
-import Data.Functor.Identity            (Identity)
+
 import Data.Scientific                  (floatingOrInteger)
 import Text.ParserCombinators.ReadP     (ReadP, readP_to_S)
 
@@ -268,7 +274,7 @@ reportExpected expected f = modifyFailure report f
 
 
 -- | parse text value by Parsec parser
-parseTextByParsec :: Monad m =>
+parseTextByParsec :: MonadFail m =>
     ParsecT Text () Identity a
     -> Text -> m a
 parseTextByParsec p t =

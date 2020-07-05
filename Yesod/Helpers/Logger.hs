@@ -2,11 +2,18 @@
 module Yesod.Helpers.Logger  where
 
 import ClassyPrelude.Yesod hiding (fileSize)
+#if MIN_VERSION_base(4, 13, 0)
+import Control.Monad (MonadFail(..))
+#endif
 import Yesod.Core.Types
 
-import Data.Default                         (Default(..))
 import qualified Data.Text                  as T
+
+#if !MIN_VERSION_yesod_core(1, 6, 18)
 import Control.DeepSeq                      (force)
+import Data.Conduit.Combinators             (sourceDirectory)
+import Control.Monad.Trans.Resource         (runResourceT)
+#endif
 
 import Network.Wai.Logger                   (DateCacheGetter)
 import System.FilePath                      (splitFileName, takeFileName)
@@ -15,13 +22,8 @@ import qualified Text.Parsec.Number         as PN
 import Text.Parsec                          (parse, eof)
 import qualified Text.Parsec
 
-#if MIN_VERSION_classy_prelude_yesod(1, 5, 0)
-import Data.Conduit.Combinators             (sourceDirectory)
-#endif
-
 import System.Posix.Files                   (getFileStatus, fileSize)
 import System.Posix.Types                   (COff(..))
-import Control.Monad.Trans.Resource         (runResourceT)
 import Control.Monad.Logger
 import System.Log.FastLogger
 

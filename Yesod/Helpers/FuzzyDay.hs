@@ -3,16 +3,20 @@ module Yesod.Helpers.FuzzyDay where
 
 -- {{{1 imports
 import ClassyPrelude.Yesod hiding (try, (<|>), optional)
+#if MIN_VERSION_base(4, 13, 0)
+import Control.Monad (MonadFail(..))
+#else
+import Control.Arrow                        ((***))
+import Control.DeepSeq                      (NFData(..))
+import GHC.Generics                         (Generic)
+#endif
 
 import qualified Data.Aeson                 as A
 import qualified Text.Parsec.Number         as PN
 import Data.Aeson.Types                     (Parser, typeMismatch)
 import Data.Scientific                      (floatingOrInteger)
 import Data.Time
-import Control.Arrow                        ((***))
-import Control.DeepSeq                      (NFData(..))
 import Control.DeepSeq.Generics             (genericRnf)
-import GHC.Generics                         (Generic)
 import Text.Parsec
 
 import Yesod.Helpers.Parsec

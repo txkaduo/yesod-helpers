@@ -11,7 +11,9 @@ import Control.Monad.State hiding (get, put)
 import Data.Serialize                       (Get, Put, get, put)
 import Text.Parsec                          (parse)
 import Data.Time                            ( NominalDiffTime, addUTCTime)
+#if !MIN_VERSION_classy_prelude(1, 5, 0)
 import Control.DeepSeq                      (NFData(..))
+#endif
 
 import Yesod.Helpers.Parsec
 
@@ -46,7 +48,7 @@ deriving instance (Show (Key val)) => Show (SafeCopyId val)
 instance (NFData (Key val)) => NFData (SafeCopyId val) where
     rnf (SafeCopyId x) = rnf x `seq` ()
 
-instance PersistEntity val => SafeCopy (SafeCopyId val) where
+instance (Typeable val, PersistEntity val) => SafeCopy (SafeCopyId val) where
     putCopy (SafeCopyId k) = contain $ putCopySafeCopyInside k
 
     getCopy = contain $ SafeCopyId <$> getCopySafeCopyInside
@@ -139,7 +141,7 @@ ttTime f (TimeTagged t x) = fmap (\t' -> TimeTagged t' x) (f t)
 unTimeTag :: Functor f => (a -> f b) -> TimeTagged a -> f (TimeTagged b)
 unTimeTag f (TimeTagged t x) = fmap (TimeTagged t) (f x)
 
-instance SafeCopy a => SafeCopy (TimeTagged a) where
+instance (Typeable a, SafeCopy a) => SafeCopy (TimeTagged a) where
     putCopy x = contain $ do
                 safePut $ _ttTime x
                 safePut $ _unTimeTag x

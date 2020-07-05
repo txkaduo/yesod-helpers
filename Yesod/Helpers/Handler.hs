@@ -3,6 +3,11 @@ module Yesod.Helpers.Handler where
 
 -- {{{1 imports
 import ClassyPrelude.Yesod hiding (runFakeHandler, requestHeaders)
+
+#if MIN_VERSION_base(4, 13, 0)
+import Control.Monad (MonadFail(..))
+#endif
+
 import Yesod.Core.Types
 import qualified Control.Monad.Trans.Reader as R
 import qualified Data.ByteString.Char8      as B8
@@ -24,15 +29,14 @@ import Data.Aeson.Types                     (Pair)
 
 import Yesod.Helpers.Form
 import Yesod.Helpers.Form2
-import Yesod.Helpers.Form                   (jsonOrHtmlOutputForm')
 import Yesod.Helpers.Utils                  (nullToNothing, encodeUtf8Rfc5987)
 import Yesod.Helpers.Pager
 import Yesod.Helpers.ParamNames
 
 import Yesod.Helpers.JSend                  (provideRepJsendAndJsonp, JSendMsg(JSendSuccess))
 
-#if MIN_VERSION_yesod_core(1, 6, 0)
-import Yesod.Core.Types                     (HandlerFor(..))
+#if !MIN_VERSION_yesod_core(1, 6, 18)
+import Yesod.Core.Types
 #endif
 
 import Yesod.Compat
@@ -98,21 +102,21 @@ clientOriginalIp = do
   return $ f1 <|> f2 <|> f3
 
 
-getCurrentRoute' :: MonadHandler m => m (Route (HandlerSite m))
+getCurrentRoute' :: (MonadFail m, MonadHandler m) => m (Route (HandlerSite m))
 getCurrentRoute' = getCurrentRoute >>= maybe (fail "getCurrentRoute failed") return
 
 
-getCurrentUrl :: MonadHandler m => m Text
+getCurrentUrl :: (MonadFail m, MonadHandler m) => m Text
 getCurrentUrl = do
     req <- waiRequest
-    current_route <- getCurrentRoute >>= maybe (error "getCurrentRoute failed") return
+    current_route <- getCurrentRoute'
     url_render <- getUrlRender
     return $ url_render current_route <> TE.decodeUtf8 (rawQueryString req)
 
-getCurrentUrlExtraQS :: MonadHandler m => Text -> m Text
+getCurrentUrlExtraQS :: (MonadFail m, MonadHandler m) => Text -> m Text
 getCurrentUrlExtraQS qs = do
     req <- waiRequest
-    current_route <- getCurrentRoute >>= maybe (error "getCurrentRoute failed") return
+    current_route <- getCurrentRoute'
     url_render <- getUrlRender
     return $ url_render current_route <> add_qs (TE.decodeUtf8 (rawQueryString req))
     where
@@ -494,7 +498,9 @@ instance Monad ParamResult where
     (ParamError errs) >>= _ = ParamError errs
     (ParamSuccess x)  >>= f = f x
 
+#if !MIN_VERSION_base(4, 13, 0)
     fail msg = ParamError [("", T.pack msg)]
+#endif
 
 
 httpErrorRetryWithValidParams ::
@@ -573,7 +579,11 @@ redirectToReturnUrl = do
   where
       lk x = lookupPostParam x >>= maybe (lookupGetParam x) (return . Just)
 
+#if MIN_VERSION_base(4, 13, 0)
+withReturnUrl :: (MonadFail (WidgetFor site)) => Route site -> WidgetOf site
+#else
 withReturnUrl :: Route site -> WidgetOf site
+#endif
 withReturnUrl r = do
   ret <- getCurrentUrl
   [whamlet|@?{(r, [(returnUrlParamName, ret)])}|]

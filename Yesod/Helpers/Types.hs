@@ -4,6 +4,9 @@ module Yesod.Helpers.Types where
 
 import Prelude                              (Read(..))
 import ClassyPrelude.Yesod hiding (Proxy)
+#if MIN_VERSION_classy_prelude(1, 5, 0)
+import Control.Monad (fail)
+#endif
 import qualified Data.Aeson                 as A
 import qualified Data.ByteString.Base64.URL as B64U
 import qualified Data.ByteString.Char8      as C8
@@ -15,7 +18,9 @@ import qualified Data.Text                  as T
 import Language.Haskell.TH.Lift             (deriveLift)
 import Data.Time                            (TimeZone, timeZoneOffsetString, getCurrentTimeZone, localDay, utcToLocalTime)
 #if MIN_VERSION_time(1,5,0)
+#if !MIN_VERSION_time(1,9,0)
 import Data.Time                            (parseTimeM)
+#endif
 #else
 import System.Locale                        (defaultTimeLocale)
 import Data.Time                            (parseTime)
@@ -26,12 +31,18 @@ import Web.PathPieces (showToPathPiece, readFromPathPiece)
 
 import Data.SafeCopy
 import Data.Binary                          (Binary)
+
+#if defined(MIN_VERSION_binary_orphans)
 #if MIN_VERSION_binary_orphans(1, 0, 0)
 import Data.Binary.Instances                ()
 #endif
 import Data.Binary.Orphans                  ()
+#endif
+
 import Database.Persist.Sql                 (PersistFieldSql(..))
+#if !MIN_VERSION_classy_prelude(1,5,0)
 import Control.DeepSeq                      (NFData(..))
+#endif
 import Control.DeepSeq.Generics             (genericRnf)
 import qualified System.FilePath.Glob       as G
 import qualified Data.Binary                as Binary

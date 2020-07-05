@@ -7,7 +7,11 @@ module Yesod.Helpers.LoginUser
 import ClassyPrelude.Yesod hiding (Proxy)
 import qualified Network.HTTP.Types         as H
 import Data.Proxy
+
+#if !MIN_VERSION_base(4, 13, 0)
 import Data.Typeable                        (Typeable)
+#endif
+
 import Data.Time                            (TimeZone)
 
 import Yesod.Helpers.Json                   (jsonDecodeKey, jsonEncodeKey)

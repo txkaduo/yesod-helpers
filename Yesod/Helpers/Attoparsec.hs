@@ -1,6 +1,9 @@
 module Yesod.Helpers.Attoparsec where
 
 import ClassyPrelude
+#if MIN_VERSION_base(4, 13, 0)
+import Control.Monad (fail)
+#endif
 import qualified Data.ByteString            as B
 import qualified Data.ByteString.Char8      as C8
 import qualified Data.ByteString.Base64     as B64

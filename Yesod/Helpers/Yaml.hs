@@ -3,14 +3,9 @@ module Yesod.Helpers.Yaml (
     , DefaultEnv(..)
     ) where
 
-import Prelude
+import ClassyPrelude.Yesod
 import Data.Yaml
-import Yesod
-import Data.Text                            (Text)
-import Data.Aeson                           (withObject)
 import qualified Data.Text                  as T
-import Data.Maybe                           (isJust)
-import Data.List                            (find)
 import Yesod.Default.Config                 (DefaultEnv(..))
 
 import Yesod.Helpers.Aeson

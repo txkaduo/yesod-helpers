@@ -7,7 +7,11 @@ import Control.Concurrent.STM               (check)
 #if !MIN_VERSION_classy_prelude(1, 0, 0)
 import Control.Concurrent.Async             (async)
 #endif
+
+#if !MIN_VERSION_classy_prelude(1, 5, 0)
 import Control.Concurrent.Async             (Async, pollSTM)
+#endif
+
 import Control.Monad.Logger
 import Control.Monad.Writer.Class           (MonadWriter(..))
 import Data.List.NonEmpty                   (NonEmpty(..), nonEmpty)

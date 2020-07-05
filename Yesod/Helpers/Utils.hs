@@ -17,7 +17,9 @@ import Data.Time                            ( localTimeToUTC, zonedTimeToUTC, Ti
 import Data.Time.Clock.POSIX                ( posixSecondsToUTCTime
                                             , utcTimeToPOSIXSeconds)
 #if MIN_VERSION_time(1,5,0)
+#if !MIN_VERSION_time(1,9,0)
 import Data.Time                            (parseTimeM)
+#endif
 #else
 import Data.Time                            (parseTime)
 #endif
