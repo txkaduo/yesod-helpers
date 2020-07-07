@@ -274,8 +274,13 @@ reportExpected expected f = modifyFailure report f
 
 
 -- | parse text value by Parsec parser
-parseTextByParsec :: MonadFail m =>
-    ParsecT Text () Identity a
+parseTextByParsec ::
+#if MIN_VERSION_base(4, 13, 0)
+    (MonadFail m)
+#else
+    (Monad m)
+#endif
+    => ParsecT Text () Identity a
     -> Text -> m a
 parseTextByParsec p t =
         case PC.parse p "" t of
