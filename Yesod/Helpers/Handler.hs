@@ -5,8 +5,10 @@ module Yesod.Helpers.Handler where
 import ClassyPrelude.Yesod hiding (runFakeHandler, requestHeaders)
 
 #if MIN_VERSION_base(4, 13, 0)
-import Control.Monad (MonadFail(..))
+-- import Control.Monad (MonadFail(..))
 #endif
+import Control.Monad.Catch (MonadThrow(..))
+import Control.Exception (AssertionFailed(..))
 
 import Yesod.Core.Types
 import qualified Control.Monad.Trans.Reader as R
@@ -102,18 +104,18 @@ clientOriginalIp = do
   return $ f1 <|> f2 <|> f3
 
 
-getCurrentRoute' :: (MonadFail m, MonadHandler m) => m (Route (HandlerSite m))
-getCurrentRoute' = getCurrentRoute >>= maybe (fail "getCurrentRoute failed") return
+getCurrentRoute' :: (MonadThrow m, MonadHandler m) => m (Route (HandlerSite m))
+getCurrentRoute' = getCurrentRoute >>= maybe (throwM $ AssertionFailed "getCurrentRoute failed") return
 
 
-getCurrentUrl :: (MonadFail m, MonadHandler m) => m Text
+getCurrentUrl :: (MonadThrow m, MonadHandler m) => m Text
 getCurrentUrl = do
     req <- waiRequest
     current_route <- getCurrentRoute'
     url_render <- getUrlRender
     return $ url_render current_route <> TE.decodeUtf8 (rawQueryString req)
 
-getCurrentUrlExtraQS :: (MonadFail m, MonadHandler m) => Text -> m Text
+getCurrentUrlExtraQS :: (MonadThrow m, MonadHandler m) => Text -> m Text
 getCurrentUrlExtraQS qs = do
     req <- waiRequest
     current_route <- getCurrentRoute'
@@ -580,7 +582,7 @@ redirectToReturnUrl = do
       lk x = lookupPostParam x >>= maybe (lookupGetParam x) (return . Just)
 
 #if MIN_VERSION_base(4, 13, 0)
-withReturnUrl :: (MonadFail (WidgetFor site)) => Route site -> WidgetOf site
+withReturnUrl :: (MonadThrow (WidgetFor site)) => Route site -> WidgetOf site
 #else
 withReturnUrl :: Route site -> WidgetOf site
 #endif
