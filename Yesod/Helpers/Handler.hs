@@ -37,10 +37,6 @@ import Yesod.Helpers.ParamNames
 
 import Yesod.Helpers.JSend                  (provideRepJsendAndJsonp, JSendMsg(JSendSuccess))
 
-#if !MIN_VERSION_yesod_core(1, 6, 18)
-import Yesod.Core.Types
-#endif
-
 import Yesod.Compat
 -- }}}1
 
@@ -589,6 +585,17 @@ withReturnUrl :: Route site -> WidgetOf site
 withReturnUrl r = do
   ret <- getCurrentUrl
   [whamlet|@?{(r, [(returnUrlParamName, ret)])}|]
+
+
+#if MIN_VERSION_base(4, 13, 0)
+withReturnUrl2 :: (MonadThrow (WidgetFor site)) => Route site -> [(Text, Text)] -> WidgetOf site
+#else
+withReturnUrl2 :: Route site -> [(Text, Text)] -> WidgetOf site
+#endif
+withReturnUrl2 r params = do
+  ret <- getCurrentUrl
+  [whamlet|@?{(r, insertMap returnUrlParamName ret params)}|]
+
 
 reqPathPieceParamPostGet :: (PathPiece a, MonadHandler m)
                          => Text
