@@ -577,6 +577,18 @@ redirectToReturnUrl = do
   where
       lk x = lookupPostParam x >>= maybe (lookupGetParam x) (return . Just)
 
+
+redirectWithQs' :: (MonadHandler m, RedirectUrl (HandlerSite m) (url, [(Text, Text)]))
+                => ((Text, Text) -> Bool) -> url -> m a
+redirectWithQs' filter_qs r = do
+  qs <- reqGetParams <$> getRequest
+  redirect (r, filter filter_qs qs)
+
+
+redirectWithQs :: (MonadHandler m, RedirectUrl (HandlerSite m) (url, [(Text, Text)])) => url -> m a
+redirectWithQs = redirectWithQs' (const True)
+
+
 #if MIN_VERSION_base(4, 13, 0)
 withReturnUrl :: (MonadThrow (WidgetFor site)) => Route site -> WidgetOf site
 #else
