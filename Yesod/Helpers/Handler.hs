@@ -579,14 +579,14 @@ redirectToReturnUrl = do
 
 
 redirectWithQs' :: (MonadHandler m, RedirectUrl (HandlerSite m) (url, [(Text, Text)]))
-                => ((Text, Text) -> Bool) -> url -> m a
-redirectWithQs' filter_qs r = do
+                => ([(Text, Text)] -> [(Text, Text)]) -> url -> m a
+redirectWithQs' fn r = do
   qs <- reqGetParams <$> getRequest
-  redirect (r, filter filter_qs qs)
+  redirect (r, fn qs)
 
 
 redirectWithQs :: (MonadHandler m, RedirectUrl (HandlerSite m) (url, [(Text, Text)])) => url -> m a
-redirectWithQs = redirectWithQs' (const True)
+redirectWithQs = redirectWithQs' id
 
 
 #if MIN_VERSION_base(4, 13, 0)
