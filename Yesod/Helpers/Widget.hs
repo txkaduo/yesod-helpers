@@ -11,6 +11,7 @@ import Yesod.Helpers.Form2
 import Yesod.Helpers.Handler
 import Yesod.Helpers.Utils
 import Yesod.Helpers.FuzzyDay
+import Yesod.Helpers.Types
 
 import Yesod.Compat
 -- }}}1
@@ -205,6 +206,14 @@ zhCnFuzzyDayWidget fd =
                     FuzzyDayY y -> tshow y <> "年"
                     FuzzyDayYM y m -> tshow y <> "年" <> tshow m <> "月"
                     FuzzyDayYMD y m d -> tshow y <> "年" <> tshow m <> "月" <> tshow d <> "日"
+
+
+yearMonthWidget :: (YearMonth -> String) -> YearMonth -> WidgetOf site
+yearMonthWidget show_ym ym = [whamlet|<time datetime=#{show ym}>#{show_ym ym}|]
+
+zhCnYearMonthWidget :: YearMonth -> WidgetOf site
+zhCnYearMonthWidget = yearMonthWidget show_ym
+  where show_ym (YearMonth y m) = show y <> "年" <> show m <> "月"
 
 
 wshow :: (ToMarkup a, MonadWidget m) => a -> m ()
