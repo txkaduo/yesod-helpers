@@ -8,9 +8,10 @@ import qualified Network.Wai as Wai
 import System.IO.Unsafe (unsafePerformIO)
 import Text.Blaze.Renderer.Utf8             (renderMarkup)
 import Text.Cassius
-import Text.Julius (JavascriptUrl, Javascript, renderJavascript)
+import Text.Julius
 import Text.Parsec.TX.Utils
 import Text.Hamlet
+import qualified Data.Text.Lazy as LT
 
 import Yesod.Helpers.Message
 import Yesod.Helpers.Form2
@@ -78,10 +79,11 @@ loadOnceCss :: MonadWidget m => Css -> m ()
 loadOnceCss css = do
   m_set_ref <- V.lookup vaultKeyLoadedCss . Wai.vault <$> waiRequest
   case m_set_ref of
-    Nothing -> fail "yesodMiddlewareInsertVaultLoadedAsset not installed"
+    Nothing -> throwIO $ userError "yesodMiddlewareInsertVaultLoadedAsset not installed"
     Just s_ref -> do
-      let css_txt = renderCss css
+      let css_txt = LT.strip $ renderCss css
       let md5 = MD5.hashlazy $ encodeUtf8 css_txt
+
       loaded <- member md5 <$> readIORef s_ref
       unless loaded $ do
         modifyIORef' s_ref (insertSet md5)
@@ -99,17 +101,18 @@ loadOnceJsUrl js_url = getUrlRenderParams >>= loadOnceJs . js_url
 -- | Load JS content only once. 'yesodMiddlewareInsertVaultLoadedCssJs' must be installed.
 loadOnceJs :: (MonadWidget m, HandlerSite m ~ site) => Javascript -> m ()
 -- {{{1
-loadOnceJs js = do
+loadOnceJs js_code = do
   m_set_ref <- V.lookup vaultKeyLoadedJs . Wai.vault <$> waiRequest
   case m_set_ref of
-    Nothing -> fail "yesodMiddlewareInsertVaultLoadedAsset not installed"
+    Nothing -> throwIO $ userError "yesodMiddlewareInsertVaultLoadedAsset not installed"
     Just s_ref -> do
-      let js_txt = renderJavascript js
+      let js_txt = LT.strip $ renderJavascript js_code
       let md5 = MD5.hashlazy $ encodeUtf8 js_txt
+
       loaded <- member md5 <$> readIORef s_ref
       unless loaded $ do
         modifyIORef' s_ref (insertSet md5)
-        toWidget js
+        toWidget js_code
 -- }}}1
 
 
@@ -130,7 +133,7 @@ loadOnceHtml :: (MonadWidget m, HandlerSite m ~ site) => Html -> m ()
 loadOnceHtml html = do
   m_set_ref <- V.lookup vaultKeyLoadedHtml . Wai.vault <$> waiRequest
   case m_set_ref of
-    Nothing -> fail "yesodMiddlewareInsertVaultLoadedAsset not installed"
+    Nothing -> throwIO $ userError "yesodMiddlewareInsertVaultLoadedAsset not installed"
     Just s_ref -> do
       let html_bs = renderMarkup html
       let md5 = MD5.hashlazy html_bs
