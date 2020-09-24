@@ -142,8 +142,15 @@ appendWidgetFieldViewFunc f1 f2 x1 x2 x3 x4 x5 =
   f1 x1 x2 x3 x4 x5 >> f2 x1 x2 x3 x4 x5
 
 
+alterFieldViewFunc :: (FieldViewFunc m a -> FieldViewFunc m a)
+                   -> Field m a
+                   -> Field m a
+alterFieldViewFunc f field = field { fieldView = f (fieldView field) }
+
+
 addWidgetToField :: FieldViewFunc m a -> Field m a -> Field m a
-addWidgetToField f field = field { fieldView = fieldView field `appendWidgetFieldViewFunc` f }
+addWidgetToField f = alterFieldViewFunc (flip appendWidgetFieldViewFunc f)
+-- addWidgetToField f field = field { fieldView = fieldView field `appendWidgetFieldViewFunc` f }
 
 
 addWidgetByIdToField :: (Text -> WidgetOf (HandlerSite m)) -> Field m a -> Field m a
