@@ -14,6 +14,7 @@ import Yesod.Core.Types
 import qualified Control.Monad.Trans.Reader as R
 import qualified Data.ByteString.Char8      as B8
 import qualified Data.Text                  as T
+import qualified Data.Text.Lazy             as LT
 import qualified Data.Text.Encoding         as TE
 import qualified Data.Vault.Lazy            as V
 #if MIN_VERSION_yesod_core(1,4,0)
@@ -26,6 +27,7 @@ import Control.Monad.Trans.Maybe
 
 import Network.Wai                          (requestHeaders, rawQueryString, requestMethod, vault)
 import Text.Blaze                           (Markup)
+import qualified Text.Blaze.Renderer.Text   as TBRT
 import Data.List                            (findIndex)
 import Data.Aeson.Types                     (Pair)
 
@@ -645,6 +647,12 @@ widgetToBodyHtml :: (Yesod site, MonadHandler m, HandlerSite m ~ site)
                  -> m Html
 widgetToBodyHtml widget = liftMonadHandler $ do
   widgetToPageContent widget >>= withUrlRenderer . pageBody
+
+
+widgetToBodyHtmlText :: (Yesod site, MonadHandler m, HandlerSite m ~ site)
+                     => WidgetOf site
+                     -> m LT.Text
+widgetToBodyHtmlText = fmap TBRT.renderMarkup . widgetToBodyHtml
 
 
 -- | 目前来说，大多数时候情况都不需要 i18n
