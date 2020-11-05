@@ -575,9 +575,21 @@ semHiddenRetainParams names = do
 redirectToReturnUrl :: (MonadHandler m, RedirectUrl (HandlerSite m) url)
                     => url -> m a
 redirectToReturnUrl = do
-  (lk returnUrlParamName >>=) . flip maybe redirect . redirect
-  where
-      lk x = lookupPostParam x >>= maybe (lookupGetParam x) (return . Just)
+  (getReturnUrl >>=) . flip maybe redirect . redirect
+
+
+getReturnUrl :: (MonadHandler m) => m (Maybe Text)
+getReturnUrl = lk returnUrlParamName
+  where lk x = lookupPostParam x >>= maybe (lookupGetParam x) (return . Just)
+
+
+redirectWithReturnUrl :: (MonadHandler m, RedirectUrl (HandlerSite m) (url, [(Text, Text)])) => url -> Text -> m a
+redirectWithReturnUrl url ret_url = do
+  redirectWithQs' (insertMap returnUrl2ParamName ret_url) url
+
+
+redirectPassReturnUrl :: (MonadHandler m, RedirectUrl (HandlerSite m) url, RedirectUrl (HandlerSite m) (url, [(Text, Text)])) => url -> m a
+redirectPassReturnUrl url = getReturnUrl >>= maybe (redirect url) (redirectWithReturnUrl url)
 
 
 redirectWithQs' :: (MonadHandler m, RedirectUrl (HandlerSite m) (url, [(Text, Text)]))
