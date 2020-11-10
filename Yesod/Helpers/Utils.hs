@@ -62,6 +62,10 @@ infix 3 ?=, ?=!, ?=?
 (?=?) n mv = (n,) . toPathPiece <$> mv
 
 
+hasDataParam :: (Text, Text)
+hasDataParam = ("_hasdata", "")
+
+
 -- | 用于隐藏用户名，昵称等名字
 -- 保留首尾字符，中间字符用*代替
 maskName :: String -> String
