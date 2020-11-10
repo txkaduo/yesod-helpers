@@ -38,6 +38,7 @@ import Network.URI                          (parseURIReference, uriQuery, uriToS
                                             , URI, uriScheme, uriPort
                                             )
 import Yesod.Core.Types                     (ContentType)
+import Web.PathPieces                       (PathPiece(..))
 import qualified Blaze.ByteString.Builder   as BBB
 import qualified Data.ByteString.UTF8       as UTF8
 import qualified Data.ByteString.Lazy       as LB
@@ -48,6 +49,17 @@ import GHC.Stack
 import Yesod.Compat as YC
 -- }}}1
 
+
+infix 3 ?=, ?=!, ?=?
+
+(?=) :: PathPiece a => Text -> a -> (Text, Text)
+(?=) n v = (n, toPathPiece v)
+
+(?=!) :: PathPiece a => Text -> a -> Maybe (Text, Text)
+(?=!) = (. Just) . (?=?)
+
+(?=?) :: PathPiece a => Text -> Maybe a -> Maybe (Text, Text)
+(?=?) n mv = (n,) . toPathPiece <$> mv
 
 
 -- | 用于隐藏用户名，昵称等名字
