@@ -30,8 +30,11 @@ import System.Random                        (randomIO)
 #if !MIN_VERSION_classy_prelude(1, 4, 0)
 import System.Timeout                       (timeout)
 #endif
+import System.CPUTime                       (getCPUTime)
+import qualified UnliftIO                   as U
 
-import Network.HTTP.Types                   (parseQueryText, renderQueryText, QueryText, urlEncode)
+import Network.HTTP.Types                   (parseQueryText, renderQueryText, QueryText, urlEncode, statusCode)
+import qualified Network.HTTP.Simple        as H
 import qualified Network.Mime               as MM
 import Network.URI                          (parseURIReference, uriQuery, uriToString
                                             , parseAbsoluteURI, uriAuthority, uriRegName
@@ -566,5 +569,47 @@ defaultExtensionOfMime mt = fmap fst $ find ((== mt) . snd) (mapToList MM.defaul
 
 getTodayLocal :: MonadIO m => m Day
 getTodayLocal = liftIO $ localDay . zonedTimeToLocalTime <$> getZonedTime
+
+
+-- | Try mutiple candidate urls, return the most fast-response one.
+-- 主要是为了 google fonts 在国内的镜像。可选择的镜像很少，经常不可靠，而且通常 google 原始的网站是直接可以访问的
+-- 用这个工具定期检查一组备选的URL，选择其中最快的可用URL.
+fastestResponseUrl :: (MonadIO m, MonadLogger m, U.MonadUnliftIO m) => Int -> [String] -> m (Maybe String)
+-- {{{1
+fastestResponseUrl timeout_seconds urls = do
+  fmap (listToMaybe . map fst . sortWith snd . catMaybes) $ mapConcurrently test_op_time urls
+  where
+    test_op_time url = do
+      begin <- liftIO getCPUTime
+      err_or_res <- tryAny $ U.timeout (timeout_seconds * 1000 * 1000) $ get_one url
+      case err_or_res of
+        Left exc -> do
+          $logError $ "Got exception when accessing '" <> fromString url
+                        <> "': "  <> tshow exc
+          pure Nothing
+
+        Right (Just (Right r)) -> do
+          end <- liftIO getCPUTime
+          pure $ Just (r, end - begin)
+
+        Right (Just (Left status)) -> do
+          $logWarn $ "Got HTTP error response status for url: " <> fromString url <> ", status was: " <> tshow status
+          pure Nothing
+
+        Right Nothing -> do
+          $logError $ "URL timed-out: " <> fromString url
+          pure Nothing
+
+
+    get_one url = do
+      rs <- liftIO $ H.httpLBS req
+      let status = H.getResponseStatus rs
+      let sc = statusCode status
+      if sc >= 200 && sc < 400
+         then pure (Right url)
+         else pure (Left status)
+      where req = H.setRequestMethod "HEAD" (fromString url)
+-- }}}1
+
 
 -- vim: set foldmethod=marker:

@@ -103,7 +103,6 @@ library
                      , parsec3-numbers
                      , aeson
                      , shakespeare
-                     , http-types
                      , exceptions
                      , template-haskell
                      , mtl
@@ -152,9 +151,11 @@ library
                      , mono-traversable
                      , semigroups
                      , http-types
+                     , http-conduit
                      , mime-types
                      , vault
                      , choice
+                     , unliftio
                      , parsec-tx-utils         >= 0.3.1
                      , yesod-compat
 
