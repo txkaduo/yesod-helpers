@@ -14,6 +14,7 @@ import qualified Data.ByteString.Lazy       as LB
 import           Data.Proxy                 (Proxy(..))
 import qualified Data.Serialize             as SL
 import qualified Data.Text                  as T
+import qualified Data.List                  as L
 
 import Language.Haskell.TH.Lift             (deriveLift)
 import Data.Time                            (TimeZone, timeZoneOffsetString, getCurrentTimeZone, localDay, utcToLocalTime)
@@ -470,6 +471,13 @@ yearMonthSucc (YearMonth y m) = YearMonth y (m + 1)
 yearMonthPred :: YearMonth -> YearMonth
 yearMonthPred (YearMonth y 1) = YearMonth (y - 1) 12
 yearMonthPred (YearMonth y m) = YearMonth y (m - 1)
+
+
+addYearMonths :: Int -> YearMonth -> YearMonth
+addYearMonths n ym
+  | n > 0     = L.head $ drop n $ L.iterate yearMonthSucc ym
+  | n < 0     = L.head $ drop (negate n) $ L.iterate yearMonthPred ym
+  | otherwise = ym
 
 
 yearMonthToDayRange :: YearMonth -> (Day, Day)
