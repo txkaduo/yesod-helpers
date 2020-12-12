@@ -7,7 +7,6 @@ import ClassyPrelude.Yesod hiding (runFakeHandler, requestHeaders)
 #if MIN_VERSION_base(4, 13, 0)
 -- import Control.Monad (MonadFail(..))
 #endif
-import Control.Monad.Catch (MonadThrow(..))
 import Control.Exception (AssertionFailed(..))
 
 import Yesod.Core.Types
@@ -102,11 +101,11 @@ clientOriginalIp = do
   return $ f1 <|> f2 <|> f3
 
 
-getCurrentRoute' :: (MonadThrow m, MonadHandler m) => m (Route (HandlerSite m))
-getCurrentRoute' = getCurrentRoute >>= maybe (throwM $ AssertionFailed "getCurrentRoute failed") return
+getCurrentRoute' :: (MonadHandler m) => m (Route (HandlerSite m))
+getCurrentRoute' = getCurrentRoute >>= maybe (liftIO $ throwIO $ AssertionFailed "getCurrentRoute failed") return
 
 
-getCurrentUrl :: (MonadThrow m, MonadHandler m) => m Text
+getCurrentUrl :: (MonadHandler m) => m Text
 getCurrentUrl = do
     req <- waiRequest
     current_route <- getCurrentRoute'
