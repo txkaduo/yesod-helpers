@@ -448,19 +448,25 @@ handleReadDelayedStmQueue app_exit_var check_exit_between get_key delay_ms in_ch
 -- }}}1
 
 
+uriToStringDefault :: URI -> String
+uriToStringDefault = flip (uriToString id) ""
+
+
+urlUpdateQueryText' :: (QueryText -> QueryText) -> URI -> URI
+urlUpdateQueryText' f uri =
+    uri { uriQuery = (UTF8.toString $ BBB.toByteString $
+                        renderQueryText True $
+                          f $ parseQueryText $ UTF8.fromString $ strip_qm $ uriQuery uri)
+        }
+    where strip_qm ('?':xs)   = xs
+          strip_qm xs         = xs
+
+
 urlUpdateQueryText :: (QueryText -> QueryText)
-                    -> String
-                    -> Maybe String
-urlUpdateQueryText f s = do
-    uri <- parseURIReference s
-    return $ flip (uriToString id) "" $
-        uri { uriQuery = (UTF8.toString $ BBB.toByteString $
-                                renderQueryText True $
-                                    f $ parseQueryText $ UTF8.fromString $ strip_qm $ uriQuery uri)
-                }
-    where
-        strip_qm ('?':xs)   = xs
-        strip_qm xs         = xs
+                   -> String
+                   -> Maybe String
+urlUpdateQueryText f s =
+  fmap (uriToStringDefault . urlUpdateQueryText' f) $ parseURIReference s
 
 
 queryTextSetParam :: [(Text, Maybe Text)]
