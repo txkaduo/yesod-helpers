@@ -141,6 +141,9 @@ runPager (PagerSettings npp pn_param) pn total_num = do
 -- }}}1
 
 
+handlerGetPageParam :: (MonadHandler m, RenderMessage (HandlerSite m) FormMessage) => m Int
+handlerGetPageParam = fmap (max 1 . fromMaybe 1) $ runInputGet $ iopt intField "p"
+
 
 -- | 把输入的数据按分页的参数取出一小部分列表，并得到总数
 -- CAUTION: 这通常使用数据库 SQL 的分页参数是更好的替代做法．
