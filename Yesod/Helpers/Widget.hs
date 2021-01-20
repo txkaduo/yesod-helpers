@@ -13,6 +13,7 @@ import Text.Parsec.TX.Utils
 import Text.Hamlet
 import qualified Data.Text.Lazy as LT
 
+import Yesod.Helpers.ParamNames
 import Yesod.Helpers.Message
 import Yesod.Helpers.Form2
 import Yesod.Helpers.Handler
@@ -342,5 +343,10 @@ wMessage :: (RenderMessage site a)
          -> WidgetOf site
 wMessage x = [whamlet|_{x}|]
 
+
+wHiddenReturnUrl :: WidgetOf site
+wHiddenReturnUrl = do
+  url <- getCurrentUrl
+  [whamlet|<input type=hidden name=#{returnUrlParamName} value=#{url}>|]
 
 -- vim: set foldmethod=marker:
