@@ -1,8 +1,10 @@
 module Yesod.Helpers.Upload where
 
-import ClassyPrelude.Yesod
+import ClassyPrelude
+import Yesod
 
 import Yesod.Core.Types                     (fileSourceRaw)
+import Data.Conduit
 import qualified Data.Conduit.Binary        as CB
 import qualified Data.ByteString.Lazy       as LB
 

@@ -2,7 +2,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 module Yesod.Helpers.SafeCopy where
 
-import ClassyPrelude.Yesod hiding (get)
+import ClassyPrelude
+import Yesod hiding (get)
+import Data.Default (Default(..))
 import qualified Data.Aeson                 as Aeson
 import Data.SafeCopy
 import Language.Haskell.TH
@@ -59,7 +61,9 @@ putCopySafeCopyInside k =
         PersistInt64 x      -> put (1 :: Word8) >> put x
         PersistObjectId x   -> put (2 :: Word8) >> put x
         PersistByteString x -> put (3 :: Word8) >> put x
+#if !MIN_VERSION_persistent(2, 11, 0)
         PersistDbSpecific x -> put (4 :: Word8) >> put x
+#endif
         _                   -> error "unexpected PersistValue in Key"
 
 getCopySafeCopyInside :: (PersistField (Key val)) => Get (Key val)
@@ -72,7 +76,9 @@ getCopySafeCopyInside = do
                 1 -> PersistInt64 <$> get
                 2 -> PersistObjectId <$> get
                 3 -> PersistByteString <$> get
+#if !MIN_VERSION_persistent(2, 11, 0)
                 4 -> PersistDbSpecific <$> get
+#endif
                 _ -> fail $ "unexpected/unknown PersistValue type tag: "
                                 ++ show x
 

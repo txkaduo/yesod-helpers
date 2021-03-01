@@ -4,7 +4,8 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 module Yesod.Helpers.Message where
 
-import ClassyPrelude.Yesod
+import ClassyPrelude
+import Yesod
 import qualified Data.Text as T
 
 import           Yesod.Form.I18n.Czech

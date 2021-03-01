@@ -2,7 +2,8 @@
 module Yesod.Helpers.FuzzyDay where
 
 -- {{{1 imports
-import ClassyPrelude.Yesod hiding (try, (<|>), optional)
+import ClassyPrelude hiding (try, (<|>), optional)
+import Yesod
 #if MIN_VERSION_base(4, 13, 0)
 import Control.Monad (MonadFail(..))
 #else

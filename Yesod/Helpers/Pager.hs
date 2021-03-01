@@ -1,8 +1,10 @@
 module Yesod.Helpers.Pager where
 
 -- {{{1 imports
-import ClassyPrelude.Yesod
+import ClassyPrelude
+import Yesod
 
+import Data.Conduit (ZipSink(..))
 import qualified Data.Conduit.Combinators as CC
 import qualified Data.Conduit.List        as CL
 

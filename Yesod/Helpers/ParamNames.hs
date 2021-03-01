@@ -1,6 +1,6 @@
 module Yesod.Helpers.ParamNames where
 
-import ClassyPrelude.Yesod
+import ClassyPrelude
 
 
 loginParamNames :: [Text]

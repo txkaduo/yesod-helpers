@@ -1,12 +1,16 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Yesod.Helpers.Logger  where
 
-import ClassyPrelude.Yesod hiding (fileSize)
+import ClassyPrelude
+import Yesod
 #if MIN_VERSION_base(4, 13, 0)
 import Control.Monad (MonadFail(..))
 #endif
 import Yesod.Core.Types
 
+import Control.Monad.Trans.Resource
+import Conduit
+import Data.Default (Default(..))
 import qualified Data.Text                  as T
 
 #if !MIN_VERSION_yesod_core(1, 6, 18)

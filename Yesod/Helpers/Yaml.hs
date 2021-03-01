@@ -3,7 +3,8 @@ module Yesod.Helpers.Yaml (
     , DefaultEnv(..)
     ) where
 
-import ClassyPrelude.Yesod
+import ClassyPrelude
+import Yesod
 import Data.Yaml
 import qualified Data.Text                  as T
 import Yesod.Default.Config                 (DefaultEnv(..))

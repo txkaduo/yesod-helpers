@@ -2,12 +2,14 @@
 module Yesod.Helpers.Handler where
 
 -- {{{1 imports
-import ClassyPrelude.Yesod hiding (runFakeHandler, requestHeaders)
+import ClassyPrelude
+import Yesod hiding (runFakeHandler)
 
 #if MIN_VERSION_base(4, 13, 0)
 -- import Control.Monad (MonadFail(..))
 #endif
 import Control.Exception (AssertionFailed(..))
+import Control.Monad.Catch (MonadThrow(..))
 
 import Yesod.Core.Types
 import qualified Control.Monad.Trans.Reader as R
@@ -25,6 +27,7 @@ import qualified Data.Map.Strict            as Map
 import Control.Monad.Trans.Maybe
 
 import Network.Wai                          (requestHeaders, rawQueryString, requestMethod, vault)
+import Network.HTTP.Types (methodNotAllowed405, mkStatus)
 import Text.Blaze                           (Markup)
 import qualified Text.Blaze.Renderer.Text   as TBRT
 import Data.List                            (findIndex)

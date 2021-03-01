@@ -1,6 +1,7 @@
 module Yesod.Helpers.Session where
 
-import ClassyPrelude.Yesod
+import ClassyPrelude
+import Yesod
 import qualified Data.Binary                as Bin
 import qualified Data.Binary.Put            as Bin
 import qualified Data.Binary.Get            as Bin

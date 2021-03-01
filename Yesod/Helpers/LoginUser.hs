@@ -4,7 +4,8 @@ module Yesod.Helpers.LoginUser
   , loginParamNames, loginMsgParamName, returnUrlParamName, returnUrl2ParamName
   ) where
 
-import ClassyPrelude.Yesod hiding (Proxy)
+import ClassyPrelude
+import Yesod
 import qualified Network.HTTP.Types         as H
 import Data.Proxy
 

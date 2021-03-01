@@ -5,7 +5,8 @@ import Control.Monad.Trans.Control
 import Control.Monad.Catch
 #endif
 
-import ClassyPrelude.Yesod
+import ClassyPrelude
+import Yesod
 import Yesod.Auth
 
 import Yesod.Compat

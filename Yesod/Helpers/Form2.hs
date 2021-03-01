@@ -29,7 +29,8 @@ module Yesod.Helpers.Form2
     ) where
 
 -- {{{1 imports
-import ClassyPrelude.Yesod
+import ClassyPrelude
+import Yesod
 import qualified Data.Text.Encoding         as TE
 import qualified Control.Monad.Trans.State.Strict as SS
 

@@ -1,7 +1,8 @@
 module Yesod.Helpers.Widget where
 
 -- {{{1 imports
-import ClassyPrelude.Yesod
+import ClassyPrelude
+import Yesod
 import Text.Blaze (ToMarkup)
 import Data.Time
 import qualified Network.Wai as Wai

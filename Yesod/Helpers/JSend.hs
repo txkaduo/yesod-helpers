@@ -3,7 +3,8 @@
 -}
 module Yesod.Helpers.JSend where
 
-import ClassyPrelude.Yesod
+import ClassyPrelude
+import Yesod
 import Control.Monad.Writer (Writer)
 import Data.Monoid (Endo)
 import Text.Julius (rawJS, Javascript, toJavascript)

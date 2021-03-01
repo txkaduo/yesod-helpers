@@ -6,7 +6,8 @@
 module Yesod.Helpers.Form where
 
 -- {{{1 imports
-import ClassyPrelude.Yesod hiding (catch)
+import ClassyPrelude
+import Yesod
 import Control.Arrow (left)
 
 #if MIN_VERSION_yesod_form(1, 3, 8)
@@ -34,6 +35,7 @@ import qualified Data.Conduit.List          as CL
 import qualified Data.Attoparsec.ByteString as Atto
 
 import Control.Monad.RWS.Lazy               (RWST)
+import Control.Monad.Trans.Resource
 import Text.Blaze                           (Markup)
 import Control.Monad.Trans.Maybe            (runMaybeT)
 import Control.Arrow                        (right)
@@ -43,6 +45,7 @@ import Text.Blaze.Renderer.Utf8             (renderMarkup)
 import Text.Parsec                          (parse, space, eof, Parsec)
 import Control.Monad.Except                 (runExceptT, throwError, ExceptT(..), withExceptT, mapExceptT)
 import Data.Aeson.Types                     (parseEither)
+import Data.Conduit
 import Data.Yaml                            (decodeEither')
 import Data.List.NonEmpty                   (NonEmpty, nonEmpty)
 
@@ -50,7 +53,6 @@ import qualified Codec.Archive.Smooth.All as AS
 
 #if MIN_VERSION_classy_prelude(1, 4, 0)
 import Control.Monad.Trans.Control
-import Control.Monad.Catch                  (throwM)
 #endif
 
 import Yesod.Helpers.Message

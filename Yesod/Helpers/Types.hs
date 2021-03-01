@@ -3,7 +3,8 @@
 module Yesod.Helpers.Types where
 
 import Prelude                              (Read(..))
-import ClassyPrelude.Yesod hiding (Proxy)
+import ClassyPrelude
+import Yesod
 #if MIN_VERSION_classy_prelude(1, 5, 0)
 import Control.Monad (fail)
 #endif
@@ -11,6 +12,7 @@ import qualified Data.Aeson                 as A
 import qualified Data.ByteString.Base64.URL as B64U
 import qualified Data.ByteString.Char8      as C8
 import qualified Data.ByteString.Lazy       as LB
+import           Data.Default (Default(..))
 import           Data.Proxy                 (Proxy(..))
 import qualified Data.Serialize             as SL
 import qualified Data.Text                  as T

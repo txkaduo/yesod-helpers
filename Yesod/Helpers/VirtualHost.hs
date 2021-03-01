@@ -12,7 +12,8 @@
 --
 module Yesod.Helpers.VirtualHost where
 
-import           ClassyPrelude.Yesod hiding (Request, Builder, Proxy)
+import           ClassyPrelude hiding (Builder)
+import           Yesod
 import           Control.Monad.Trans.Maybe
 import           Blaze.ByteString.Builder   (Builder, toByteString)
 import           Data.Proxy                 (Proxy(..))

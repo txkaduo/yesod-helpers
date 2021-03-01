@@ -1,7 +1,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Yesod.Helpers.Json where
 
-import ClassyPrelude.Yesod
+import ClassyPrelude
+import Yesod
 import Control.Monad.Writer (Writer)
 import qualified Data.Text.Encoding         as TE
 import qualified Data.ByteString.Lazy       as LB
@@ -11,6 +12,7 @@ import Data.Aeson.Types                     (Pair, parseEither)
 import Data.Attoparsec.ByteString           (parseOnly)
 import Data.Monoid (Endo)
 import Text.Julius (Javascript)
+import Network.HTTP.Types                   (unauthorized401)
 
 
 import Yesod.Helpers.Handler                (lookupReqAccept, matchMimeType)
