@@ -26,7 +26,11 @@ import qualified Text.Parsec.Number         as PN
 import Text.Parsec                          (parse, eof)
 import qualified Text.Parsec
 
+#if defined(mingw32_HOST_OS)
+import System.PosixCompat.Files                   (getFileStatus, fileSize)
+#else
 import System.Posix.Files                   (getFileStatus, fileSize)
+#endif
 import System.Posix.Types                   (COff(..))
 import Control.Monad.Logger
 import System.Log.FastLogger
