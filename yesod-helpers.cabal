@@ -132,7 +132,6 @@ library
                      , deepseq
                      , filepath
                      , path-pieces
-                     , unix
                      , deepseq-generics
                      , stm
                      , async
@@ -157,6 +156,11 @@ library
                      , unliftio
                      , parsec-tx-utils         >= 0.3.1
                      , yesod-compat
+
+  if os(windows)
+      build-depends:   unix-compat
+  else
+      build-depends:   unix
 
   if flag(acid-state)
       build-depends:   acid-state
