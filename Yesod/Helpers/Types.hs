@@ -521,3 +521,23 @@ toHtmlCode = HtmlCode . toStrict . renderMarkup
 
 fromHtmlCode :: HtmlCode -> Html
 fromHtmlCode = preEscapedText . unHtmlCode
+
+
+data HtmlAttrsOpts = HtmlAttrsOpts
+  { haoClasses :: [Text]
+  , haoOtherAttrs :: [(Text, Text)]
+  }
+
+instance Default HtmlAttrsOpts where
+  def = HtmlAttrsOpts def def
+
+haoAllAttributes :: HtmlAttrsOpts -> [(Text, Text)]
+haoAllAttributes (HtmlAttrsOpts {..}) =
+  haoOtherAttrs <> class_attr
+  where
+    class_attr =
+      if null haoClasses
+         then []
+         else [ ("class", unwords haoClasses) ]
+
+
