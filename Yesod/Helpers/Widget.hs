@@ -308,6 +308,15 @@ zhCnFormatUtcWidgetNoSec :: UTCTime
 zhCnFormatUtcWidgetNoSec = zhCnFormatUtcWidget "%Y-%m-%d %H:%M"
 
 
+timeOfDayWidgetNoSec :: TimeOfDay -> WidgetOf site
+timeOfDayWidgetNoSec tod = [whamlet|<time datetime=#{s}>#{s}|]
+  where s = formatTime defaultTimeLocale "%H:%M" tod
+
+timeOfDayWidgetSec :: TimeOfDay -> WidgetOf site
+timeOfDayWidgetSec tod = [whamlet|<time datetime=#{s}>#{s}|]
+  where s = formatTime defaultTimeLocale "%H:%M:%S" tod
+
+
 fuzzyDayWidget :: FuzzyDay -> WidgetOf site
 fuzzyDayWidget fd = [whamlet|<time datetime=#{toPathPiece fd}>#{toPathPiece fd}|]
 
