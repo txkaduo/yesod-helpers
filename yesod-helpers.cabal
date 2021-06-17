@@ -201,7 +201,7 @@ library
       cpp-options:   -DDEVELOPMENT
       ghc-options:   -O0
   else
-      ghc-options:   -O
+      ghc-options:   -O2
 
   if flag(prof)
       ghc-options:   -fprof-auto
