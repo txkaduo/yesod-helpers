@@ -243,6 +243,16 @@ fsAddCssClass css_cls fs = fs { fsAttrs = new_attrs' }
 -- }}}1
 
 
+fsModifyName :: (Maybe Text -> Maybe Text)
+             -> FieldSettings site -> FieldSettings site
+fsModifyName f x = x { fsName = f (fsName x) }
+
+
+fsModifyLabel :: (SomeMessage site -> SomeMessage site)
+              -> FieldSettings site -> FieldSettings site
+fsModifyLabel f x = x { fsLabel = f (fsLabel x) }
+
+
 minimialLayoutBody :: (Yesod site)
                    => WidgetOf site
                    -> HandlerOf site Html
