@@ -35,7 +35,7 @@ import Data.Aeson.Types                     (Pair)
 
 import Yesod.Helpers.Form
 import Yesod.Helpers.Form2
-import Yesod.Helpers.Utils                  (nullToNothing, encodeUtf8Rfc5987)
+import Yesod.Helpers.Utils                  (nullToNothing, encodeUtf8Rfc5987, (?=?))
 import Yesod.Helpers.Pager
 import Yesod.Helpers.ParamNames
 
@@ -623,6 +623,27 @@ withReturnUrl2 :: Route site -> [(Text, Text)] -> WidgetOf site
 withReturnUrl2 r params = do
   ret <- getCurrentUrl
   [whamlet|@?{(r, insertMap returnUrlParamName ret params)}|]
+
+
+#if MIN_VERSION_base(4, 13, 0)
+keepReturnUrl :: (MonadThrow (WidgetFor site)) => Route site -> WidgetOf site
+#else
+keepReturnUrl :: Route site -> WidgetOf site
+#endif
+keepReturnUrl r = do
+  m_return_url <- getReturnUrl
+  [whamlet|@?{(r, catMaybes [returnUrlParamName ?=? m_return_url])}|]
+
+
+#if MIN_VERSION_base(4, 13, 0)
+keepReturnUrl2 :: (MonadThrow (WidgetFor site)) => Route site -> [(Text, Text)] -> WidgetOf site
+#else
+keepReturnUrl2 :: Route site -> [(Text, Text)] -> WidgetOf site
+#endif
+keepReturnUrl2 r params = do
+  m_return_url <- getReturnUrl
+  let params' = fromMaybe id (insertMap returnUrlParamName <$> m_return_url) params
+  [whamlet|@?{(r, params')}|]
 
 
 reqPathPieceParamPostGet :: (PathPiece a, MonadHandler m)
