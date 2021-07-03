@@ -25,6 +25,7 @@ import Yesod.Helpers.Aeson                  (parseTextByParsec)
 import Yesod.Helpers.SafeCopy
 import Yesod.Helpers.Form
 import Yesod.Helpers.Message
+import Yesod.Helpers.Types
 -- }}}1
 
 
@@ -179,6 +180,11 @@ fromFuzzyDayMaybe fd =
     _ -> Nothing
 -- }}}1
 
+
+fuzzyDayToYearMonth :: FuzzyDay -> Maybe YearMonth
+fuzzyDayToYearMonth (FuzzyDayY _)       = Nothing
+fuzzyDayToYearMonth (FuzzyDayYM y m)    = Just $ YearMonth y m
+fuzzyDayToYearMonth (FuzzyDayYMD y m _) = Just $ YearMonth y m
 
 
 -- | FuzzyDay所指范围的最后一日
