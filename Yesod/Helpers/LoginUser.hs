@@ -5,6 +5,8 @@ module Yesod.Helpers.LoginUser
   ) where
 
 import ClassyPrelude
+import Control.Monad.Logger
+import Control.Monad.Trans.Maybe (runMaybeT, MaybeT(..))
 import Yesod
 import qualified Network.HTTP.Types         as H
 import Data.Proxy
@@ -14,6 +16,7 @@ import Data.Typeable                        (Typeable)
 #endif
 
 import Data.Time                            (TimeZone)
+import Data.Time.Clock.POSIX
 
 import Yesod.Helpers.Json                   (jsonDecodeKey, jsonEncodeKey)
 import Yesod.Helpers.Form                   (nameToFs)
@@ -42,6 +45,12 @@ class
                  -> Proxy u
                  -> Text
 
+    -- | 可选地增加登录或活动时间的检查，或其它逻辑检查
+    loginKeyValidate :: (MonadHandler m, HandlerSite m ~ site, MonadLoggerIO m)
+                     => Key u
+                     -> m Bool
+    loginKeyValidate _ = pure True
+
     loginIdentToKey :: site
                     -> Proxy u
                     -> Text       -- ^ 在 session 中保存的用户标识字串
@@ -69,7 +78,7 @@ getLoggedInUser :: forall u site m.
     , PersistStore (YesodDB site)
 #endif
     , YesodPersist site
-    , MonadHandler m, HandlerSite m ~ site
+    , MonadHandler m, HandlerSite m ~ site, MonadLoggerIO m
     )
     => m (Maybe (Entity u))
 getLoggedInUser = do
@@ -78,6 +87,7 @@ getLoggedInUser = do
     case maybe_key of
         Nothing -> return Nothing
         Just k -> liftMonadHandler $ runDB $ liftM (fmap $ Entity k) $ get k
+
 
 getLoggedInIdent :: (LoginUser site u, MonadHandler m, HandlerSite m ~ site)
                  => Proxy u
@@ -89,11 +99,13 @@ getLoggedInIdent mu = do
     lookupSession sk
 
 
-getLoggedInId :: (LoginUser site u, MonadHandler m, HandlerSite m ~ site)
+getLoggedInId :: (LoginUser site u, MonadHandler m, HandlerSite m ~ site, MonadLoggerIO m)
               => Proxy u -> m (Maybe (Key u))
-getLoggedInId mu = do
-  foundation <- getYesod
-  liftM (join . (fmap $ loginIdentToKey foundation mu)) $ getLoggedInIdent mu
+getLoggedInId mu = runMaybeT $ do
+  foundation <- lift getYesod
+  k <- MaybeT $ liftM (join . (fmap $ loginIdentToKey foundation mu)) $ getLoggedInIdent mu
+  lift (loginKeyValidate k) >>= guard
+  pure k
 
 
 -- | 在 session 中标记某个用户为登录状态
@@ -114,6 +126,28 @@ markLoggedOut mu = do
     foundation <- getYesod
     let sk = loginIdentSK foundation mu
     deleteSession sk
+
+
+-- | Helper for implementing 'loginKeyValidate'
+handlerCheckSessionTimeRecentEnough :: (MonadHandler m)
+                                    => Text  -- ^ session key
+                                    -> Int -- ^ TTL in seconds
+                                    -> m Bool
+handlerCheckSessionTimeRecentEnough sk ttl = fmap (fromMaybe False) $ runMaybeT $ do
+  v <- MaybeT $ lookupSession sk
+  t <- MaybeT $ pure $ readMay v
+  now <- liftIO getPOSIXTime
+  guard $ now - fromIntegral (t :: Int64) < fromIntegral ttl
+  pure True
+
+
+-- | Helper for implementing 'loginKeyValidate'
+handlerSessionTimeUpdate :: (MonadHandler m)
+                         => Text  -- ^ session key
+                         -> m ()
+handlerSessionTimeUpdate sk = do
+  now <- liftIO getPOSIXTime
+  setSession sk $ tshow (round now :: Int64)
 
 
 data LoggedInHandler u site a =
