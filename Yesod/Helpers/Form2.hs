@@ -296,7 +296,7 @@ emstatic (FieldSettings {..}) v text = do
     (_, site, langs) <- lift $ ask
     let mr2 = renderMessage site langs
     return (FormSuccess v, FieldView
-        { fvLabel = toHtml $ mr2 fsLabel
+        { fvLabel = toHtml $ Textarea $ mr2 fsLabel
         , fvTooltip = fmap toHtml $ fmap mr2 fsTooltip
         , fvId = theId
         , fvInput = toWidget
@@ -316,7 +316,7 @@ emstaticW (FieldSettings {..}) v msg = do
     (_, site, langs) <- lift $ ask
     let mr2 = renderMessage site langs
     return (FormSuccess v, FieldView
-        { fvLabel = toHtml $ mr2 fsLabel
+        { fvLabel = toHtml $ Textarea $ mr2 fsLabel
         , fvTooltip = fmap toHtml $ fmap mr2 fsTooltip
         , fvId = theId
         , fvInput = toWidget
@@ -339,7 +339,7 @@ emstaticHiddenW (FieldSettings {..}) v msg = do
     (_, site, langs) <- lift $ ask
     let mr2 = renderMessage site langs
     return (FormSuccess v, FieldView
-        { fvLabel = toHtml $ mr2 fsLabel
+        { fvLabel = toHtml $ Textarea $ mr2 fsLabel
         , fvTooltip = fmap toHtml $ fmap mr2 fsTooltip
         , fvId = theId
         , fvInput = toWidget
@@ -625,7 +625,7 @@ mhelper Field {..} fs@(FieldSettings {..}) mdef onMissing onFound isReq = do
                                 return (r, Left "")
                             Just x -> return (onFound x, Right x)
     return (res, FieldView
-        { fvLabel = toHtml $ mr2 fsLabel
+        { fvLabel = toHtml $ Textarea $ mr2 fsLabel
         , fvTooltip = fmap toHtml $ fmap mr2 fsTooltip
         , fvId = theId
         , fvInput = fieldView theId name fsAttrs val isReq
