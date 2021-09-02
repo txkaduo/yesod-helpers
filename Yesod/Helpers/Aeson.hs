@@ -17,8 +17,6 @@ import qualified Data.Aeson             as A
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Base64.URL as B64U
-import qualified Data.ByteString        as B
-import qualified Data.ByteString.Char8  as C8
 import qualified Text.Parsec            as PC
 import qualified Control.Monad.Trans.State as S
 
@@ -191,24 +189,24 @@ parseListSepParsec type_name    _   _ v                 = typeMismatch type_name
 -- | parse a hex-encoded string
 parseHexByteString :: String -> Text -> Parser ByteString
 parseHexByteString type_name s = do
-    let (good, invalid) = B16.decode $ encodeUtf8 s
-    if B.null invalid
-        then return good
-        else fail $ "cannot parse hex-string as type '" ++ type_name ++ "'"
+  case B16.decodeBase16 $ encodeUtf8 s of
+    Left err -> fail $ "cannot parse hex-string as type '" ++ type_name ++ "': " <> T.unpack err
+    Right good -> pure good
+
 
 -- | parse a base64-encoded string
 parseBase64ByteString :: String -> Text -> Parser ByteString
 parseBase64ByteString type_name s = do
-    case B64.decode $ encodeUtf8 s of
+    case B64.decodeBase64 $ encodeUtf8 s of
         Left err    -> fail $ "cannot parse base64-string as type '"
-                                ++ type_name ++ "': " ++ err
+                                ++ type_name ++ "': " ++ T.unpack err
         Right good  -> return good
 
 parseUrlBase64ByteString :: String -> Text -> Parser ByteString
 parseUrlBase64ByteString type_name s = do
-    case B64U.decode $ encodeUtf8 s of
+    case B64U.decodeBase64 $ encodeUtf8 s of
         Left err    -> fail $ "cannot parse url-base64-string as type '"
-                                ++ type_name ++ "': " ++ err
+                                ++ type_name ++ "': " ++ T.unpack err
         Right good  -> return good
 
 newtype Base64EncodedByteString = Base64EncodedByteString { unBase64EncodedByteString :: ByteString }
@@ -218,7 +216,7 @@ instance FromJSON Base64EncodedByteString where
                     parseJSON v >>= parseBase64ByteString "Base64EncodedByteString"
 
 instance ToJSON Base64EncodedByteString where
-    toJSON = toJSON . C8.unpack . B64.encode . unBase64EncodedByteString
+    toJSON = toJSON . B64.encodeBase64 . unBase64EncodedByteString
 
 -- | expecting a Array, parse each value in it
 parseArray ::

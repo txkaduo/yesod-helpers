@@ -276,11 +276,10 @@ newtype B64UByteStringPathPiece = B64UByteStringPathPiece { unB64UByteStringPath
                                 deriving (Eq, Ord, Show, Read, Typeable, Generic, Binary)
 
 instance PathPiece B64UByteStringPathPiece where
-    toPathPiece (B64UByteStringPathPiece bs) =
-        fromString $ C8.unpack $ B64U.encode bs
+    toPathPiece (B64UByteStringPathPiece bs) = B64U.encodeBase64 bs
 
     fromPathPiece t = do
-        case B64U.decode (encodeUtf8 t) of
+        case B64U.decodeBase64 (encodeUtf8 t) of
             Left _ -> mzero
             Right bs -> return $ B64UByteStringPathPiece bs
 
@@ -298,7 +297,7 @@ newtype B64UByteString a = B64UByteString { unB64UByteString :: a }
                                 deriving (Eq, Ord)
 
 instance Binary a => Show (B64UByteString a) where
-  show (B64UByteString bs) = C8.unpack $ B64U.encode $ LB.toStrict $ Binary.encode bs
+  show (B64UByteString bs) = C8.unpack $ B64U.encodeBase64' $ LB.toStrict $ Binary.encode bs
 
 instance Binary a => Read (B64UByteString a) where
   readsPrec d r =
@@ -308,8 +307,8 @@ instance Binary a => Read (B64UByteString a) where
       merge (Right x, y) = Just (x, y)
 
       dec s = do
-        bs <- B64U.decode s
-        (left_bs, _, y) <- either (\(_, _, x) -> Left x) Right $ Binary.decodeOrFail $ LB.fromStrict bs
+        bs <- B64U.decodeBase64 s
+        (left_bs, _, y) <- either (\(_, _, x) -> Left $ pack x) Right $ Binary.decodeOrFail $ LB.fromStrict bs
         if LB.null left_bs
             then return $ B64UByteString y
             else Left "not all input consumed"
@@ -318,8 +317,8 @@ instance Binary a => PathPiece (B64UByteString a) where
   toPathPiece = fromString . show
 
   fromPathPiece t = either (const Nothing) Just $ do
-      bs <- B64U.decode (encodeUtf8 t)
-      (left_bs, _, y) <- either (\(_, _, x) -> Left x) Right $ Binary.decodeOrFail $ LB.fromStrict bs
+      bs <- B64U.decodeBase64 (encodeUtf8 t)
+      (left_bs, _, y) <- either (\(_, _, x) -> Left $ pack x) Right $ Binary.decodeOrFail $ LB.fromStrict bs
       if LB.null left_bs
           then return $ B64UByteString y
           else Left "not all input consumed"

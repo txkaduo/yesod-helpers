@@ -45,7 +45,7 @@ import Web.PathPieces                       (PathPiece(..))
 import qualified Blaze.ByteString.Builder   as BBB
 import qualified Data.ByteString.UTF8       as UTF8
 import qualified Data.ByteString.Lazy       as LB
-import qualified Data.ByteString.Base64.Lazy as LB64
+import qualified Data.ByteString.Lazy.Base64 as LB64
 
 import GHC.Stack
 
@@ -531,7 +531,7 @@ base64DataURI ct lbs =
           , fromStrict ct
           , ";base64"
           , ","
-          , LB64.encode lbs
+          , LB64.encodeBase64' lbs
           ]
 
 

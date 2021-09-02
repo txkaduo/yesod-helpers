@@ -106,8 +106,8 @@ library
                      , template-haskell
                      , mtl
                      , vector
-                     , base16-bytestring
-                     , base64-bytestring
+                     , base16
+                     , base64
                      , utf8-string
                      , yaml
                      , yesod-core

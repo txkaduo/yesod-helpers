@@ -348,6 +348,9 @@ $newline never
   <label .radio for=#{theId}-#{value} .form-check-label>
     #{text}
 |])
+#if MIN_VERSION_yesod_form(1, 7, 0)
+    Nothing
+#endif
 
 -- | Creates an input with @type="radio"@ for selecting one option.
 radioFieldListBs4 :: (Eq a, RenderMessage site FormMessage, RenderMessage site msg)

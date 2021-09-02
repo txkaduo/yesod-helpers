@@ -22,7 +22,6 @@ import qualified Data.Text                  as T
 import qualified Data.Text.Lazy             as LT
 import qualified Data.ByteString.Lazy       as LB
 import qualified Data.ByteString            as B
-import qualified Data.ByteString.Char8      as C8
 import qualified Data.ByteString.Base16     as B16
 import qualified Data.ByteString.Base64     as B64
 import qualified Data.ByteString.Base64.URL as B64U
@@ -736,13 +735,13 @@ base16Field ::
     ) =>
     msg
     -> Field m B.ByteString
-base16Field msg = checkMMap conv conv_back strippedTextField
+base16Field msg = checkMMap conv B16.encodeBase16 strippedTextField
     where
-        conv_back = T.pack . C8.unpack . B16.encode
-        conv t = if B.null leftbs
-                    then return $ Right $ okbs
-                    else return $ Left msg
-            where (okbs, leftbs) = B16.decode (TE.encodeUtf8 t)
+        conv t = pure $
+                  case B16.decodeBase16 (encodeUtf8 t) of
+                    Left _     -> Left msg
+                    Right okbs -> Right okbs
+
 
 base64Field ::
     ( Monad m, RenderMessage (HandlerSite m) FormMessage
@@ -750,12 +749,13 @@ base64Field ::
     ) =>
     msg
     -> Field m B.ByteString
-base64Field msg = checkMMap conv conv_back strippedTextField
+base64Field msg = checkMMap conv B64.encodeBase64 strippedTextField
     where
-        conv_back = T.pack . C8.unpack . B64.encode
-        conv t = case B64.decode (TE.encodeUtf8 t) of
-                    Left _err -> return $ Left msg
-                    Right bs  -> return $ Right bs
+        conv t = pure $
+                    case B64.decodeBase64 (encodeUtf8 t) of
+                      Left _err -> Left msg
+                      Right bs  -> Right bs
+
 
 base64UrlField ::
     ( Monad m, RenderMessage (HandlerSite m) FormMessage
@@ -763,12 +763,13 @@ base64UrlField ::
     ) =>
     msg
     -> Field m B.ByteString
-base64UrlField msg = checkMMap conv conv_back strippedTextField
+base64UrlField msg = checkMMap conv B64U.encodeBase64 strippedTextField
     where
-        conv_back = T.pack . C8.unpack . B64U.encode
-        conv t = case B64U.decode (TE.encodeUtf8 t) of
-                    Left _err -> return $ Left msg
-                    Right bs  -> return $ Right bs
+        conv t = pure $
+                  case B64U.decodeBase64 (encodeUtf8 t) of
+                    Left _err -> Left msg
+                    Right bs  -> Right bs
+
 
 -- | strip the value (as Text from client) before parsing.
 stripUpFront :: Field m a -> Field m a

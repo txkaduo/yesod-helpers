@@ -132,11 +132,24 @@ showPersistEntityDiff diffs =
     , "}"
     ]
   where
-    name = unHaskellName $ entityHaskell $ entityDef (Nothing :: Maybe r)
+    name =
+#if MIN_VERSION_persistent(2, 13, 0)
+            unEntityNameHS $ getEntityHaskellName $
+#else
+            unHaskellName $ entityHaskell $
+#endif
+              entityDef (Nothing :: Maybe r)
 
     show_diff (SomeEntityFieldDiff ef v_old v_new) =
       mconcat
-        [ unHaskellName $ fieldHaskell $ persistFieldDef ef
+        [
+#if MIN_VERSION_persistent(2, 13, 0)
+          unFieldNameHS $
+#else
+          unHaskellName $
+#endif
+            fieldHaskell $ persistFieldDef ef
+
         , ": "
         , fromString (show v_old)
         , "=>"

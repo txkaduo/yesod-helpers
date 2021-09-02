@@ -7,6 +7,7 @@ import Control.Monad (fail)
 import qualified Data.ByteString            as B
 import qualified Data.ByteString.Char8      as C8
 import qualified Data.ByteString.Base64     as B64
+import qualified Data.Text                  as T
 
 import Data.Attoparsec.ByteString           (Parser, many1)
 import Data.Attoparsec.ByteString.Char8     (satisfy)
@@ -31,8 +32,8 @@ hexEncodedByteString = fmap B.pack $ many1 hex2
 base64EncodedByteString :: Parser ByteString
 base64EncodedByteString = do
     b64str <- many1 $ satisfy is_base64_char
-    case B64.decode $ C8.pack b64str of
-        Left err -> fail $ "failed to base64-decode: " ++ err
+    case B64.decodeBase64 $ C8.pack b64str of
+        Left err -> fail $ "failed to base64-decode: " <> T.unpack err
         Right bs -> return bs
     where
         is_base64_char c = isAlphaNum c || c `elem` (asString "+/=")
