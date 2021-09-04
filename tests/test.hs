@@ -11,6 +11,10 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE DataKinds #-}
 module Main where
 
 import ClassyPrelude
@@ -121,7 +125,7 @@ test_parseIntGrouping = do
 testAnySafeCopy :: (SafeCopy a, Eq a, Show a) => a -> IO ()
 testAnySafeCopy x = do
     let bs = runPut $ safePut x
-    putStrLn $ decodeUtf8 $ B16.encode bs
+    putStrLn $ B16.encodeBase16 bs
     putStrLn $ tshow x
     case runGet safeGet bs of
         Left err -> do

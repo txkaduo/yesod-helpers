@@ -240,7 +240,7 @@ test-suite test
                  , classy-prelude
                  , network
                  , bytestring
-                 , base16-bytestring
+                 , base16
                  , parsec
                  , aeson
                  , text

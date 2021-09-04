@@ -5,7 +5,7 @@ import Prelude
 import System.Exit
 import Data.Aeson
 import Data.Aeson.Types
-import Data.Yaml                        (decodeEither)
+import Data.Yaml                        (decodeEither')
 import qualified Data.Text              as T
 
 import Yesod.Helpers.Aeson
@@ -13,9 +13,9 @@ import Data.ByteString  (ByteString)
 
 test1 :: FromJSON a => ByteString -> (a -> Parser b) -> IO b
 test1 bs f = do
-    case decodeEither bs of
+    case decodeEither' bs of
         Left err -> do
-            putStrLn $ "failed to parse aeson string: " ++ err
+            putStrLn $ "failed to parse aeson string: " ++ show err
             exitFailure
         Right v -> do
             case parseEither f v of
@@ -31,7 +31,7 @@ main = do
         -- runSubFieldParser $ obj +.: "a" +>>= (withText "text" $ \t -> return t)
         a <- obj +.: "a"
         d <- atField (.:) obj "x" $ withText "text" $ \t -> return t
-        c <- atFieldS (.:) obj "x" $ liftWithS withObject "object b" $ \obj2 -> obj2 +.: "d"
+        c <- atFieldS (.:) obj "b" $ liftWithS withObject "object b" $ \obj2 -> obj2 +.: "c"
         -- c <- reqField obj "b" $ \obj2 -> obj2 +.: "d"
         return ((a::Int) + c + T.length d)
     putStrLn $ "x=" ++ show x
