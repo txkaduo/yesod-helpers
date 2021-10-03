@@ -12,7 +12,7 @@ module Yesod.Helpers.Form2
     , generateEMFormGet'
     , generateEMFormGet
     , emreq, emopt, emstatic, emstaticW, emstaticHiddenW
-    , semreq, semreq2, semopt, semopt2, semreqOpt, semstatic, semstatic', semstaticW, semstaticHiddenW
+    , semreq, semreq2, semopt, semopt2, semreqOpt, semstatic, semstatic', semstaticW, semstaticW', semstaticHiddenW
     , semview, semviewW
     , addEMFieldError
     , overallFieldName
@@ -451,6 +451,14 @@ semstaticW fs v w = do
   (res, view) <- lift $ emstaticW fs v w
   SS.modify ( view : )
   return res
+
+
+semstaticW' :: (site ~ HandlerSite m, MonadHandler m, ToWidget site w)
+            => FieldSettings site
+            -> a
+            -> (a -> w)
+            -> SEMForm m (FormResult a)
+semstaticW' fs v w = semstaticW fs v (w v)
 
 
 semstaticHiddenW :: (site ~ HandlerSite m, MonadHandler m, ToWidget site w, PathPiece a)
