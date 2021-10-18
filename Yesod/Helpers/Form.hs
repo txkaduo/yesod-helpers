@@ -619,6 +619,23 @@ anyTextOptionList :: OptionList Text
 anyTextOptionList = OptionList [] (Just . id)
 
 
+pathPieceOptionList :: (PathPiece a, MonadHandler m, RenderMessage (HandlerSite m) msg)
+                    => [(msg, a)]
+                    -> m (OptionList a)
+pathPieceOptionList lst = do
+  render_msg <- getMessageRender
+  pure $ mkOptionList $ flip map lst $ \ (msg, x) -> Option (render_msg msg) x (toPathPiece x)
+
+
+pathPieceOptionListMaybe :: (PathPiece a, MonadHandler m, RenderMessage (HandlerSite m) msg)
+                         => [(msg, Maybe a)]
+                         -> m (OptionList (Maybe a))
+pathPieceOptionListMaybe lst = do
+  render_msg <- getMessageRender
+  pure $ mkOptionList $ flip map lst $ \ (msg, x) -> Option (render_msg msg) x (fromMaybe "" $ fmap toPathPiece x)
+
+
+
 -- | parse the content in textarea, into a list of values
 -- using methods of SimpleStringRep
 simpleEncodedListTextareaField :: (SimpleStringRep a, Monad m
