@@ -70,6 +70,26 @@ type PersistRecordBackend record backend = (PersistEntity record, PersistEntityB
 #endif
 
 
+-- | Represents Boolean values in yesod's checkboxField
+-- Different PathPiece instance than Bool.
+-- can be use with (?=)
+newtype CheckboxBool = CheckboxBool { unCheckboxBool :: Bool }
+
+instance PathPiece CheckboxBool where
+  -- 根据 yesod-form 的行为
+  toPathPiece (CheckboxBool b) = bool "no" "yes" b
+
+  fromPathPiece t = fmap CheckboxBool $ do
+    case toLower t of
+      "yes"   -> pure True
+      "on"    -> pure True
+      "true"  -> pure True
+      "no"    -> pure False
+      "off"   -> pure False
+      "false" -> pure False
+      _       -> Nothing
+
+
 -- | For sharing code between 'XXreq' and 'XXopt'
 data FormInputReqOpt = FormInputReq | FormInputOpt
 
