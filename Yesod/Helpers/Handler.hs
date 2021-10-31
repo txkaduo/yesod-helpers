@@ -677,6 +677,14 @@ getUrlRenderIO foundation = do
         >>= either (error "getUrlRender shoud never fail") return
 
 
+getMessageRenderIO :: (Yesod site, RenderMessage site msg) => site -> IO (msg -> Text)
+getMessageRenderIO foundation = do
+        runFakeHandler Map.empty
+                    (error "logger required in getUrlRenderIO")
+                    foundation getMessageRender
+        >>= either (error "getMessageRender shoud never fail") return
+
+
 widgetToBodyHtml :: (Yesod site, MonadHandler m, HandlerSite m ~ site)
                  => WidgetOf site
                  -> m Html
