@@ -421,7 +421,10 @@ instance Default (CommaSepPathPieces a) where def = CommaSepPathPieces []
 type PathPieceDayRange = PathPieceTuple Day Day
 
 
-data YearMonth = YearMonth Integer Int
+data YearMonth = YearMonth
+  { ymYear :: Integer
+  , ymMonth :: Int
+  }
   deriving (Eq, Ord)
 
 -- {{{1 instances
