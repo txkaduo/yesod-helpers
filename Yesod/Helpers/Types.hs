@@ -452,6 +452,22 @@ instance FromJSON YearMonth where
 -- }}}1
 
 
+yearMonth :: (Integral y, Integral m) => y -> m -> YearMonth
+yearMonth year month = YearMonth year' month'
+  where
+    year' = fromIntegral year
+    month' = fromIntegral month
+
+
+yearMonthValid :: (Integral y, Integral m) => y -> m -> Maybe YearMonth
+yearMonthValid year month = do
+  _ <- fromGregorianValid year' month' 1
+  pure $ YearMonth year' month'
+  where
+    year' = fromIntegral year
+    month' = fromIntegral month
+
+
 yearMonthField :: Monad m => RenderMessage (HandlerSite m) YHCommonMessage => Field m YearMonth
 yearMonthField = Field
     { fieldParse = parseHelperGen $ parseYearMonth
