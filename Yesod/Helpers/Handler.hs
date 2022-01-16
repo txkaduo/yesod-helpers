@@ -45,6 +45,12 @@ import Yesod.Compat
 -- }}}1
 
 
+data SomeRedirectUrl master = forall a. RedirectUrl master a => SomeRedirectUrl a
+
+instance RedirectUrl master (SomeRedirectUrl master) where
+  toTextUrl (SomeRedirectUrl r) = toTextUrl r
+
+
 -- | Tell browser never cache this response
 -- See: http://stackoverflow.com/questions/49547/how-to-control-web-page-caching-across-all-browsers/2068407
 neverCache :: MonadHandler m => m ()
