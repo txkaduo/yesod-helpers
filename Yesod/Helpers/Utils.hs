@@ -16,6 +16,7 @@ import Data.Time                            ( localTimeToUTC, zonedTimeToUTC, Ti
                                             )
 import Data.Time.Clock.POSIX                ( posixSecondsToUTCTime
                                             , utcTimeToPOSIXSeconds)
+import Data.Time.Calendar.WeekDate
 #if MIN_VERSION_time(1,5,0)
 #if !MIN_VERSION_time(1,9,0)
 import Data.Time                            (parseTimeM)
@@ -575,6 +576,14 @@ defaultExtensionOfMime mt = fmap fst $ find ((== mt) . snd) (mapToList MM.defaul
 
 getTodayLocal :: MonadIO m => m Day
 getTodayLocal = liftIO $ localDay . zonedTimeToLocalTime <$> getZonedTime
+
+
+-- | Consider monday is the first day.
+dayToWeekDayRange :: Day -> (Day, Day)
+dayToWeekDayRange d = (addDays (negate $ wd - 1) d, addDays (7 - wd) d)
+  where
+    wd = fromIntegral wd'
+    (_, _, wd') = toWeekDate d
 
 
 -- | Try mutiple candidate urls, return the most fast-response one.
