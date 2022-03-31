@@ -596,8 +596,20 @@ redirectWithReturnUrl url ret_url = do
   redirectWithQs' (insertMap returnUrl2ParamName ret_url) url
 
 
-redirectPassReturnUrl :: (MonadHandler m, RedirectUrl (HandlerSite m) url, RedirectUrl (HandlerSite m) (url, [(Text, Text)])) => url -> m a
+redirectPassReturnUrl :: (MonadHandler m, RedirectUrl (HandlerSite m) url, RedirectUrl (HandlerSite m) (url, [(Text, Text)]))
+                      => url -> m a
 redirectPassReturnUrl url = getReturnUrl >>= maybe (redirect url) (redirectWithReturnUrl url)
+
+
+redirectPassReturnUrlParams :: (MonadHandler m, RedirectUrl (HandlerSite m) url, RedirectUrl (HandlerSite m) (url, [(Text, Text)]))
+                            => url
+                            -> [(Text, Text)]
+                            -> m a
+redirectPassReturnUrlParams url params =
+  getReturnUrl
+    >>= maybe
+          (redirect url)
+          (\ ret_url -> redirect (url, insertMap returnUrl2ParamName ret_url params) )
 
 
 redirectWithQs' :: (MonadHandler m, RedirectUrl (HandlerSite m) (url, [(Text, Text)]))
