@@ -359,4 +359,12 @@ wHiddenReturnUrl = do
   url <- getCurrentUrl
   [whamlet|<input type=hidden name=#{returnUrlParamName} value=#{url}>|]
 
+
+-- | Like wHiddenReturnUrl, but use 'current return url' when possible
+wHiddenReturnUrl' :: WidgetOf site
+wHiddenReturnUrl' = do
+  url <- getReturnUrl >>= maybe getCurrentUrl pure
+  [whamlet|<input type=hidden name=#{returnUrlParamName} value=#{url}>|]
+
+
 -- vim: set foldmethod=marker:
