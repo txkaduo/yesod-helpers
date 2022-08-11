@@ -16,6 +16,7 @@ import Data.Time                            ( localTimeToUTC, zonedTimeToUTC, Ti
                                             )
 import Data.Time.Clock.POSIX                ( posixSecondsToUTCTime
                                             , utcTimeToPOSIXSeconds)
+import Data.Time.Calendar                   (gregorianMonthLength)
 import Data.Time.Calendar.WeekDate
 #if MIN_VERSION_time(1,5,0)
 #if !MIN_VERSION_time(1,9,0)
@@ -584,6 +585,15 @@ dayToWeekDayRange d = (addDays (negate $ wd - 1) d, addDays (7 - wd) d)
   where
     wd = fromIntegral wd'
     (_, _, wd') = toWeekDate d
+
+
+dayToMonthDayRange :: Day -> (Day, Day)
+dayToMonthDayRange day = (begin_day, end_day)
+  where
+    (year, month, _) = toGregorian day
+    month_length = gregorianMonthLength year month
+    begin_day = fromGregorian year month 1
+    end_day = addDays (fromIntegral $ month_length + 1) begin_day
 
 
 -- | Try mutiple candidate urls, return the most fast-response one.
