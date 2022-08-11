@@ -153,12 +153,19 @@ mergePageTitles :: ( RenderMessage (HandlerSite m) message
                     )
                 => [message]
                 -> m ()
--- {{{1
-mergePageTitles parts = do
+mergePageTitles parts = mergePageTitlesToText parts >>= setTitleI
+
+
+mergePageTitlesToText :: ( RenderMessage (HandlerSite m) message
+                         , RenderMessage (HandlerSite m) YHCommonMessage
+                         , MonadHandler m
+                         )
+                      => [message]
+                      -> m Text
+mergePageTitlesToText parts = do
     mr <- getMessageRender
     mr2 <- getMessageRender
-    setTitleI $ mconcat $ intersperse (mr MsgPageTitleSep) $ map mr2 parts
--- }}}1
+    pure $ mconcat $ intersperse (mr MsgPageTitleSep) $ map mr2 parts
 
 
 formAllErrorMessagesWidget :: FieldErrors site -> WidgetOf site
