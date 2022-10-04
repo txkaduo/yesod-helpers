@@ -175,7 +175,7 @@ formAllErrorMessagesWidget form_errs =
     $if not (null overall_errors)
         $if not (null overall_errors)
           <div .alert .alert-warning>
-            <ul>表单输入错误
+            <ul>
               $forall (_, errs) <- overall_errors
                 <li>#{intercalate ";" errs}
 
