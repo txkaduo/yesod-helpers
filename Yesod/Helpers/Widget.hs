@@ -261,6 +261,21 @@ jsSetSubmitButtonText selector txt =
 -- }}}1
 
 
+zhCnTimeOfDayWidget :: String -> TimeOfDay -> WidgetOf site
+zhCnTimeOfDayWidget fmt t =
+  [whamlet|
+    <time datetime=#{formatTime defaultTimeLocale iso8601 t}>
+      #{formatTime zhCnTimeLocale fmt t}
+  |]
+  where iso8601 = "%H:%M:%S"
+
+zhCnTimeOfDayWidgetDefault :: TimeOfDay -> WidgetOf site
+zhCnTimeOfDayWidgetDefault = zhCnTimeOfDayWidget "%H:%M:%S"
+
+zhCnTimeOfDayWidgetNoSec :: TimeOfDay -> WidgetOf site
+zhCnTimeOfDayWidgetNoSec = zhCnTimeOfDayWidget "%H:%M"
+
+
 zhCnLocalTimeWidget :: String -> LocalTime -> WidgetOf site
 zhCnLocalTimeWidget fmt t =
   [whamlet|
